@@ -1,0 +1,14 @@
+{
+  "name": "eas-poc",
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "demo:disclosure": "node selective-disclosure.mjs",
+    "demo:dualsign": "node dual-signature.mjs"
+  },
+  "dependencies": {
+    "@sd-jwt/sd-jwt-vc": "^0.20.0",
+    "@sd-jwt/crypto-nodejs": "^0.19.0",
+    "jose": "^6.2.3"
+  }
+}
