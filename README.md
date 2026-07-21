@@ -115,17 +115,37 @@ npm run demo:dualsign     # 證明事後篡改會被偵測
 
 需要 Node 22 以上。兩支腳本的預期輸出與說明見 [`poc/README.md`](poc/README.md)。
 
+## 執行 Demo
+
+```bash
+npm install
+npm run dev --workspace @eas/web    # http://localhost:5173
+```
+
+兩個視圖：
+
+**勞工錢包（M4）** — 四張憑證初始全部標示「待勞工反簽」。這是刻意的：雇主單方簽發的憑證在這裡不成立，未反簽就出示會被閘門以 `MISSING_WORKER_ATTESTATION` 拒絕。斜線遮蔽塊代表的不是「被遮住的值」，而是該欄位在出示內容中**密碼學上不存在**。
+
+**稽核台（M5）** — 左右並排同一位勞工的同一批憑證：
+
+- **SplitDemo**：左邊銀行的 Agent A 得到「建議核准」與三個布林結論，拿不到仲介費金額與薪資；右邊品牌的 Agent B 得到 83% 合規率與母體人數，拿不到任何一位勞工的工時，問「哪幾位勞工超時」則回 `INDIVIDUAL_QUERY_REJECTED`。
+- **RevokeDemo**：按「模擬離境：撤銷主體」後，銀行端立刻變成拒絕（`CREDENTIAL_REVOKED`，且 Agent 沒讀到任何欄位），品牌端母體從 6 降為 5、合規率變 80%，並標示有 1 份證據被閘門剔除——**其他勞工的證據不受影響**。這就是場景一「離境後帳戶仍可用」的收口。
+
+> **關於 demo 的一項誠實說明**：簽章與驗證使用 `@sd-jwt/crypto-nodejs`，是 Node 專用的，因此在這個 demo 裡它們跑在 Vite dev server 的 Node 行程中，瀏覽器只是視圖層。真實的錢包必須把私鑰留在勞工裝置上並在該處簽章（改用 `@sd-jwt/crypto-browser`）——「私鑰不離開裝置」是這個系統的前提，demo 的這個簡化不該被誤讀成架構主張。
+
 ## 執行測試
 
 ```bash
 npm install      # 於 repo 根目錄，安裝 workspace 依賴
-npm test         # vitest，目前 27 個測試全綠
+npm test         # vitest，目前 40 個測試全綠
 npm run typecheck
 ```
 
 已可跑的測試情境：
 
 - **T2 — 誠實流程**：工廠簽發工時憑證 → 勞工反簽 → 選擇性揭露出示 → 驗證方取得 `withinRBALimit`，且配對成立、`totalHours` 不在 payload 中。
+- **撤銷與連動撤銷**：單張憑證可撤銷；`revokeSubject()` 則是連動——勞工離境或許可終止時，關於他的每一張憑證同時停止可用，不需要有人去逐一列舉。母體中其他勞工不受影響。
+- **有效期**：憑證帶 `exp`，預設 365 天，可依簽發者覆寫。過期回 `CREDENTIAL_EXPIRED`（而不是被誤報成簽章無效）。
 - **T3 — 拒絕個體查詢**：品牌的 Agent 問「這一位勞工的狀況」，L2 提問層拒絕，回 `INDIVIDUAL_QUERY_REJECTED`，且回應序列化後不含任何勞工識別碼。母體小於 k-匿名門檻的匯總同樣拒答，回 `AGGREGATE_BELOW_K_ANONYMITY`。
 - **T4 — 事後篡改**：工廠把 186 小時重簽成 150 小時，勞工原本的反簽配對失效，回 `ATTESTATION_HASH_MISMATCH`。
 
@@ -152,10 +172,10 @@ Agent A 的能力邊界也寫在型別裡：`BankAssessment.requiresHumanReview`
 | 模組 | 內容 | 狀態 |
 |---|---|---|
 | M1 shared | 憑證 schema、原因碼、SD-JWT 封裝、雙簽配對 | ✅ |
-| M2 issuer | 依 schema 簽發（撤銷排在 W2） | ✅ 簽發部分 |
+| M2 issuer | 依 schema 簽發、有效期、撤銷登記 | ✅ |
 | M3 agents | 兩個查驗 Agent、Policy Gate L1＋L2 | ✅ 兩層閘門已串接，端到端可跑 |
-| M4 wallet | 勞工錢包 UI | 未開始 |
-| M5 console | 稽核台 SplitDemo／RevokeDemo | 未開始 |
+| M4 wallet | 勞工錢包 UI（反簽、選擇性揭露呈現） | ✅ |
+| M5 console | 稽核台 SplitDemo／RevokeDemo | ✅ |
 
 ## 技術棧
 

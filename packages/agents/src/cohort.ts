@@ -8,7 +8,7 @@
  * an agent is ever given.
  */
 
-import type { ReasonCode, PublicJwk } from '@eas/shared';
+import type { ReasonCode, PublicJwk, RevocationRegistry } from '@eas/shared';
 import { checkCredentialLayer } from './credentialLayer.js';
 import type { CohortEvidence } from './brandAgent.js';
 import type { AggregateMetric } from './policyGate.js';
@@ -26,6 +26,7 @@ export interface CohortRequest {
   /** The boolean conclusion this metric is built from, e.g. `withinRBALimit`. */
   readonly claim: string;
   readonly submissions: readonly Submission[];
+  readonly revocations?: RevocationRegistry;
 }
 
 export interface CohortResult {
@@ -45,6 +46,7 @@ export async function buildCohortEvidence(request: CohortRequest): Promise<Cohor
       issuerPublicKey: submission.issuerPublicKey,
       workerPublicKey: submission.workerPublicKey,
       requiredClaims: [request.claim],
+      ...(request.revocations === undefined ? {} : { revocations: request.revocations }),
     });
 
     if (!decision.ok) {

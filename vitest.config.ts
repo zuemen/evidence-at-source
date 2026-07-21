@@ -11,6 +11,7 @@ export default defineConfig({
       '@eas/shared': r('./packages/shared/src/index.ts'),
       '@eas/issuer': r('./packages/issuer/src/index.ts'),
       '@eas/agents': r('./packages/agents/src/index.ts'),
+      '@eas/web': r('./packages/web/src/demo/world.ts'),
     },
   },
   test: {
