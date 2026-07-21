@@ -115,6 +115,31 @@ npm run demo:dualsign     # 證明事後篡改會被偵測
 
 需要 Node 22 以上。兩支腳本的預期輸出與說明見 [`poc/README.md`](poc/README.md)。
 
+## 執行測試
+
+```bash
+npm install      # 於 repo 根目錄，安裝 workspace 依賴
+npm test         # vitest，目前 9 個測試全綠
+npm run typecheck
+```
+
+已可跑的測試情境：
+
+- **T2 — 誠實流程**：工廠簽發工時憑證 → 勞工反簽 → 選擇性揭露出示 → 驗證方取得 `withinRBALimit`，且配對成立、`totalHours` 不在 payload 中。
+- **T4 — 事後篡改**：工廠把 186 小時重簽成 150 小時，勞工原本的反簽配對失效，回 `ATTESTATION_HASH_MISMATCH`。
+
+其中一個關鍵設計來自測試的逼問：反簽的雜湊只涵蓋 **issuer-signed JWT 區段**，不是整串 SD-JWT。若雜湊整串，勞工每次選擇性揭露都會讓配對斷掉；只涵蓋該區段，則因為隱藏欄位的 `_sd` digest 就在裡面，篡改仍然一定被抓到。見 [`packages/shared/src/attestation.ts`](packages/shared/src/attestation.ts)。
+
+## 模組進度
+
+| 模組 | 內容 | 狀態 |
+|---|---|---|
+| M1 shared | 憑證 schema、原因碼、SD-JWT 封裝、雙簽配對 | ✅ |
+| M2 issuer | 依 schema 簽發（撤銷排在 W2） | ✅ 簽發部分 |
+| M3 agents | 兩個查驗 Agent、Policy Gate L2 | 未開始 |
+| M4 wallet | 勞工錢包 UI | 未開始 |
+| M5 console | 稽核台 SplitDemo／RevokeDemo | 未開始 |
+
 ## 技術棧
 
 | 層 | 選型 |
