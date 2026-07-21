@@ -119,7 +119,7 @@ npm run demo:dualsign     # 證明事後篡改會被偵測
 
 ```bash
 npm install      # 於 repo 根目錄，安裝 workspace 依賴
-npm test         # vitest，目前 21 個測試全綠
+npm test         # vitest，目前 27 個測試全綠
 npm run typecheck
 ```
 
@@ -130,6 +130,14 @@ npm run typecheck
 - **T4 — 事後篡改**：工廠把 186 小時重簽成 150 小時，勞工原本的反簽配對失效，回 `ATTESTATION_HASH_MISMATCH`。
 
 其中一個關鍵設計來自測試的逼問：反簽的雜湊只涵蓋 **issuer-signed JWT 區段**，不是整串 SD-JWT。若雜湊整串，勞工每次選擇性揭露都會讓配對斷掉；只涵蓋該區段，則因為隱藏欄位的 `_sd` digest 就在裡面，篡改仍然一定被抓到。見 [`packages/shared/src/attestation.ts`](packages/shared/src/attestation.ts)。
+
+### 識別資訊在哪一行消失
+
+架構圖上「Policy Gate → Agent」那一段，在程式碼裡是 [`packages/agents/src/cohort.ts`](packages/agents/src/cohort.ts)。
+
+每一份提交進來時都綁著一位勞工——他的 presentation、他的反簽、他的公鑰，三者都是判斷證據真偽所必需。`buildCohortEvidence()` 用它們跑完 L1 閘門之後，**回傳的東西只剩一個布林陣列**。識別資訊不是被遮蔽或過濾，是到此為止不再往下傳。
+
+端到端測試（[`endToEnd.test.ts`](packages/agents/test/endToEnd.test.ts)）跑 7 份提交，其中 1 份是工廠事後篡改過的：篡改那份在 L1 就被擋下（`ATTESTATION_HASH_MISMATCH`）不計入母體，剩下 6 份收斂成合規率 4/6，而整個 cohort 物件序列化後不含任何 `zWorker` 字樣。同一個 Agent 被問到個別勞工時回 `INDIVIDUAL_QUERY_REJECTED`，且回應不回顯查詢中的 DID。
 
 ### 原則一是一個會失敗的測試，不只是一句承諾
 
@@ -145,7 +153,7 @@ Agent A 的能力邊界也寫在型別裡：`BankAssessment.requiresHumanReview`
 |---|---|---|
 | M1 shared | 憑證 schema、原因碼、SD-JWT 封裝、雙簽配對 | ✅ |
 | M2 issuer | 依 schema 簽發（撤銷排在 W2） | ✅ 簽發部分 |
-| M3 agents | 兩個查驗 Agent、Policy Gate L2 | ✅ L2 閘門與兩個 Agent（L1 串接待續） |
+| M3 agents | 兩個查驗 Agent、Policy Gate L1＋L2 | ✅ 兩層閘門已串接，端到端可跑 |
 | M4 wallet | 勞工錢包 UI | 未開始 |
 | M5 console | 稽核台 SplitDemo／RevokeDemo | 未開始 |
 
