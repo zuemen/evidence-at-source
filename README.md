@@ -119,16 +119,25 @@ npm run demo:dualsign     # 證明事後篡改會被偵測
 
 ```bash
 npm install      # 於 repo 根目錄，安裝 workspace 依賴
-npm test         # vitest，目前 9 個測試全綠
+npm test         # vitest，目前 21 個測試全綠
 npm run typecheck
 ```
 
 已可跑的測試情境：
 
 - **T2 — 誠實流程**：工廠簽發工時憑證 → 勞工反簽 → 選擇性揭露出示 → 驗證方取得 `withinRBALimit`，且配對成立、`totalHours` 不在 payload 中。
+- **T3 — 拒絕個體查詢**：品牌的 Agent 問「這一位勞工的狀況」，L2 提問層拒絕，回 `INDIVIDUAL_QUERY_REJECTED`，且回應序列化後不含任何勞工識別碼。母體小於 k-匿名門檻的匯總同樣拒答，回 `AGGREGATE_BELOW_K_ANONYMITY`。
 - **T4 — 事後篡改**：工廠把 186 小時重簽成 150 小時，勞工原本的反簽配對失效，回 `ATTESTATION_HASH_MISMATCH`。
 
 其中一個關鍵設計來自測試的逼問：反簽的雜湊只涵蓋 **issuer-signed JWT 區段**，不是整串 SD-JWT。若雜湊整串，勞工每次選擇性揭露都會讓配對斷掉；只涵蓋該區段，則因為隱藏欄位的 `_sd` digest 就在裡面，篡改仍然一定被抓到。見 [`packages/shared/src/attestation.ts`](packages/shared/src/attestation.ts)。
+
+### 原則一是一個會失敗的測試，不只是一句承諾
+
+[`packages/agents/test/principleOne.test.ts`](packages/agents/test/principleOne.test.ts) 會掃描 `packages/` 下所有 TypeScript 原始碼，只要出現 `approveAccount`、`rejectAccount`、`freezeAccount`、`transferFunds`、`readTransactionHistory` 其中任何一個字串就讓測試變紅——包含被註解掉、被條件擋掉、或只是寫在型別裡的情況。
+
+我們實際驗證過這個守門測試抓得到違規：臨時放入一個 `export function approveAccount() {}` 後測試立刻失敗並指出檔案，移除後回綠。
+
+Agent A 的能力邊界也寫在型別裡：`BankAssessment.requiresHumanReview` 的型別是字面量 `true`，任何程式碼都無法產生一份聲稱自己是最終決定的評估結果。
 
 ## 模組進度
 
@@ -136,7 +145,7 @@ npm run typecheck
 |---|---|---|
 | M1 shared | 憑證 schema、原因碼、SD-JWT 封裝、雙簽配對 | ✅ |
 | M2 issuer | 依 schema 簽發（撤銷排在 W2） | ✅ 簽發部分 |
-| M3 agents | 兩個查驗 Agent、Policy Gate L2 | 未開始 |
+| M3 agents | 兩個查驗 Agent、Policy Gate L2 | ✅ L2 閘門與兩個 Agent（L1 串接待續） |
 | M4 wallet | 勞工錢包 UI | 未開始 |
 | M5 console | 稽核台 SplitDemo／RevokeDemo | 未開始 |
 

@@ -10,6 +10,7 @@ export default defineConfig({
       // tests always exercise the code under edit, with no build step.
       '@eas/shared': r('./packages/shared/src/index.ts'),
       '@eas/issuer': r('./packages/issuer/src/index.ts'),
+      '@eas/agents': r('./packages/agents/src/index.ts'),
     },
   },
   test: {

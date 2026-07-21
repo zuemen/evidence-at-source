@@ -12,6 +12,9 @@ export const REASON_CODES = [
   'CREDENTIAL_REVOKED',
   'CREDENTIAL_EXPIRED',
   'CLAIM_NOT_DISCLOSED',
+  // A required fact was disclosed and did not satisfy policy. Distinct from
+  // CLAIM_NOT_DISCLOSED so a human reviewer can tell "missing" from "failing".
+  'POLICY_CHECK_FAILED',
   // L2 — query layer
   'INDIVIDUAL_QUERY_REJECTED',
   'AGGREGATE_BELOW_K_ANONYMITY',
