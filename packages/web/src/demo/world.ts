@@ -37,15 +37,22 @@ const WORKER_DID = 'did:key:zWorker001';
 const COHORT = 'factory-a-2026-08';
 const DEVICE = 'sha256:synthetic-device-001';
 
+/**
+ * The four credentials the wallet narrative shows. SalaryDepositCredential
+ * exists in the system for cross-validation but is not part of this story, so
+ * it is deliberately excluded here rather than forced into the wallet view.
+ */
+type WalletCredentialType = Exclude<CredentialType, 'SalaryDepositCredential'>;
+
 /** The single public claim each credential contributes to a verifier. */
-const HEADLINE_CLAIM: Record<CredentialType, string> = {
+const HEADLINE_CLAIM: Record<WalletCredentialType, string> = {
   RecruitmentFeeCredential: 'feeWithinLegalCap',
   DocumentCustodyCredential: 'passportHeldByWorker',
   ContractConsentCredential: 'nativeLanguageVersionProvided',
   WorkingHoursCredential: 'withinRBALimit',
 };
 
-const CLAIMS: Record<CredentialType, Record<string, unknown>> = {
+const CLAIMS: Record<WalletCredentialType, Record<string, unknown>> = {
   RecruitmentFeeCredential: {
     workerDID: WORKER_DID,
     feeWithinLegalCap: true,
@@ -80,7 +87,7 @@ const CLAIMS: Record<CredentialType, Record<string, unknown>> = {
   },
 };
 
-const ISSUER_OF: Record<CredentialType, 'agency' | 'factory'> = {
+const ISSUER_OF: Record<WalletCredentialType, 'agency' | 'factory'> = {
   RecruitmentFeeCredential: 'agency',
   DocumentCustodyCredential: 'factory',
   ContractConsentCredential: 'agency',
@@ -128,7 +135,7 @@ export interface DemoWorld {
 }
 
 interface HeldCredential {
-  readonly type: CredentialType;
+  readonly type: WalletCredentialType;
   readonly issuer: Issuer;
   readonly issuerName: string;
   readonly credential: string;
@@ -183,7 +190,7 @@ export async function createDemoWorld(): Promise<DemoWorld> {
   const revocations: RevocationRegistry = createRevocationRegistry();
 
   const held: HeldCredential[] = [];
-  for (const type of Object.keys(CLAIMS) as CredentialType[]) {
+  for (const type of Object.keys(CLAIMS) as WalletCredentialType[]) {
     const which = ISSUER_OF[type];
     const issuer = issuers[which];
 

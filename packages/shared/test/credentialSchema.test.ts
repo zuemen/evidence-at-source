@@ -9,13 +9,21 @@ describe('credential schema', () => {
     expect(schema.public).toContain('withinRBALimit');
   });
 
-  test('all four credential types from docs/credentials.md have a schema', () => {
+  test('all credential types from docs/credentials.md have a schema', () => {
     expect([...CREDENTIAL_TYPES]).toEqual([
       'RecruitmentFeeCredential',
       'DocumentCustodyCredential',
       'ContractConsentCredential',
       'WorkingHoursCredential',
+      'SalaryDepositCredential',
     ]);
+  });
+
+  test('SalaryDepositCredential keeps the deposited amount and count hidden', () => {
+    const schema = getCredentialSchema('SalaryDepositCredential');
+
+    expect(schema.hidden).toEqual(['depositedAmountTWD', 'depositCount']);
+    expect(schema.public).toEqual(['periodStart', 'periodEnd', 'issuerType']);
   });
 
   test('no field is both public and hidden', () => {

@@ -24,7 +24,8 @@ export type AggregateMetric =
   | 'workingHoursComplianceRate'
   | 'recruitmentFeeComplianceRate'
   | 'documentCustodyComplianceRate'
-  | 'contractConsentComplianceRate';
+  | 'contractConsentComplianceRate'
+  | 'payrollDiscrepancyRate';
 
 export type Query =
   | {

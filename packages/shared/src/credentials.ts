@@ -11,6 +11,7 @@ export const CREDENTIAL_TYPES = [
   'DocumentCustodyCredential',
   'ContractConsentCredential',
   'WorkingHoursCredential',
+  'SalaryDepositCredential',
 ] as const;
 
 export type CredentialType = (typeof CREDENTIAL_TYPES)[number];
@@ -38,6 +39,13 @@ const SCHEMAS: Record<CredentialType, DisclosureSchema> = {
   WorkingHoursCredential: {
     public: ['withinRBALimit', 'periodStart'],
     hidden: ['totalHours', 'overtimeHours'],
+  },
+  // Issued by a bank or remittance operator — a data source the factory cannot
+  // control. Cross-checking it against working hours turns single-party lying
+  // into a two-party conspiracy between institutions with opposing interests.
+  SalaryDepositCredential: {
+    public: ['periodStart', 'periodEnd', 'issuerType'],
+    hidden: ['depositedAmountTWD', 'depositCount'],
   },
 };
 

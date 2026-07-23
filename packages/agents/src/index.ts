@@ -10,7 +10,14 @@ export { checkCredentialLayer } from './credentialLayer.js';
 export type { CredentialDecision, CredentialLayerInput } from './credentialLayer.js';
 
 export { createBrandAgent } from './brandAgent.js';
-export type { BrandAgent, BrandAnswer, CohortEvidence } from './brandAgent.js';
+export type {
+  BrandAgent,
+  BrandAnswer,
+  CohortEvidence,
+  PayrollConsistencyAnswer,
+  PayrollRateAnswer,
+  ReconciliationCohort,
+} from './brandAgent.js';
 
 export { buildCohortEvidence } from './cohort.js';
 export type { CohortRequest, CohortResult, Submission } from './cohort.js';

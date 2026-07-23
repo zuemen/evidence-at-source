@@ -137,7 +137,7 @@ npm run dev --workspace @eas/web    # http://localhost:5173
 
 ```bash
 npm install      # 於 repo 根目錄，安裝 workspace 依賴
-npm test         # vitest，目前 40 個測試全綠
+npm test         # vitest，目前 53 個測試全綠
 npm run typecheck
 ```
 
@@ -148,6 +148,7 @@ npm run typecheck
 - **有效期**：憑證帶 `exp`，預設 365 天，可依簽發者覆寫。過期回 `CREDENTIAL_EXPIRED`（而不是被誤報成簽章無效）。
 - **T3 — 拒絕個體查詢**：品牌的 Agent 問「這一位勞工的狀況」，L2 提問層拒絕，回 `INDIVIDUAL_QUERY_REJECTED`，且回應序列化後不含任何勞工識別碼。母體小於 k-匿名門檻的匯總同樣拒答，回 `AGGREGATE_BELOW_K_ANONYMITY`。
 - **T4 — 事後篡改**：工廠把 186 小時重簽成 150 小時，勞工原本的反簽配對失效，回 `ATTESTATION_HASH_MISMATCH`。
+- **T10 — 交叉驗證抓省略式造假**：工廠申報 150 小時（未超標，工時憑證單看是乾淨的），但銀行入帳金額對應約 186 小時的薪資。兩個獨立簽發者（工廠 + 銀行，DID 不同）的資料互相矛盾，M7 對帳回 `DISCREPANCY_OVERPAID`，而回應只有結果碼、不含任何金額或時數。這補上了雙簽配對擋不住的破口：工廠不必偽造紀錄，只要**不記錄**那筆加班——但它改不了銀行的入帳。
 
 其中一個關鍵設計來自測試的逼問：反簽的雜湊只涵蓋 **issuer-signed JWT 區段**，不是整串 SD-JWT。若雜湊整串，勞工每次選擇性揭露都會讓配對斷掉；只涵蓋該區段，則因為隱藏欄位的 `_sd` digest 就在裡面，篡改仍然一定被抓到。見 [`packages/shared/src/attestation.ts`](packages/shared/src/attestation.ts)。
 
@@ -176,6 +177,7 @@ Agent A 的能力邊界也寫在型別裡：`BankAssessment.requiresHumanReview`
 | M3 agents | 兩個查驗 Agent、Policy Gate L1＋L2 | ✅ 兩層閘門已串接，端到端可跑 |
 | M4 wallet | 勞工錢包 UI（反簽、選擇性揭露呈現） | ✅ |
 | M5 console | 稽核台 SplitDemo／RevokeDemo | ✅ |
+| M7 reconciliation | 工時×薪資交叉驗證（v2 進攻型機制） | ✅ 後端＋T10；Agent B 對帳查詢 k-匿名 |
 
 ## 技術棧
 

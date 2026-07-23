@@ -1,5 +1,5 @@
 {
-  "name": "@eas/agents",
+  "name": "@eas/reconciliation",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -7,7 +7,6 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "@eas/reconciliation": "*",
     "@eas/shared": "*"
   }
 }

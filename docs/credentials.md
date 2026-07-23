@@ -109,6 +109,28 @@
 
 ---
 
+## 5. `SalaryDepositCredential` — 薪資入帳
+
+**簽發者**：銀行或小額匯兌業者（例 `did:web:bank.example`）——**其 issuer DID 必須與工廠不同**
+**需勞工反簽**：是
+**簽發時機**：每個薪資週期入帳的當下
+
+| 欄位 | 型別 | 歸屬 | 說明 |
+|---|---|---|---|
+| `periodStart` | string | 公開 | 對應薪資期間起日 |
+| `periodEnd` | string | 公開 | 對應薪資期間迄日 |
+| `issuerType` | string | 公開 | `BANK` 或 `REMITTANCE` |
+| `depositedAmountTWD` | number | 隱藏 | 該期實際入帳金額 |
+| `depositCount` | number | 隱藏 | 該期入帳筆數 |
+| 逐筆交易明細 | — | 不入憑證 | 只存銀行系統與勞工裝置 |
+| 帳號 | — | 不入憑證 | 不收集 |
+
+設計要點：這張憑證存在的唯一理由是引入一個**工廠控制不了的資料源**。工廠控制不了銀行、銀行控制不了打卡系統，於是造假從「單方說謊」變成「兩個利益相反的機構共謀」。M7 對帳模組比對它與工時憑證：入帳金額大於申報工時應得，代表有工時沒被記錄（`DISCREPANCY_OVERPAID`）——這是「省略式造假」的指紋。對帳邏輯與結果碼見 [`packages/reconciliation`](../packages/reconciliation)。
+
+**隱私約束**：M7 的輸出只能是結果碼，永遠不得回傳 `depositedAmountTWD`、`totalHours`、`overtimeHours` 或推算出的預期薪資。此約束由 `packages/reconciliation/test/reconcile.privacy.test.ts` 守門。
+
+---
+
 ## 勞工反簽 Attestation
 
 四張憑證共用同一種反簽結構。這不是憑證，是一張獨立的 JWT，由勞工私鑰簽發。
