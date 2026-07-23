@@ -9,6 +9,18 @@ export type {
 export { checkCredentialLayer } from './credentialLayer.js';
 export type { CredentialDecision, CredentialLayerInput } from './credentialLayer.js';
 
+export {
+  DEFAULT_K_ANONYMITY,
+  DEFAULT_QUERY_BUDGET,
+  createQuerySession,
+} from './differencing.js';
+export type {
+  AuditedQuery,
+  QuerySession,
+  QuerySessionOptions,
+  QueryVerdict,
+} from './differencing.js';
+
 export { createBrandAgent } from './brandAgent.js';
 export type {
   BrandAgent,

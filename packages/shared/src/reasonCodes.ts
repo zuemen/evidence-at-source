@@ -18,6 +18,11 @@ export const REASON_CODES = [
   // L2 — query layer
   'INDIVIDUAL_QUERY_REJECTED',
   'AGGREGATE_BELOW_K_ANONYMITY',
+  // Two answered aggregates whose populations differ by fewer than k can be
+  // subtracted to isolate an individual. The later query is refused.
+  'DIFFERENCING_ATTACK_DETECTED',
+  // An agent has spent its per-period allowance of answered queries.
+  'QUERY_BUDGET_EXCEEDED',
 ] as const;
 
 export type ReasonCode = (typeof REASON_CODES)[number];
