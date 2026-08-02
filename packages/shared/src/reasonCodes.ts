@@ -5,6 +5,13 @@
  */
 
 export const REASON_CODES = [
+  // L0 — agent-authorization layer. Checked before any worker data is read.
+  'AGENT_DELEGATION_MISSING',
+  'AGENT_DELEGATION_INVALID',
+  'AGENT_DELEGATION_EXPIRED',
+  'AGENT_DELEGATION_REVOKED',
+  'QUERY_TYPE_NOT_IN_SCOPE',
+  'CREDENTIAL_TYPE_NOT_IN_SCOPE',
   // L1 — credential layer
   'INVALID_ISSUER_SIGNATURE',
   'MISSING_WORKER_ATTESTATION',

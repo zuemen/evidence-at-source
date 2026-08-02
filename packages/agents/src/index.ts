@@ -9,6 +9,13 @@ export type {
 export { checkCredentialLayer } from './credentialLayer.js';
 export type { CredentialDecision, CredentialLayerInput } from './credentialLayer.js';
 
+export { checkAgentDelegation, runAuthorizedGate } from './delegationGate.js';
+export type {
+  AuthorizedGateResult,
+  DelegationContext,
+  DelegationDecision,
+} from './delegationGate.js';
+
 export {
   DEFAULT_K_ANONYMITY,
   DEFAULT_QUERY_BUDGET,

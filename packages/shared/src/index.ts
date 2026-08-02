@@ -16,6 +16,12 @@ export { REASON_CODES } from './reasonCodes.js';
 export type { ReasonCode } from './reasonCodes.js';
 
 export {
+  DEFAULT_DELEGATION_LIFETIME_SECONDS,
+  DELEGATION_VCT,
+} from './delegation.js';
+export type { AllowedQueryType, DelegationClaims } from './delegation.js';
+
+export {
   ATTESTATION_TYP,
   createWorkerAttestation,
   credentialHash,
