@@ -77,14 +77,27 @@ function toClaims(payload: Record<string, unknown>): DelegationClaims {
   };
 }
 
-export async function checkAgentDelegation(ctx: DelegationContext): Promise<DelegationDecision> {
-  if (ctx.signedDelegation === null) {
+export interface DelegationValidityInput {
+  readonly signedDelegation: string | null;
+  readonly knownInstitutions: Readonly<Record<string, PublicJwk>>;
+  readonly revocations?: RevocationRegistry;
+}
+
+/**
+ * The query-independent half of L0: is the delegation present, validly signed by
+ * a known institution, current, and not revoked. The worker's wallet uses this
+ * on its own to decide whether to trust an agent at all, before any query.
+ */
+export async function verifyDelegationValidity(
+  input: DelegationValidityInput,
+): Promise<DelegationDecision> {
+  if (input.signedDelegation === null) {
     return { ok: false, reason: 'AGENT_DELEGATION_MISSING' };
   }
 
-  const unverified = readUnverified(ctx.signedDelegation);
+  const unverified = readUnverified(input.signedDelegation);
   const principalKey =
-    unverified.principal === undefined ? undefined : ctx.knownInstitutions[unverified.principal];
+    unverified.principal === undefined ? undefined : input.knownInstitutions[unverified.principal];
 
   // An unknown principal cannot be trusted, and there is no key to verify against.
   if (principalKey === undefined) {
@@ -93,7 +106,7 @@ export async function checkAgentDelegation(ctx: DelegationContext): Promise<Dele
 
   let claims: DelegationClaims;
   try {
-    const verified = await verifyPresentation(ctx.signedDelegation, principalKey);
+    const verified = await verifyPresentation(input.signedDelegation, principalKey);
     claims = toClaims(verified.payload);
   } catch {
     // Verification fails on both a bad signature and an expired credential; the
@@ -109,13 +122,24 @@ export async function checkAgentDelegation(ctx: DelegationContext): Promise<Dele
     return { ok: false, reason: 'AGENT_DELEGATION_EXPIRED' };
   }
 
-  const revoked = ctx.revocations?.isRevoked({
-    credentialHash: credentialHash(ctx.signedDelegation),
+  const revoked = input.revocations?.isRevoked({
+    credentialHash: credentialHash(input.signedDelegation),
     workerDID: claims.agentDid,
   });
   if (revoked === true) {
     return { ok: false, reason: 'AGENT_DELEGATION_REVOKED' };
   }
+
+  return { ok: true, claims };
+}
+
+export async function checkAgentDelegation(ctx: DelegationContext): Promise<DelegationDecision> {
+  const validity = await verifyDelegationValidity(ctx);
+  if (!validity.ok) {
+    return validity;
+  }
+
+  const { claims } = validity;
 
   if (!claims.allowedQueryTypes.includes(ctx.requestedQueryType)) {
     return { ok: false, reason: 'QUERY_TYPE_NOT_IN_SCOPE' };

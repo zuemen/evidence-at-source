@@ -9,11 +9,16 @@ export type {
 export { checkCredentialLayer } from './credentialLayer.js';
 export type { CredentialDecision, CredentialLayerInput } from './credentialLayer.js';
 
-export { checkAgentDelegation, runAuthorizedGate } from './delegationGate.js';
+export {
+  checkAgentDelegation,
+  runAuthorizedGate,
+  verifyDelegationValidity,
+} from './delegationGate.js';
 export type {
   AuthorizedGateResult,
   DelegationContext,
   DelegationDecision,
+  DelegationValidityInput,
 } from './delegationGate.js';
 
 export {
