@@ -26,10 +26,16 @@ export type {
   BrandAgent,
   BrandAnswer,
   CohortEvidence,
+  CommitmentCoverageAnswer,
+  OmissionCohort,
+  OmissionCountAnswer,
   PayrollConsistencyAnswer,
   PayrollRateAnswer,
   ReconciliationCohort,
 } from './brandAgent.js';
+
+export { buildOmissionCohort } from './omission.js';
+export type { HeldRecord, OmissionCohortRequest } from './omission.js';
 
 export { buildCohortEvidence } from './cohort.js';
 export type { CohortRequest, CohortResult, Submission } from './cohort.js';

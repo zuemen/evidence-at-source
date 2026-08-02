@@ -20,6 +20,7 @@
       "@eas/issuer": ["packages/issuer/src/index.ts"],
       "@eas/agents": ["packages/agents/src/index.ts"],
       "@eas/reconciliation": ["packages/reconciliation/src/index.ts"],
+      "@eas/integrity": ["packages/integrity/src/index.ts"],
       "@eas/web": ["packages/web/src/demo/world.ts"]
     }
   },

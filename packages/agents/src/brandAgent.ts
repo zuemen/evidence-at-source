@@ -37,6 +37,26 @@ export type PayrollConsistencyAnswer =
   | { readonly ok: true; readonly cohort: string; readonly window: string; readonly cohortSize: number; readonly consistent: boolean }
   | { readonly ok: false; readonly reason: ReasonCode };
 
+/**
+ * Per-worker omission verdicts for a cohort and period: true = the worker holds
+ * a genuine record the factory left out of its published commitment. A bare list
+ * of flags with no identifiers — the agent can count omissions but cannot name
+ * whose record went missing.
+ */
+export interface OmissionCohort {
+  readonly cohort: string;
+  readonly window: string;
+  readonly signals: readonly boolean[];
+}
+
+export type OmissionCountAnswer =
+  | { readonly ok: true; readonly cohort: string; readonly window: string; readonly count: number }
+  | { readonly ok: false; readonly reason: ReasonCode };
+
+export type CommitmentCoverageAnswer =
+  | { readonly ok: true; readonly cohort: string; readonly window: string; readonly coverage: number }
+  | { readonly ok: false; readonly reason: ReasonCode };
+
 export type BrandAnswer =
   | {
       readonly ok: true;
@@ -52,6 +72,8 @@ export interface BrandAgent {
   answer(query: Query): BrandAnswer;
   getDiscrepancyRate(cohort: string, window: string): PayrollRateAnswer;
   checkPayrollConsistency(cohort: string, window: string): PayrollConsistencyAnswer;
+  getOmissionSignalCount(cohort: string, window: string): OmissionCountAnswer;
+  getCommitmentCoverage(cohort: string, window: string): CommitmentCoverageAnswer;
 }
 
 /** Discrepancy = a verdict that is neither consistent nor unassessable. */
@@ -62,7 +84,12 @@ function isDiscrepancy(code: ReconciliationCode): boolean {
 export function createBrandAgent(
   evidence: readonly CohortEvidence[],
   reconciliations: readonly ReconciliationCohort[] = [],
+  omissions: readonly OmissionCohort[] = [],
 ): BrandAgent {
+  function findOmissionCohort(cohort: string, window: string): OmissionCohort | undefined {
+    return omissions.find((o) => o.cohort === cohort && o.window === window);
+  }
+
   function gateReconciliation(
     cohort: string,
     window: string,
@@ -116,6 +143,27 @@ export function createBrandAgent(
         cohortSize: gated.record.outcomes.length,
         consistent: !gated.record.outcomes.some(isDiscrepancy),
       };
+    },
+
+    getOmissionSignalCount(cohort, window) {
+      const record = findOmissionCohort(cohort, window);
+      if (!record) {
+        return { ok: false, reason: 'CLAIM_NOT_DISCLOSED' };
+      }
+
+      // Only the count travels back — never which positions were omitted.
+      return { ok: true, cohort, window, count: record.signals.filter(Boolean).length };
+    },
+
+    getCommitmentCoverage(cohort, window) {
+      const record = findOmissionCohort(cohort, window);
+      if (!record || record.signals.length === 0) {
+        return { ok: false, reason: 'CLAIM_NOT_DISCLOSED' };
+      }
+
+      const covered = record.signals.filter((omitted) => !omitted).length;
+
+      return { ok: true, cohort, window, coverage: covered / record.signals.length };
     },
 
     answer(query) {
