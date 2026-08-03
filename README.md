@@ -140,6 +140,18 @@ flowchart TD
 
 一個靠簽章運作的系統，只有在**每一方各自都有理由簽**的時候才會被採用。拱心石是：每一方之所以願意簽，是因為對方的簽章保護了自己——簽發方免於事後被單方指控，勞工換到一份自持、可攜、可選擇性揭露的通行證。勞工反簽時可附一個**自述的 `purpose`**（例「為在台開戶查驗而反簽」），由勞工本人簽發、不參與配對計算，讓「下限由勞工給」成為一個明示的動作而非預設同意。各方誘因、失衡點與對應機制的完整論述見 [`docs/incentive-chain.md`](docs/incentive-chain.md)。
 
+### 6. 三條撤銷路徑
+
+撤銷不是單一動作——它來自三個不同的觸發者，在兩個不同的閘門層生效。`createRevocationDirectory` 把三條路徑正名，並用兩個獨立的撤銷登記把它們隔開，因此撤銷 Agent 永遠不會動到勞工憑證，反之亦然。
+
+| 路徑 | 觸發者 | 情境 | 生效層 | 原因碼 |
+|---|---|---|---|---|
+| A 簽發方撤銷 | 簽發方 | 誤發的單張憑證 | L1 | `CREDENTIAL_REVOKED` |
+| B 主體連動撤銷 | 勞工／系統 | 離境、許可終止、裝置遺失——該勞工全部憑證同時失效 | L1（cascade） | `CREDENTIAL_REVOKED` |
+| C 機構撤銷 Agent | 委託機構 | 收回某 Agent 的授權 | L0 | `AGENT_DELEGATION_REVOKED` |
+
+三條路徑各有整合測試佐證其獨立性，見 [`packages/agents/test/revocationPaths.test.ts`](packages/agents/test/revocationPaths.test.ts)。
+
 ## 執行 PoC
 
 ```bash
@@ -174,7 +186,7 @@ npm run dev --workspace @eas/web    # http://localhost:5173
 
 ```bash
 npm install      # 於 repo 根目錄，安裝 workspace 依賴
-npm test         # vitest，目前 100 個測試全綠
+npm test         # vitest，目前 106 個測試全綠
 npm run typecheck
 ```
 
@@ -222,6 +234,8 @@ Agent A 的能力邊界也寫在型別裡：`BankAssessment.requiresHumanReview`
 | M7 reconciliation | 工時×薪資交叉驗證（v2 進攻型機制） | ✅ 後端＋T10；Agent B 對帳查詢 k-匿名 |
 | integrity | Merkle 承諾＋inclusion proof＋省略偵測（防「不記錄」） | ✅ 後端＋T11；Agent B 省略/涵蓋率查詢 |
 | 證據完整性指數（P6） | 涵蓋率×一致率×雙簽比率 → 單一 0–100 分＋等級 | ✅ 後端＋純函式測試；demo UI 待接 |
+| 誘因鏈（P1） | 各方誘因論述＋勞工自述 attestation `purpose` 欄位 | ✅ docs＋一個欄位 |
+| 三條撤銷路徑（P3） | 簽發方／主體連動／機構撤銷 Agent，兩層隔離 | ✅ facade＋整合測試 |
 | 攻擊演示 | T8 prompt injection 無效、T9 差分攻擊偵測 | ✅ 後端；demo 畫面待接 |
 
 ## 技術棧

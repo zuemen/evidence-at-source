@@ -12,6 +12,9 @@ export type { CredentialPayload, PrivateJwk, PublicJwk, VerifiedCredential } fro
 export { createRevocationRegistry } from './revocation.js';
 export type { RevocationQuery, RevocationRegistry } from './revocation.js';
 
+export { createRevocationDirectory } from './revocationPaths.js';
+export type { RevocationDirectory, RevocationPath } from './revocationPaths.js';
+
 export { REASON_CODES } from './reasonCodes.js';
 export type { ReasonCode } from './reasonCodes.js';
 
