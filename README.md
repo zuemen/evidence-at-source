@@ -186,13 +186,15 @@ npm run dev --workspace @eas/web    # http://localhost:5173
 - **T9 差分攻擊被擋**：三個查詢逐列顯示，#1043／#1044 回答、#1045 拒絕，並印出 `DENIED — DIFFERENCING_ATTACK_DETECTED`＋母體差＋審計序號。
 - **證據完整性指數**：一個大大的 A/B/C/D 等級 + 0–100 分，加上涵蓋率／一致率兩條組成長條。
 
+**▶ 導演模式** — masthead 的「▶ 導演」按鈕啟動一條有序、附旁白的導覽：七幕依序走過四項事實待反簽 → 證據前置反簽 → 錢包驗授權 → SplitDemo → L0 撤銷 Agent → 離境連動撤銷 → 攻防三面板。每幕自足（先 reset 再套用自己的動作，彼此不堆疊），可用點點跳幕或上一幕／下一幕，畫面每次一致——適合錄影配音。幕腳本見 [`packages/web/src/demo/directorScript.ts`](packages/web/src/demo/directorScript.ts)。
+
 > **關於 demo 的一項誠實說明**：簽章與驗證使用 `@sd-jwt/crypto-nodejs`，是 Node 專用的，因此在這個 demo 裡它們跑在 Vite dev server 的 Node 行程中，瀏覽器只是視圖層。真實的錢包必須把私鑰留在勞工裝置上並在該處簽章（改用 `@sd-jwt/crypto-browser`）——「私鑰不離開裝置」是這個系統的前提，demo 的這個簡化不該被誤讀成架構主張。
 
 ## 執行測試
 
 ```bash
 npm install      # 於 repo 根目錄，安裝 workspace 依賴
-npm test         # vitest，目前 106 個測試全綠
+npm test         # vitest，目前 114 個測試全綠
 npm run typecheck
 ```
 

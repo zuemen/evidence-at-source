@@ -340,6 +340,89 @@ button.act:disabled {
   padding: 4rem 0;
 }
 
+/* ── director bar ─────────────────────────────────────── */
+
+.director-bar {
+  border: 1px solid var(--jade);
+  background: linear-gradient(var(--paper-raised), var(--paper));
+  padding: 1.1rem 1.3rem;
+  margin-bottom: 2rem;
+  position: relative;
+  animation: rise 0.4s cubic-bezier(0.2, 0.7, 0.3, 1) backwards;
+}
+
+.director-bar::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  background: var(--jade);
+}
+
+.director-meta {
+  display: flex;
+  align-items: baseline;
+  gap: 0.9rem;
+  flex-wrap: wrap;
+}
+
+.director-step {
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--jade);
+}
+
+.director-title {
+  font-size: 1.15rem;
+  font-weight: 600;
+}
+
+.director-narration {
+  margin: 0.6rem 0 1rem;
+  color: var(--text-dim);
+  line-height: 1.7;
+  font-size: 0.92rem;
+  max-width: 74ch;
+}
+
+.director-controls {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.director-dots {
+  display: flex;
+  gap: 0.5rem;
+  flex: 1;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.director-dot {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  border: 1px solid var(--line-bright);
+  background: transparent;
+  cursor: pointer;
+  padding: 0;
+  transition: background 0.18s, border-color 0.18s, transform 0.18s;
+}
+
+.director-dot:hover:not(:disabled) {
+  border-color: var(--jade);
+}
+
+.director-dot[data-active='true'] {
+  background: var(--jade);
+  border-color: var(--jade);
+  transform: scale(1.2);
+}
+
 @media (max-width: 820px) {
   .split { grid-template-columns: 1fr; }
   .split-divider { width: auto; height: 1px; }
