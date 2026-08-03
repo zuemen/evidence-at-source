@@ -10,6 +10,8 @@ interface DemoWorldLike {
   attest(type: string): Promise<void>;
   attestAll(): Promise<void>;
   revokeSubject(): void;
+  revokeAgentDelegation(role: 'bank' | 'brand'): void;
+  delegationState(): Promise<unknown>;
   split(): Promise<unknown>;
 }
 
@@ -50,6 +52,9 @@ function demoApi(): Plugin {
                 await instance.attestAll();
               } else if (route === '/revoke') {
                 instance.revokeSubject();
+              } else if (route === '/revoke-agent') {
+                const body = await readJson(req);
+                instance.revokeAgentDelegation(body['role'] === 'brand' ? 'brand' : 'bank');
               } else if (route !== '/state' && route !== '/reset') {
                 next();
                 return;
@@ -58,6 +63,7 @@ function demoApi(): Plugin {
               const payload = {
                 snapshot: instance.snapshot(),
                 split: await instance.split(),
+                delegation: await instance.delegationState(),
               };
 
               res.setHeader('content-type', 'application/json; charset=utf-8');

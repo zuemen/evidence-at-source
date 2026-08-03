@@ -40,7 +40,7 @@ describe('demo world', () => {
     expect(split.bank.refusedWith).toBeNull();
     expect(split.bank.assessment?.recommendation).toBe('APPROVE_PENDING_HUMAN_REVIEW');
     expect(split.bank.assessment?.requiresHumanReview).toBe(true);
-    expect(split.brand.answer.ok).toBe(true);
+    expect(split.brand.answer?.ok).toBe(true);
   });
 
   test('neither side ever receives a raw value', async () => {
@@ -76,6 +76,35 @@ describe('demo world', () => {
     const split = await world.split();
 
     // The other workers' evidence is untouched, so the brand still gets an answer.
-    expect(split.brand.answer.ok).toBe(true);
+    expect(split.brand.answer?.ok).toBe(true);
+  });
+
+  test('revoking the bank agent delegation fails its side at L0 and reads no worker data', async () => {
+    const world = await createDemoWorld();
+    await world.attestAll();
+
+    world.revokeAgentDelegation('bank');
+    const split = await world.split();
+
+    expect(split.bank.refusedWith).toBe('AGENT_DELEGATION_REVOKED');
+    // L0 refused before any credential was read.
+    expect(Object.keys(split.bank.disclosed)).toHaveLength(0);
+    expect(split.bank.assessment).toBeNull();
+    // The brand agent is unaffected by the bank agent's revocation.
+    expect(split.brand.answer?.ok).toBe(true);
+  });
+
+  test('delegationState reflects revocation and flips the wallet review to refused', async () => {
+    const world = await createDemoWorld();
+
+    const before = await world.delegationState();
+    expect(before.agents.find((a) => a.role === 'bank')?.status).toBe('valid');
+    expect(before.walletReview.status).toBe('authorized');
+
+    world.revokeAgentDelegation('bank');
+    const after = await world.delegationState();
+
+    expect(after.agents.find((a) => a.role === 'bank')?.status).toBe('revoked');
+    expect(after.walletReview.status).toBe('refused');
   });
 });

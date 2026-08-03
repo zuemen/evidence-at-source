@@ -1,8 +1,9 @@
-import type { DemoSnapshot, SplitView } from './demo/world.js';
+import type { AgentRole, DelegationState, DemoSnapshot, SplitView } from './demo/world.js';
 
 export interface DemoPayload {
   readonly snapshot: DemoSnapshot;
   readonly split: SplitView;
+  readonly delegation: DelegationState;
 }
 
 async function call(path: string, body?: unknown): Promise<DemoPayload> {
@@ -24,5 +25,6 @@ export const api = {
   attest: (type: string) => call('/attest', { type }),
   attestAll: () => call('/attest-all', {}),
   revoke: () => call('/revoke', {}),
+  revokeAgent: (role: AgentRole) => call('/revoke-agent', { role }),
   reset: () => call('/reset', {}),
 };

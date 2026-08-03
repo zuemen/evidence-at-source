@@ -41,11 +41,19 @@ flowchart TD
         I3["工廠打卡系統<br/>工時・證件保管"]
     end
 
-    W["<b>Worker Wallet 勞工錢包</b><br/>生物辨識綁定<br/>私鑰不離開裝置"]
+    subgraph PRIN["Principal 委託機構"]
+        P1["國泰世華銀行<br/>did:web:bank.example"]
+        P2["國際成衣品牌<br/>did:web:brand.example"]
+    end
+
+    W["<b>Worker Wallet 勞工錢包</b><br/>生物辨識綁定<br/>私鑰不離開裝置<br/>出示前先驗 Agent 授權"]
     ATT["勞工反簽 Attestation<br/>subjectCredentialHash → 憑證雜湊"]
     PAIR["雙簽憑證組<br/>Issuer VC ＋ Worker Attestation"]
+    DA["Agent A 授權<br/>DelegationCredential<br/>allowedQueryTypes・scope・24h・可撤銷"]
+    DB["Agent B 授權<br/>DelegationCredential"]
 
-    subgraph GATE["Policy Gate 兩層閘門"]
+    subgraph GATE["Policy Gate 三層閘門（L0 → L1 → L2）"]
+        G0["<b>L0 授權層</b><br/>驗 Agent 授權<br/>缺／無效／過期／撤銷／越範圍"]
         G1["<b>L1 憑證層</b><br/>簽章・撤銷・有效期<br/>雙簽配對比對"]
         G2["<b>L2 提問層</b><br/>只放行布林／匯總<br/>攔截個體查詢"]
     end
@@ -57,9 +65,16 @@ flowchart TD
     I1 -->|簽發 SD-JWT VC| W
     I2 -->|簽發 SD-JWT VC| W
     I3 -->|簽發 SD-JWT VC| W
+    P1 -->|簽發 DelegationCredential| DA
+    P2 -->|簽發 DelegationCredential| DB
+    DA -.->|錢包先驗授權範圍| W
     W --> ATT
     ATT --> PAIR
-    PAIR -->|選擇性揭露出示| G1
+    DA -->|出示授權| G0
+    DB -->|出示授權| G0
+    PAIR -->|選擇性揭露出示| G0
+    G0 -->|授權通過| G1
+    G0 -.->|AGENT_DELEGATION_MISSING／EXPIRED／REVOKED<br/>QUERY_TYPE_NOT_IN_SCOPE …| X1
     G1 -->|通過| G2
     G1 -.->|ATTESTATION_HASH_MISMATCH<br/>CREDENTIAL_REVOKED …| X1
     G2 --> A
@@ -67,7 +82,7 @@ flowchart TD
     G2 -.->|INDIVIDUAL_QUERY_REJECTED<br/>AGGREGATE_BELOW_K_ANONYMITY| X1
 ```
 
-資料流一句話：**簽發方簽 → 勞工反簽並自持 → 選擇性揭露 → 兩層閘門 → Agent 只拿到結論。**
+資料流一句話：**機構授權 Agent → 錢包驗授權 → 簽發方簽 → 勞工反簽並自持 → 選擇性揭露 → L0 驗授權／L1 驗憑證／L2 驗提問 → Agent 只拿到結論。**
 
 ## 四張憑證
 
@@ -104,6 +119,21 @@ flowchart TD
 
 同理，Agent A 代表銀行，但**它沒有核准、拒絕、凍結帳戶或轉帳的能力**——這些函式在程式碼中根本不存在，不是寫出來再用條件擋掉。詳見 [`CLAUDE.md`](CLAUDE.md) 原則一。
 
+### 4. 雙重授權：上限由機構給，下限由勞工給
+
+前三個機制回答「Agent 不能做壞事」。這一個回答另一個問題：**Agent 憑什麼可以做它正在做的事？**
+
+每個查驗 Agent 自己也持有一張機構簽發的 `DelegationCredential`（銀行授權 Agent A、品牌授權 Agent B），短效 24 小時、可撤銷，裡面寫明它被授權的查詢型別（`allowedQueryTypes`，型別上就只能是 `'boolean' | 'aggregate'`，個體查詢在編譯期就無法被寫進去）、可查的憑證類型（`scope`）與授權目的。
+
+這份授權在**兩個地方**被驗證，缺一不可：
+
+- **驗證方側（Policy Gate L0）**：機構內部的授權治理。閘門先驗 Agent 的授權，才驗勞工的憑證。
+- **被觀察方側（勞工錢包）**：勞工的自我保護。錢包獨立驗證 Agent 的授權，把授權範圍攤開給勞工看，勞工看完才決定要不要出示；授權無效、過期或已撤銷時，錢包直接不提供出示按鈕。
+
+只做前者是「自己驗自己」。加上後者，「**授權上限由機構給**（Agent 只能做授權允許的事）、**下限由勞工給**（勞工看到範圍後才決定出示）」這句話才第一次在程式與畫面上都成立——這正是本專案的核心主張：當 Agent 代表甲方觀察乙方，乙方要有保護自己的能力。
+
+**為什麼閘門順序是 L0 → L1 → L2**：先確認「查的人有沒有資格」，再檢查「被查的資料是否成立」，最後才看「這個問題能不能問」。順序不可顛倒——若先驗憑證再驗授權，未授權的 Agent 會在被拒絕之前就已經讀到了勞工資料。`runAuthorizedGate` 以結構保證這一點：L0 失敗時，讀取勞工憑證的函式從未被呼叫，並由測試 D7 以 spy 驗證（不是只寫在註解裡）。
+
 ## 執行 PoC
 
 ```bash
@@ -124,12 +154,13 @@ npm run dev --workspace @eas/web    # http://localhost:5173
 
 兩個視圖：
 
-**勞工錢包（M4）** — 四張憑證初始全部標示「待勞工反簽」。這是刻意的：雇主單方簽發的憑證在這裡不成立，未反簽就出示會被閘門以 `MISSING_WORKER_ATTESTATION` 拒絕。斜線遮蔽塊代表的不是「被遮住的值」，而是該欄位在出示內容中**密碼學上不存在**。
+**勞工錢包（M4）** — 頂端先出現一張**授權檢視卡**：某某銀行的查驗 Agent 請求查看憑證，攤開授權方、目的、可查詢的型別、查驗範圍、到期時間與剩餘時間，勞工看完才按「允許本次出示／拒絕」。若 Agent 授權無效／過期／已撤銷，這張卡直接顯示拒絕理由、不提供出示按鈕。不在授權範圍內的憑證（例如銀行 Agent 的授權不含工時憑證）會被標示「不在此次授權範圍」並淡化。下方四張憑證初始全部標示「待勞工反簽」——雇主單方簽發的憑證在這裡不成立，未反簽就出示會被閘門以 `MISSING_WORKER_ATTESTATION` 拒絕。斜線遮蔽塊代表該欄位在出示內容中**密碼學上不存在**。
 
-**稽核台（M5）** — 左右並排同一位勞工的同一批憑證：
+**稽核台（M5）** — 左右並排同一位勞工的同一批憑證，每一側頂端顯示該 Agent 的 **L0 授權狀態**（有效／剩餘時間／已撤銷）與一個「模擬：機構撤銷此 Agent 授權」按鈕：
 
 - **SplitDemo**：左邊銀行的 Agent A 得到「建議核准」與三個布林結論，拿不到仲介費金額與薪資；右邊品牌的 Agent B 得到 83% 合規率與母體人數，拿不到任何一位勞工的工時，問「哪幾位勞工超時」則回 `INDIVIDUAL_QUERY_REJECTED`。
 - **RevokeDemo**：按「模擬離境：撤銷主體」後，銀行端立刻變成拒絕（`CREDENTIAL_REVOKED`，且 Agent 沒讀到任何欄位），品牌端母體從 6 降為 5、合規率變 80%，並標示有 1 份證據被閘門剔除——**其他勞工的證據不受影響**。這就是場景一「離境後帳戶仍可用」的收口。
+- **AuthRevokeDemo（L0）**：按某一側的「機構撤銷此 Agent 授權」後，該 Agent 的查詢立即在 **L0 就失效**（`AGENT_DELEGATION_REVOKED`），畫面顯示「一個勞工欄位都沒讀到」，另一側 Agent 不受影響。
 
 > **關於 demo 的一項誠實說明**：簽章與驗證使用 `@sd-jwt/crypto-nodejs`，是 Node 專用的，因此在這個 demo 裡它們跑在 Vite dev server 的 Node 行程中，瀏覽器只是視圖層。真實的錢包必須把私鑰留在勞工裝置上並在該處簽章（改用 `@sd-jwt/crypto-browser`）——「私鑰不離開裝置」是這個系統的前提，demo 的這個簡化不該被誤讀成架構主張。
 
@@ -137,7 +168,7 @@ npm run dev --workspace @eas/web    # http://localhost:5173
 
 ```bash
 npm install      # 於 repo 根目錄，安裝 workspace 依賴
-npm test         # vitest，目前 77 個測試全綠
+npm test         # vitest，目前 91 個測試全綠
 npm run typecheck
 ```
 
@@ -177,9 +208,10 @@ Agent A 的能力邊界也寫在型別裡：`BankAssessment.requiresHumanReview`
 |---|---|---|
 | M1 shared | 憑證 schema、原因碼、SD-JWT 封裝、雙簽配對 | ✅ |
 | M2 issuer | 依 schema 簽發、有效期、撤銷登記 | ✅ |
-| M3 agents | 兩個查驗 Agent、Policy Gate L1＋L2 | ✅ 兩層閘門已串接，端到端可跑 |
-| M4 wallet | 勞工錢包 UI（反簽、選擇性揭露呈現） | ✅ |
-| M5 console | 稽核台 SplitDemo／RevokeDemo | ✅ |
+| M3 agents | 兩個查驗 Agent、Policy Gate L0＋L1＋L2 | ✅ 三層閘門已串接，端到端可跑 |
+| L0 授權 | DelegationCredential、機構簽發/撤銷、L0 授權層、錢包驗授權 | ✅ 後端 D1–D7＋錢包 W1–W4＋兩個 demo 畫面 |
+| M4 wallet | 勞工錢包 UI（授權檢視、反簽、選擇性揭露呈現） | ✅ |
+| M5 console | 稽核台 SplitDemo／RevokeDemo／AuthRevokeDemo | ✅ |
 | M7 reconciliation | 工時×薪資交叉驗證（v2 進攻型機制） | ✅ 後端＋T10；Agent B 對帳查詢 k-匿名 |
 | integrity | Merkle 承諾＋inclusion proof＋省略偵測（防「不記錄」） | ✅ 後端＋T11；Agent B 省略/涵蓋率查詢 |
 | 攻擊演示 | T8 prompt injection 無效、T9 差分攻擊偵測 | ✅ 後端；demo 畫面待接 |

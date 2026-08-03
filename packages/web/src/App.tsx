@@ -51,6 +51,7 @@ export function App(): JSX.Element {
       ) : tab === 'wallet' ? (
         <WalletView
           snapshot={payload.snapshot}
+          walletReview={payload.delegation.walletReview}
           busy={busy}
           onAttest={(type) => void run(() => api.attest(type))}
           onAttestAll={() => void run(api.attestAll)}
@@ -60,8 +61,10 @@ export function App(): JSX.Element {
         <ConsoleView
           snapshot={payload.snapshot}
           split={payload.split}
+          agents={payload.delegation.agents}
           busy={busy}
           onRevoke={() => void run(api.revoke)}
+          onRevokeAgent={(role) => void run(() => api.revokeAgent(role))}
           onReset={() => void run(api.reset)}
         />
       )}
