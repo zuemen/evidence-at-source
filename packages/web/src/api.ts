@@ -1,9 +1,18 @@
-import type { AgentRole, DelegationState, DemoSnapshot, SplitView } from './demo/world.js';
+import type {
+  AgentRole,
+  AttackDemoState,
+  DelegationState,
+  DemoSnapshot,
+  IntegrityDemoState,
+  SplitView,
+} from './demo/world.js';
 
 export interface DemoPayload {
   readonly snapshot: DemoSnapshot;
   readonly split: SplitView;
   readonly delegation: DelegationState;
+  readonly attack: AttackDemoState;
+  readonly integrity: IntegrityDemoState;
 }
 
 async function call(path: string, body?: unknown): Promise<DemoPayload> {

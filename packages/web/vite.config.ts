@@ -13,6 +13,8 @@ interface DemoWorldLike {
   revokeAgentDelegation(role: 'bank' | 'brand'): void;
   delegationState(): Promise<unknown>;
   split(): Promise<unknown>;
+  attackDemo(): unknown;
+  integrityDemo(): unknown;
 }
 
 /**
@@ -64,6 +66,8 @@ function demoApi(): Plugin {
                 snapshot: instance.snapshot(),
                 split: await instance.split(),
                 delegation: await instance.delegationState(),
+                attack: instance.attackDemo(),
+                integrity: instance.integrityDemo(),
               };
 
               res.setHeader('content-type', 'application/json; charset=utf-8');

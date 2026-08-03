@@ -2,8 +2,9 @@ import { useCallback, useEffect, useState } from 'react';
 import { api, type DemoPayload } from './api.js';
 import { WalletView } from './views/WalletView.js';
 import { ConsoleView } from './views/ConsoleView.js';
+import { AttackIntegrityView } from './views/AttackIntegrityView.js';
 
-type Tab = 'wallet' | 'console';
+type Tab = 'wallet' | 'console' | 'attack';
 
 export function App(): JSX.Element {
   const [payload, setPayload] = useState<DemoPayload | null>(null);
@@ -43,6 +44,9 @@ export function App(): JSX.Element {
           <button data-active={tab === 'console'} onClick={() => setTab('console')}>
             稽核台
           </button>
+          <button data-active={tab === 'attack'} onClick={() => setTab('attack')}>
+            攻防與完整性
+          </button>
         </nav>
       </header>
 
@@ -57,7 +61,7 @@ export function App(): JSX.Element {
           onAttestAll={() => void run(api.attestAll)}
           onReset={() => void run(api.reset)}
         />
-      ) : (
+      ) : tab === 'console' ? (
         <ConsoleView
           snapshot={payload.snapshot}
           split={payload.split}
@@ -65,6 +69,13 @@ export function App(): JSX.Element {
           busy={busy}
           onRevoke={() => void run(api.revoke)}
           onRevokeAgent={(role) => void run(() => api.revokeAgent(role))}
+          onReset={() => void run(api.reset)}
+        />
+      ) : (
+        <AttackIntegrityView
+          attack={payload.attack}
+          integrity={payload.integrity}
+          busy={busy}
           onReset={() => void run(api.reset)}
         />
       )}
