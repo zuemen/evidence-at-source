@@ -10,6 +10,7 @@
 import type { ReasonCode } from '@eas/shared';
 import type { ReconciliationCode } from '@eas/reconciliation';
 import { checkQueryLayer, type AggregateMetric, type Query } from './policyGate.js';
+import { computeEvidenceIntegrityIndex, type IntegrityGrade } from './evidenceIntegrity.js';
 
 export interface CohortEvidence {
   readonly cohort: string;
@@ -57,6 +58,17 @@ export type CommitmentCoverageAnswer =
   | { readonly ok: true; readonly cohort: string; readonly window: string; readonly coverage: number }
   | { readonly ok: false; readonly reason: ReasonCode };
 
+export type EvidenceIntegrityAnswer =
+  | {
+      readonly ok: true;
+      readonly cohort: string;
+      readonly window: string;
+      readonly index: number;
+      readonly grade: IntegrityGrade;
+      readonly components: { readonly coverage?: number; readonly consistency?: number };
+    }
+  | { readonly ok: false; readonly reason: ReasonCode };
+
 export type BrandAnswer =
   | {
       readonly ok: true;
@@ -74,6 +86,7 @@ export interface BrandAgent {
   checkPayrollConsistency(cohort: string, window: string): PayrollConsistencyAnswer;
   getOmissionSignalCount(cohort: string, window: string): OmissionCountAnswer;
   getCommitmentCoverage(cohort: string, window: string): CommitmentCoverageAnswer;
+  getEvidenceIntegrityIndex(cohort: string, window: string): EvidenceIntegrityAnswer;
 }
 
 /** Discrepancy = a verdict that is neither consistent nor unassessable. */
@@ -164,6 +177,30 @@ export function createBrandAgent(
       const covered = record.signals.filter((omitted) => !omitted).length;
 
       return { ok: true, cohort, window, coverage: covered / record.signals.length };
+    },
+
+    getEvidenceIntegrityIndex(cohort, window) {
+      const omission = findOmissionCohort(cohort, window);
+      const reconciliation = reconciliations.find(
+        (r) => r.cohort === cohort && r.window === window,
+      );
+
+      const components: { coverage?: number; consistency?: number } = {};
+      if (omission && omission.signals.length > 0) {
+        const covered = omission.signals.filter((omitted) => !omitted).length;
+        components.coverage = covered / omission.signals.length;
+      }
+      if (reconciliation && reconciliation.outcomes.length > 0) {
+        const discrepancies = reconciliation.outcomes.filter(isDiscrepancy).length;
+        components.consistency = 1 - discrepancies / reconciliation.outcomes.length;
+      }
+
+      const { index, grade } = computeEvidenceIntegrityIndex(components);
+      if (index === null || grade === null) {
+        return { ok: false, reason: 'CLAIM_NOT_DISCLOSED' };
+      }
+
+      return { ok: true, cohort, window, index, grade, components };
     },
 
     answer(query) {

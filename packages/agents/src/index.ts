@@ -39,6 +39,7 @@ export type {
   BrandAnswer,
   CohortEvidence,
   CommitmentCoverageAnswer,
+  EvidenceIntegrityAnswer,
   OmissionCohort,
   OmissionCountAnswer,
   PayrollConsistencyAnswer,
@@ -48,6 +49,13 @@ export type {
 
 export { buildOmissionCohort } from './omission.js';
 export type { HeldRecord, OmissionCohortRequest } from './omission.js';
+
+export { computeEvidenceIntegrityIndex } from './evidenceIntegrity.js';
+export type {
+  EvidenceIntegrityResult,
+  IntegrityComponents,
+  IntegrityGrade,
+} from './evidenceIntegrity.js';
 
 export { buildCohortEvidence } from './cohort.js';
 export type { CohortRequest, CohortResult, Submission } from './cohort.js';
