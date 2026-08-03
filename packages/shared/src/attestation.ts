@@ -34,6 +34,13 @@ export interface AttestationInput {
   readonly workerDID: string;
   readonly credential: string;
   readonly deviceFingerprint: string;
+  /**
+   * The worker's own reason for counter-signing, e.g. "為在台開戶查驗而反簽".
+   * Optional and self-authored: it makes the worker's participation an explicit
+   * act rather than an assumed one — the "下限由勞工給" side of the incentive
+   * chain. It plays no part in pairing and carries no third party's claim.
+   */
+  readonly purpose?: string;
 }
 
 export type PairingResult = { readonly ok: true } | { readonly ok: false; readonly reason: ReasonCode };
@@ -49,6 +56,7 @@ export async function createWorkerAttestation(
     workerDID: input.workerDID,
     attestedAt: new Date().toISOString(),
     deviceFingerprint: input.deviceFingerprint,
+    ...(input.purpose === undefined ? {} : { purpose: input.purpose }),
   })
     .setProtectedHeader({ alg: 'ES256', typ: ATTESTATION_TYP })
     .setIssuer(input.workerDID)

@@ -142,6 +142,7 @@
 | `workerDID` | string | 勞工 DID（與 `iss` 相同，冗餘保留供比對） |
 | `attestedAt` | string | 反簽時間（ISO 8601） |
 | `deviceFingerprint` | string | 裝置指紋雜湊，用於偵測異常簽署裝置 |
+| `purpose` | string（選填） | 勞工自述反簽理由，例「為在台開戶查驗而反簽」。由勞工本人簽發、不參與配對計算，見 [`incentive-chain.md`](incentive-chain.md) |
 
 Header：`{ alg: 'ES256', typ: 'worker-attestation+jwt' }`
 
