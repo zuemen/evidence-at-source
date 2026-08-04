@@ -35,6 +35,14 @@
 
 ## 系統架構
 
+### 機構信任層：vLEI
+
+機構（銀行、品牌、工廠、仲介）的身分不靠設定檔裡的公鑰名單，而是 GLEIF vLEI
+憑證鏈：GLEIF Root → QVI → Legal Entity vLEI → ECR（Agent 授權角色）。Agent 出示
+DelegationCredential 之外還必須出示 ECR 鏈；機構簽發勞工憑證的公鑰也只能從已驗證
+的 Legal Entity vLEI 取得。任何上游憑證被撤銷，下游全部立即失效。完整規格與
+明文簡化清單見 [`docs/vlei.md`](docs/vlei.md)。
+
 ```mermaid
 flowchart TD
     subgraph ISS["Issuer 簽發方"]
@@ -284,8 +292,9 @@ Agent A 的能力邊界也寫在型別裡：`BankAssessment.requiresHumanReview`
 |---|---|
 | 語言／執行環境 | TypeScript、Node 22 |
 | 前端 | React 18 + Vite |
-| 憑證格式 | SD-JWT VC（`@sd-jwt/sd-jwt-vc`） |
-| 簽章演算法 | ES256（P-256 ECDSA） |
+| 憑證格式 | SD-JWT VC（`@sd-jwt/sd-jwt-vc`）＋ ACDC（vLEI 機構信任層，repo 內實作） |
+| 簽章演算法 | ES256（P-256 ECDSA）＋ Ed25519（KERI AID，`@noble/curves`） |
+| 機構身分 | GLEIF vLEI：KERI KEL（pre-rotation）、TEL 撤銷、SAID（Blake3-256）、ISO 17442 LEI |
 | JWT | `jose` |
 
 ## 文件
@@ -294,6 +303,7 @@ Agent A 的能力邊界也寫在型別裡：`BankAssessment.requiresHumanReview`
 |---|---|
 | [`CLAUDE.md`](CLAUDE.md) | 施工守則：三條不可違反原則 |
 | [`docs/credentials.md`](docs/credentials.md) | 四張憑證的完整欄位表 |
+| [`docs/vlei.md`](docs/vlei.md) | vLEI 機構信任層：信任鏈、schema profiles、明文簡化 |
 | `docs/BUILD-SPEC-開發規格書.md` | 模組拆解與測試情境（尚未入庫） |
 | `docs/ADR-001-系統架構與技術選型.md` | 架構決策紀錄（尚未入庫） |
 | `docs/技術設計與論點防禦手冊.md` | 對評審提問的技術防禦（尚未入庫） |
