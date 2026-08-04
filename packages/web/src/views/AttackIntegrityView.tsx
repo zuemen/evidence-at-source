@@ -37,6 +37,13 @@ export function AttackIntegrityView({ attack, integrity, busy, onReset }: Props)
   return (
     <section>
       <h2 className="sr-only">攻防與完整性</h2>
+
+      <p className="view-intro">
+        這一頁我們<strong>攻擊自己的系統</strong>，並展示為什麼擋得下來：
+        往憑證裡塞惡意指令沒有用（判斷路徑上沒有 AI 可以被騙）、
+        想用兩次查詢相減推算個人會被拒絕、證據的完整程度會被打成一個分數。
+      </p>
+
       <div className="toolbar">
         <span className="badge" data-tone="ok">
           我們 demo 自己被攻擊，並擋下來

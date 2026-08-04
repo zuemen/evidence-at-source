@@ -166,6 +166,14 @@ export function WalletView({
   return (
     <section>
       <h2 className="sr-only">勞工錢包</h2>
+
+      <p className="view-intro">
+        你現在是<strong>勞工</strong>。這一頁是你手機裡的憑證錢包：關於你的每一件事實
+        （仲介費、證件、契約、工時），雇主簽發後還要由你按「<strong>反簽</strong>」
+        共同封存才算數——之後誰都改不了。最上面那張卡是查驗方 Agent 的請求，
+        看清楚它能查什麼之後，再決定要不要出示。
+      </p>
+
       <DelegationCard review={walletReview} />
 
       <div className="toolbar">

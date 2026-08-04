@@ -110,6 +110,12 @@ export function ConsoleView({
 
   return (
     <section>
+      <p className="view-intro">
+        你現在是<strong>查驗方</strong>。左邊是銀行的 AI Agent、右邊是品牌的 AI
+        Agent——對同一批憑證，它們只拿得到「是／否」和比率，
+        <strong>拿不到任何原始數字</strong>。可以按紅色的「模擬」按鈕看撤銷當下會發生什麼。
+      </p>
+
       <TrustChainPanel
         vlei={vlei}
         busy={busy}

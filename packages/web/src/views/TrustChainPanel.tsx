@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import type { AgentRole, VleiState } from '../demo/world.js';
 
 interface Props {
@@ -6,41 +7,6 @@ interface Props {
   readonly onRevokeQvi: () => void;
   /** Resolves the agent's portable presentation bundle (JSON string). */
   readonly onExportBundle: (role: AgentRole) => Promise<string>;
-}
-
-function DownloadIcon(): JSX.Element {
-  return (
-    <svg
-      width="13"
-      height="13"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-      style={{ verticalAlign: '-0.15em', marginRight: '0.4em' }}
-    >
-      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-      <path d="m7 10 5 5 5-5" />
-      <path d="M12 15V3" />
-    </svg>
-  );
-}
-
-async function downloadBundle(
-  role: AgentRole,
-  onExportBundle: (role: AgentRole) => Promise<string>,
-): Promise<void> {
-  const wire = await onExportBundle(role);
-  const blob = new Blob([wire], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const anchor = document.createElement('a');
-  anchor.href = url;
-  anchor.download = `vlei-presentation-${role}.json`;
-  anchor.click();
-  URL.revokeObjectURL(url);
 }
 
 const TIER_LABELS: Record<string, string> = {
@@ -97,84 +63,147 @@ function ShieldIcon({ broken }: { broken: boolean }): JSX.Element {
   );
 }
 
+function DownloadIcon(): JSX.Element {
+  return (
+    <svg
+      width="13"
+      height="13"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      style={{ verticalAlign: '-0.15em', marginRight: '0.4em' }}
+    >
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+      <path d="m7 10 5 5 5-5" />
+      <path d="M12 15V3" />
+    </svg>
+  );
+}
+
+async function downloadBundle(
+  role: AgentRole,
+  onExportBundle: (role: AgentRole) => Promise<string>,
+): Promise<void> {
+  const wire = await onExportBundle(role);
+  const blob = new Blob([wire], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = `vlei-presentation-${role}.json`;
+  anchor.click();
+  URL.revokeObjectURL(url);
+}
+
 export function TrustChainPanel({ vlei, busy, onRevokeQvi, onExportBundle }: Props): JSX.Element {
   const intact = vlei.chains.every((chain) => chain.verified);
+  const [expanded, setExpanded] = useState(false);
+  // A broken chain is the story — it always shows itself.
+  const open = expanded || !intact;
 
   return (
     <section className="chain-panel" data-broken={!intact}>
       <div className="chain-head">
-        <div>
+        <div style={{ flex: '1 1 20rem' }}>
           <h2>機構信任鏈</h2>
-          <p className="who">vLEI · GLEIF → QVI → Legal Entity → ECR</p>
+          <p className="chain-summary">
+            {intact
+              ? '所有機構與查驗 Agent 的身分，都已經由 GLEIF vLEI 憑證鏈自動驗證——靠的是可驗證的憑證，不是任何人手上的名單。'
+              : '信任鏈已斷裂：QVI 資格被 GLEIF 撤銷，其下所有機構與 Agent 的身分立即失效——不需要任何人去更新任何名單。'}
+          </p>
         </div>
         <span className="badge" data-tone={intact ? 'ok' : 'bad'}>
-          <ShieldIcon broken={!intact} /> {intact ? '信任鏈完好' : 'QVI 已被 GLEIF 撤銷'}
+          <ShieldIcon broken={!intact} /> {intact ? '驗證通過' : '信任鏈斷裂'}
         </span>
-        <span style={{ flex: 1 }} />
-        <button
-          className="act"
-          data-danger="true"
-          onClick={onRevokeQvi}
-          disabled={busy || vlei.qviRevoked}
-        >
-          模擬：GLEIF 撤銷 QVI 資格
-        </button>
+        {intact && (
+          <button
+            className="act"
+            aria-expanded={open}
+            onClick={() => setExpanded((value) => !value)}
+          >
+            {open ? '收合細節' : '展開細節'}
+          </button>
+        )}
       </div>
 
-      {vlei.chains.map((chain) => (
-        <div className="chain-row" key={chain.role} role="group" aria-label={`${chain.role} 信任鏈`}>
-          {chain.nodes.map((node, index) => (
-            <div style={{ display: 'contents' }} key={node.tier}>
-              {index > 0 && (
-                <span className="chain-link" data-ok={chain.verified} aria-hidden="true">
-                  <ChevronRight />
-                </span>
-              )}
-              <div className="chain-node" data-ok={chain.verified}>
-                <span className="tier">{TIER_LABELS[node.tier]}</span>
-                <span className="title">{node.title}</span>
-                <span className="sub">{node.subtitle}</span>
-              </div>
+      {open && (
+        <>
+          <div className="chain-actions">
+            <span className="who" style={{ margin: 0 }}>
+              vLEI · GLEIF → QVI → Legal Entity → ECR
+            </span>
+            <span style={{ flex: 1 }} />
+            <button
+              className="act"
+              data-danger="true"
+              onClick={onRevokeQvi}
+              disabled={busy || vlei.qviRevoked}
+            >
+              模擬：GLEIF 撤銷 QVI 資格
+            </button>
+          </div>
+
+          {vlei.chains.map((chain) => (
+            <div
+              className="chain-row"
+              key={chain.role}
+              role="group"
+              aria-label={`${chain.role} 信任鏈`}
+            >
+              {chain.nodes.map((node, index) => (
+                <div style={{ display: 'contents' }} key={node.tier}>
+                  {index > 0 && (
+                    <span className="chain-link" data-ok={chain.verified} aria-hidden="true">
+                      <ChevronRight />
+                    </span>
+                  )}
+                  <div className="chain-node" data-ok={chain.verified}>
+                    <span className="tier">{TIER_LABELS[node.tier]}</span>
+                    <span className="title">{node.title}</span>
+                    <span className="sub">{node.subtitle}</span>
+                  </div>
+                </div>
+              ))}
+              <span className="badge chain-verdict" data-tone={chain.verified ? 'ok' : 'bad'}>
+                {chain.verified
+                  ? '鏈驗證通過'
+                  : `${FAILURE_LABELS[chain.failure ?? ''] ?? '鏈驗證失敗'} · ${chain.failure}`}
+              </span>
+              <button
+                className="act chain-export"
+                onClick={() => void downloadBundle(chain.role, onExportBundle)}
+                disabled={busy}
+                aria-label={`下載 ${chain.role} agent 的可攜出示包（JSON）`}
+              >
+                <DownloadIcon />
+                出示包
+              </button>
             </div>
           ))}
-          <span
-            className="badge chain-verdict"
-            data-tone={chain.verified ? 'ok' : 'bad'}
-          >
-            {chain.verified
-              ? '鏈驗證通過'
-              : `${FAILURE_LABELS[chain.failure ?? ''] ?? '鏈驗證失敗'} · ${chain.failure}`}
-          </span>
-          <button
-            className="act chain-export"
-            onClick={() => void downloadBundle(chain.role, onExportBundle)}
-            disabled={busy}
-            aria-label={`下載 ${chain.role} agent 的可攜出示包（JSON）`}
-          >
-            <DownloadIcon />
-            出示包
-          </button>
-        </div>
-      ))}
 
-      <div className="chain-issuers">
-        <span className="chain-issuers-label">簽發方法人憑證</span>
-        {vlei.issuers.map((issuer) => (
-          <span className="chain-issuer" data-ok={issuer.verified} key={issuer.didWeb}>
-            <ShieldIcon broken={!issuer.verified} />
-            <span>{issuer.name}</span>
-            <span className="lei">LEI {issuer.lei}</span>
-          </span>
-        ))}
-      </div>
+          <div className="chain-issuers">
+            <span className="chain-issuers-label">簽發方法人憑證</span>
+            {vlei.issuers.map((issuer) => (
+              <span className="chain-issuer" data-ok={issuer.verified} key={issuer.didWeb}>
+                <ShieldIcon broken={!issuer.verified} />
+                <span>{issuer.name}</span>
+                <span className="lei">LEI {issuer.lei}</span>
+              </span>
+            ))}
+          </div>
 
-      <p className="note" style={{ maxWidth: '78ch' }}>
-        機構信任不是設定檔裡的公鑰名單，而是一條可驗證的憑證鏈：Agent 的每一次查詢，
-        L0 都會把這條鏈重新走一遍——SAID、門檻簽章、KEL 錨定、撤銷狀態、LEI 一致性。
-        上游任何一張憑證被撤銷，下游全部<strong>立即</strong>失效，沒有名單要同步。
-        「出示包」會把整條鏈（憑證＋KEL＋TEL）打成單一 JSON——任何驗證方只需釘選
-        GLEIF root，就能離線重驗整條鏈。
-      </p>
+          <p className="note" style={{ maxWidth: '78ch' }}>
+            機構信任不是設定檔裡的公鑰名單，而是一條可驗證的憑證鏈：Agent 的每一次查詢，
+            L0 都會把這條鏈重新走一遍——SAID、門檻簽章、KEL 錨定、撤銷狀態、LEI 一致性。
+            上游任何一張憑證被撤銷，下游全部<strong>立即</strong>失效，沒有名單要同步。
+            「出示包」會把整條鏈（憑證＋KEL＋TEL）打成單一 JSON——任何驗證方只需釘選
+            GLEIF root，就能離線重驗整條鏈。
+          </p>
+        </>
+      )}
     </section>
   );
 }

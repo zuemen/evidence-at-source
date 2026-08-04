@@ -354,7 +354,11 @@ export async function createDemoWorld(): Promise<DemoWorld> {
         },
         { tier: 'qvi', title: 'Qualified vLEI Issuer', subtitle: 'QVI vLEI Credential' },
         { tier: 'legalEntity', title: principal.legalName, subtitle: `LEI ${principal.lei}` },
-        { tier: 'agent', title: agentDid, subtitle: 'ECR · ai-verification-agent' },
+        {
+          tier: 'agent',
+          title: role === 'bank' ? '銀行查驗 Agent' : '品牌查驗 Agent',
+          subtitle: `${agentDid} · ECR`,
+        },
       ],
     };
   }

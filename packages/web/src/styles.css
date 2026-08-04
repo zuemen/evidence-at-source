@@ -479,6 +479,35 @@ button {
   }
 }
 
+/* ── plain-language view intros ───────────────────────── */
+
+.view-intro {
+  border: 1px solid var(--line);
+  border-left: 2px solid var(--jade);
+  background: var(--paper);
+  padding: 0.95rem 1.2rem;
+  margin: 0 0 1.75rem;
+  color: var(--text-dim);
+  font-size: 0.92rem;
+  line-height: 1.75;
+}
+
+.view-intro strong {
+  color: var(--text);
+  font-weight: 600;
+}
+
+/* the guided-tour button is the primary entry point for first-time viewers */
+.tabs button[data-tour='true'] {
+  color: var(--jade);
+}
+
+.tabs button[data-tour='true']:hover,
+.tabs button[data-tour='true'][data-active='true'] {
+  background: var(--jade);
+  color: var(--ink);
+}
+
 /* ── vLEI trust chain panel ───────────────────────────── */
 
 .chain-panel {
@@ -523,6 +552,24 @@ button {
 .chain-head .badge svg {
   vertical-align: -0.18em;
   margin-right: 0.35em;
+}
+
+.chain-summary {
+  margin: 0.35rem 0 0;
+  color: var(--text-dim);
+  font-size: 0.88rem;
+  line-height: 1.65;
+  max-width: 62ch;
+}
+
+.chain-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  flex-wrap: wrap;
+  margin-top: 1rem;
+  padding-top: 0.9rem;
+  border-top: 1px dashed var(--line);
 }
 
 .chain-row {

@@ -82,6 +82,7 @@ export function App(): JSX.Element {
           </button>
           <button
             data-active={directorOn}
+            data-tour="true"
             onClick={() => {
               if (directorOn) {
                 setDirectorOn(false);
@@ -101,7 +102,7 @@ export function App(): JSX.Element {
             >
               <path d="M8 5v14l11-7z" />
             </svg>
-            導演
+            一鍵導覽
           </button>
         </nav>
       </header>
