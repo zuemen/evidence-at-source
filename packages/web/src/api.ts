@@ -66,6 +66,7 @@ export const api = {
     (await worldPromise).revokeQvi();
     return currentPayload();
   },
+  exportBundle: async (role: AgentRole) => (await worldPromise).exportAgentBundle(role),
   reset: async () => {
     worldPromise = createDemoWorld();
     return currentPayload();

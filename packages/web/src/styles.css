@@ -588,6 +588,12 @@ button {
   margin-left: 0.35rem;
 }
 
+.chain-export {
+  align-self: center;
+  padding: 0.4rem 0.8rem;
+  font-size: 0.66rem;
+}
+
 .chain-issuers {
   display: flex;
   align-items: center;

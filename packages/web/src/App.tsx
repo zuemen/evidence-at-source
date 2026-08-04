@@ -167,6 +167,7 @@ export function App(): JSX.Element {
           onRevoke={() => void run(api.revoke)}
           onRevokeAgent={(role) => void run(() => api.revokeAgent(role))}
           onRevokeQvi={() => void run(api.revokeQvi)}
+          onExportBundle={(role) => api.exportBundle(role)}
           onReset={() => void run(api.reset)}
         />
       ) : (

@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'vitest';
+import { importVerifierContext, verifyEcrChain } from '@eas/vlei';
 import { createDemoWorld } from '@eas/web';
 
 describe('demo world', () => {
@@ -140,5 +141,17 @@ describe('demo world', () => {
     const delegation = await world.delegationState();
     expect(delegation.agents.every((agent) => agent.status === 'revoked')).toBe(true);
     expect(delegation.walletReview.status).toBe('refused');
+  });
+
+  test('the exported agent bundle verifies in a rebuilt context pinned to the demo root', async () => {
+    const world = await createDemoWorld();
+    const vlei = world.vleiState();
+
+    expect(vlei.root).toEqual({ keyCount: 3, threshold: 2 });
+
+    const wire = world.exportAgentBundle('bank');
+    const imported = importVerifierContext(wire, new Set([vlei.gleifAid]));
+
+    expect(verifyEcrChain(imported.presentation, imported.trust).ok).toBe(true);
   });
 });

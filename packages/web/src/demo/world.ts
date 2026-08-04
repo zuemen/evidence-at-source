@@ -23,7 +23,12 @@ import {
   type RevocationRegistry,
 } from '@eas/shared';
 import { createVleiIssuer, type Issuer, type VleiIssuer } from '@eas/issuer';
-import { bootstrapEcosystem, verifyEcrChain, verifyLeChain } from '@eas/vlei';
+import {
+  bootstrapEcosystem,
+  exportChainArtifacts,
+  verifyEcrChain,
+  verifyLeChain,
+} from '@eas/vlei';
 import {
   buildCohortEvidence,
   checkCredentialLayer,
@@ -179,6 +184,8 @@ export interface VleiIssuerStanding {
 
 export interface VleiState {
   readonly gleifAid: string;
+  /** Root key-state summary: the PoC mirrors GLEIF's council-held multisig. */
+  readonly root: { readonly keyCount: number; readonly threshold: number };
   readonly qviRevoked: boolean;
   readonly chains: readonly VleiChainStatus[];
   readonly issuers: readonly VleiIssuerStanding[];
@@ -222,6 +229,8 @@ export interface DemoWorld {
   /** GLEIF-side revocation of the QVI credential: the whole chain collapses. */
   revokeQvi(): void;
   vleiState(): VleiState;
+  /** Portable bundle (credentials + KELs + TELs) for the agent's chain. */
+  exportAgentBundle(role: AgentRole): string;
   delegationState(): Promise<DelegationState>;
   split(): Promise<SplitView>;
   attackDemo(): AttackDemoState;
@@ -338,7 +347,11 @@ export async function createDemoWorld(): Promise<DemoWorld> {
       verified: verdict.ok,
       failure: verdict.ok ? null : verdict.failure,
       nodes: [
-        { tier: 'root', title: 'GLEIF Root', subtitle: `${eco.gleifAid.slice(0, 20)}…` },
+        {
+          tier: 'root',
+          title: 'GLEIF Root',
+          subtitle: `${eco.gleifKeyState.threshold}-of-${eco.gleifKeyState.keys.length} 多簽 · ${eco.gleifAid.slice(0, 12)}…`,
+        },
         { tier: 'qvi', title: 'Qualified vLEI Issuer', subtitle: 'QVI vLEI Credential' },
         { tier: 'legalEntity', title: principal.legalName, subtitle: `LEI ${principal.lei}` },
         { tier: 'agent', title: agentDid, subtitle: 'ECR · ai-verification-agent' },
@@ -599,9 +612,17 @@ export async function createDemoWorld(): Promise<DemoWorld> {
       }
     },
 
+    exportAgentBundle(role) {
+      return exportChainArtifacts(role === 'bank' ? bankAgentVlei : brandAgentVlei, eco.trust);
+    },
+
     vleiState() {
       return {
         gleifAid: eco.gleifAid,
+        root: {
+          keyCount: eco.gleifKeyState.keys.length,
+          threshold: eco.gleifKeyState.threshold,
+        },
         qviRevoked,
         chains: [agentChain('bank'), agentChain('brand')],
         issuers: [

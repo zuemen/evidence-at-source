@@ -1,9 +1,46 @@
-import type { VleiState } from '../demo/world.js';
+import type { AgentRole, VleiState } from '../demo/world.js';
 
 interface Props {
   readonly vlei: VleiState;
   readonly busy: boolean;
   readonly onRevokeQvi: () => void;
+  /** Resolves the agent's portable presentation bundle (JSON string). */
+  readonly onExportBundle: (role: AgentRole) => Promise<string>;
+}
+
+function DownloadIcon(): JSX.Element {
+  return (
+    <svg
+      width="13"
+      height="13"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      style={{ verticalAlign: '-0.15em', marginRight: '0.4em' }}
+    >
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+      <path d="m7 10 5 5 5-5" />
+      <path d="M12 15V3" />
+    </svg>
+  );
+}
+
+async function downloadBundle(
+  role: AgentRole,
+  onExportBundle: (role: AgentRole) => Promise<string>,
+): Promise<void> {
+  const wire = await onExportBundle(role);
+  const blob = new Blob([wire], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = `vlei-presentation-${role}.json`;
+  anchor.click();
+  URL.revokeObjectURL(url);
 }
 
 const TIER_LABELS: Record<string, string> = {
@@ -60,7 +97,7 @@ function ShieldIcon({ broken }: { broken: boolean }): JSX.Element {
   );
 }
 
-export function TrustChainPanel({ vlei, busy, onRevokeQvi }: Props): JSX.Element {
+export function TrustChainPanel({ vlei, busy, onRevokeQvi, onExportBundle }: Props): JSX.Element {
   const intact = vlei.chains.every((chain) => chain.verified);
 
   return (
@@ -108,6 +145,15 @@ export function TrustChainPanel({ vlei, busy, onRevokeQvi }: Props): JSX.Element
               ? '鏈驗證通過'
               : `${FAILURE_LABELS[chain.failure ?? ''] ?? '鏈驗證失敗'} · ${chain.failure}`}
           </span>
+          <button
+            className="act chain-export"
+            onClick={() => void downloadBundle(chain.role, onExportBundle)}
+            disabled={busy}
+            aria-label={`下載 ${chain.role} agent 的可攜出示包（JSON）`}
+          >
+            <DownloadIcon />
+            出示包
+          </button>
         </div>
       ))}
 
@@ -124,8 +170,10 @@ export function TrustChainPanel({ vlei, busy, onRevokeQvi }: Props): JSX.Element
 
       <p className="note" style={{ maxWidth: '78ch' }}>
         機構信任不是設定檔裡的公鑰名單，而是一條可驗證的憑證鏈：Agent 的每一次查詢，
-        L0 都會把這條鏈重新走一遍——SAID、簽章、撤銷狀態、LEI 一致性。
+        L0 都會把這條鏈重新走一遍——SAID、門檻簽章、KEL 錨定、撤銷狀態、LEI 一致性。
         上游任何一張憑證被撤銷，下游全部<strong>立即</strong>失效，沒有名單要同步。
+        「出示包」會把整條鏈（憑證＋KEL＋TEL）打成單一 JSON——任何驗證方只需釘選
+        GLEIF root，就能離線重驗整條鏈。
       </p>
     </section>
   );

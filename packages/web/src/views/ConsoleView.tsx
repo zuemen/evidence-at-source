@@ -16,6 +16,7 @@ interface Props {
   readonly onRevoke: () => void;
   readonly onRevokeAgent: (role: AgentRole) => void;
   readonly onRevokeQvi: () => void;
+  readonly onExportBundle: (role: AgentRole) => Promise<string>;
   readonly onReset: () => void;
 }
 
@@ -97,6 +98,7 @@ export function ConsoleView({
   onRevoke,
   onRevokeAgent,
   onRevokeQvi,
+  onExportBundle,
   onReset,
 }: Props): JSX.Element {
   const bankRefused = split.bank.refusedWith !== null;
@@ -108,7 +110,12 @@ export function ConsoleView({
 
   return (
     <section>
-      <TrustChainPanel vlei={vlei} busy={busy} onRevokeQvi={onRevokeQvi} />
+      <TrustChainPanel
+        vlei={vlei}
+        busy={busy}
+        onRevokeQvi={onRevokeQvi}
+        onExportBundle={onExportBundle}
+      />
 
       <div className="toolbar">
         <span className="badge" data-tone={snapshot.subjectRevoked ? 'bad' : 'ok'}>
