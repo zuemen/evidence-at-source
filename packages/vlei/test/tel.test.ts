@@ -1,10 +1,14 @@
 import { describe, expect, test } from 'vitest';
+import { utf8ToBytes } from '@eas/shared';
 import {
   CredentialRegistry,
   KelStore,
   TelStore,
   createAid,
+  saidify,
+  versify,
   type SignedTelEvent,
+  type TelEvent,
 } from '@eas/vlei';
 
 function setup() {
@@ -76,5 +80,41 @@ describe('TEL credential registry', () => {
 
     expect(tels.status(registry.registryId, CRED_SAID)).toBe('issued');
     expect(tels.status(registry.registryId, second)).toBe('issued');
+  });
+});
+
+describe('TEL anchoring in the controller KEL', () => {
+  test('normal issuance is anchored and reports issued', () => {
+    const { kels, tels, controller, registry } = setup();
+    registry.issue(CRED_SAID);
+
+    expect(kels.isAnchored(controller.aid, registry.events[1]!.event.d)).toBe(true);
+    expect(tels.status(registry.registryId, CRED_SAID)).toBe('issued');
+  });
+
+  test('a validly-signed but unanchored event fails closed to unknown', () => {
+    const { tels, controller, registry } = setup();
+    registry.issue(CRED_SAID);
+
+    // An attacker with the controller's signing keys forges a revocation but
+    // cannot extend the KEL to anchor it.
+    const forgedRev = saidify({
+      v: versify('KERI', 0),
+      t: 'rev' as const,
+      d: '',
+      i: CRED_SAID,
+      s: '1',
+      ri: registry.registryId,
+      p: registry.events[1]!.event.d,
+      dt: '2026-08-04T00:00:00Z',
+    });
+    const { sigs, sigSeq } = controller.sign(utf8ToBytes(JSON.stringify(forgedRev)));
+    (registry.events as SignedTelEvent[]).push({
+      event: forgedRev as unknown as TelEvent,
+      sigs,
+      sigSeq,
+    });
+
+    expect(tels.status(registry.registryId, CRED_SAID)).toBe('unknown');
   });
 });

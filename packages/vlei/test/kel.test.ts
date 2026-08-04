@@ -97,3 +97,43 @@ describe('AID inception and rotation (threshold multisig)', () => {
     expect(() => createAid({ keyCount: 3, threshold: 0 })).toThrow();
   });
 });
+
+describe('interaction events and anchoring', () => {
+  test('anchor() appends a verifiable ixn carrying the seal', () => {
+    const store = new KelStore();
+    const controller = createAid();
+    store.register(controller.kel);
+    const said = 'E' + 'S'.repeat(43);
+
+    controller.anchor(said);
+
+    expect(controller.kel).toHaveLength(2);
+    expect(controller.kel[1]?.event.t).toBe('ixn');
+    expect(verifyKel(controller.kel)).toBe(true);
+    expect(store.isAnchored(controller.aid, said)).toBe(true);
+    expect(store.isAnchored(controller.aid, 'E' + 'X'.repeat(43))).toBe(false);
+  });
+
+  test('rotation still verifies across interleaved ixn events', () => {
+    const controller = createAid({ keyCount: 2, threshold: 2 });
+    controller.anchor('E' + 'A'.repeat(43));
+    controller.rotate();
+    controller.anchor('E' + 'B'.repeat(43));
+
+    expect(verifyKel(controller.kel)).toBe(true);
+    const store = new KelStore();
+    store.register(controller.kel);
+    expect(store.keyStateAt(controller.aid, 2)?.keys).toEqual(controller.currentKeyState().keys);
+  });
+
+  test('a tampered seal breaks KEL verification', () => {
+    const controller = createAid();
+    controller.anchor('E' + 'A'.repeat(43));
+
+    const kel = controller.kel as SignedKelEvent[];
+    const ixn = kel[1]!;
+    kel[1] = { ...ixn, event: { ...ixn.event, a: [{ d: 'E' + 'Z'.repeat(43) }] } };
+
+    expect(verifyKel(kel)).toBe(false);
+  });
+});

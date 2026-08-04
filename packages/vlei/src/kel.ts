@@ -35,21 +35,21 @@ export interface KeyState {
 
 export interface KelEvent {
   readonly v: string;
-  readonly t: 'icp' | 'rot';
+  readonly t: 'icp' | 'rot' | 'ixn';
   readonly d: string;
   readonly i: string;
   readonly s: string;
   readonly p?: string;
-  readonly kt: string;
-  readonly k: readonly string[];
-  readonly nt: string;
-  readonly n: readonly string[];
-  readonly bt: string;
+  readonly kt?: string;
+  readonly k?: readonly string[];
+  readonly nt?: string;
+  readonly n?: readonly string[];
+  readonly bt?: string;
   readonly b?: readonly string[];
   readonly br?: readonly string[];
   readonly ba?: readonly string[];
   readonly c?: readonly string[];
-  readonly a: readonly unknown[];
+  readonly a: readonly { readonly d: string }[];
 }
 
 export interface SignedKelEvent {
@@ -68,6 +68,8 @@ export interface AidController {
   currentKeyState(): KeyState;
   sign(data: Uint8Array): { sigs: readonly string[]; sigSeq: number };
   rotate(): void;
+  /** Appends an ixn event sealing `said` — the current keys' notarisation. */
+  anchor(said: string): void;
 }
 
 function freshKeys(count: number): KeyMaterial[] {
@@ -104,7 +106,8 @@ export function verifyThreshold(
   return valid >= state.threshold;
 }
 
-function eventKeyState(event: KelEvent): KeyState {
+function eventKeyState(event: KelEvent): KeyState | undefined {
+  if (event.k === undefined || event.kt === undefined) return undefined;
   return { keys: event.k, threshold: parseInt(event.kt, 16) };
 }
 
@@ -182,6 +185,21 @@ export function createAid(options: AidOptions = {}): AidController {
       estSeq = seq;
       kel.push({ event: rot as unknown as KelEvent, sigs: signAll(rot, current) });
     },
+
+    anchor(said) {
+      const prior = kel[kel.length - 1]!.event;
+      const seq = parseInt(prior.s, 16) + 1;
+      const ixn = saidify({
+        v: versify('KERI', 0),
+        t: 'ixn' as const,
+        d: '',
+        i: icp.i,
+        s: seq.toString(16),
+        p: prior.d,
+        a: [{ d: said }],
+      });
+      kel.push({ event: ixn as unknown as KelEvent, sigs: signAll(ixn, current) });
+    },
   };
 }
 
@@ -196,30 +214,61 @@ export function verifyKel(kel: readonly SignedKelEvent[]): boolean {
   const icp = first.event;
   if (icp.t !== 'icp' || icp.s !== '0' || icp.i !== icp.d) return false;
   if (!verifySaid(icp as unknown as Ked, ['d', 'i'])) return false;
-  if (!signaturesValid(first, eventKeyState(icp))) return false;
+  const icpState = eventKeyState(icp);
+  if (icpState === undefined || !signaturesValid(first, icpState)) return false;
 
   let lastEst = icp;
   for (let at = 1; at < kel.length; at++) {
     const prev = kel[at - 1]!.event;
     const signed = kel[at]!;
-    const rot = signed.event;
+    const event = signed.event;
 
-    if (rot.t !== 'rot' || rot.i !== icp.i) return false;
-    if (parseInt(rot.s, 16) !== parseInt(prev.s, 16) + 1) return false;
-    if (rot.p !== prev.d) return false;
-    if (!verifySaid(rot as unknown as Ked)) return false;
+    if (event.i !== icp.i) return false;
+    if (parseInt(event.s, 16) !== parseInt(prev.s, 16) + 1) return false;
+    if (event.p !== prev.d) return false;
+    if (!verifySaid(event as unknown as Ked)) return false;
+
+    if (event.t === 'ixn') {
+      // Interaction events are signed by the keys current at that point.
+      const state = eventKeyState(lastEst);
+      if (state === undefined || !signaturesValid(signed, state)) return false;
+      continue;
+    }
+
+    if (event.t !== 'rot') return false;
+    const rotState = eventKeyState(event);
+    if (rotState === undefined) return false;
+    if (event.k === undefined || lastEst.n === undefined || lastEst.nt === undefined) return false;
 
     // Pre-rotation: every new key must match the per-index commitment made by
     // the last establishment event, and the committed threshold must hold.
-    if (rot.k.length !== lastEst.n.length) return false;
-    if (!rot.k.every((key, idx) => digestOfQb64(key) === lastEst.n[idx])) return false;
-    if (parseInt(rot.kt, 16) !== parseInt(lastEst.nt, 16)) return false;
-    if (!signaturesValid(signed, eventKeyState(rot))) return false;
+    if (event.k.length !== lastEst.n.length) return false;
+    if (!event.k.every((key, idx) => digestOfQb64(key) === lastEst.n![idx])) return false;
+    if (event.kt === undefined || parseInt(event.kt, 16) !== parseInt(lastEst.nt, 16)) return false;
+    if (!signaturesValid(signed, rotState)) return false;
 
-    lastEst = rot;
+    lastEst = event;
   }
 
   return true;
+}
+
+/** Pure lookup in an already-verified KEL: key state at an establishment seq. */
+export function keyStateIn(
+  kel: readonly SignedKelEvent[],
+  seq: number,
+): KeyState | undefined {
+  const establishment = kel.find(
+    (signed) =>
+      parseInt(signed.event.s, 16) === seq &&
+      (signed.event.t === 'icp' || signed.event.t === 'rot'),
+  );
+  return establishment === undefined ? undefined : eventKeyState(establishment.event);
+}
+
+/** Pure lookup in an already-verified KEL: does any event seal `said`? */
+export function anchoredIn(kel: readonly SignedKelEvent[], said: string): boolean {
+  return kel.some((signed) => signed.event.a.some((seal) => seal.d === said));
 }
 
 export class KelStore {
@@ -234,16 +283,25 @@ export class KelStore {
     this.kels.set(aid, kel);
   }
 
-  /** Re-verifies the whole KEL on every read; a tampered log resolves nothing. */
-  keyStateAt(aid: string, seq: number): KeyState | undefined {
+  /**
+   * One verified read: the full KEL after re-verifying it now, or nothing.
+   * Callers batching several lookups verify once and use the pure helpers.
+   */
+  verifiedKel(aid: string): readonly SignedKelEvent[] | undefined {
     const kel = this.kels.get(aid);
     if (kel === undefined || !verifyKel(kel)) return undefined;
+    return kel;
+  }
 
-    const establishment = kel.find(
-      (signed) =>
-        parseInt(signed.event.s, 16) === seq &&
-        (signed.event.t === 'icp' || signed.event.t === 'rot'),
-    );
-    return establishment === undefined ? undefined : eventKeyState(establishment.event);
+  /** Re-verifies the whole KEL on every read; a tampered log resolves nothing. */
+  keyStateAt(aid: string, seq: number): KeyState | undefined {
+    const kel = this.verifiedKel(aid);
+    return kel === undefined ? undefined : keyStateIn(kel, seq);
+  }
+
+  /** True only when the KEL verifies and some event carries a seal for `said`. */
+  isAnchored(aid: string, said: string): boolean {
+    const kel = this.verifiedKel(aid);
+    return kel === undefined ? false : anchoredIn(kel, said);
   }
 }
