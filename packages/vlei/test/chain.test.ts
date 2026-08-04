@@ -101,3 +101,16 @@ describe('vLEI trust chain', () => {
     expect(verifyLeChain(pruned, eco.trust)).toEqual({ ok: false, failure: 'EDGE_MISSING' });
   });
 });
+
+describe('multisig GLEIF root', () => {
+  test('the root is 2-of-3 and every chain still verifies against it', () => {
+    const { eco, le } = bank();
+
+    expect(eco.gleifKeyState.keys).toHaveLength(3);
+    expect(eco.gleifKeyState.threshold).toBe(2);
+    expect(verifyEcrChain(le.grantEcr('did:key:zBankAgent'), eco.trust).ok).toBe(true);
+
+    eco.revokeQviCredential();
+    expect(verifyLeChain(le.presentation(), eco.trust).ok).toBe(false);
+  });
+});

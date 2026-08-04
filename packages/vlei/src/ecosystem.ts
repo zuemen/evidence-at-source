@@ -5,7 +5,7 @@
  * AI agents. All LEIs are synthetic (visibly fake, valid check digits).
  */
 
-import { KelStore, createAid, type AidController } from './kel.js';
+import { KelStore, createAid, type AidController, type KeyState } from './kel.js';
 import { CredentialRegistry, TelStore } from './tel.js';
 import { syntheticLei } from './lei.js';
 import { issueAcdc, type SignedAcdc } from './acdc.js';
@@ -33,6 +33,8 @@ export interface CreateLegalEntityInput {
 
 export interface Ecosystem {
   readonly gleifAid: string;
+  /** Snapshot of the GLEIF root key state (multisig threshold demo surface). */
+  readonly gleifKeyState: KeyState;
   readonly trust: VleiTrustContext;
   createLegalEntity(input: CreateLegalEntityInput): LegalEntityHandle;
   revokeQviCredential(): void;
@@ -42,7 +44,8 @@ export function bootstrapEcosystem(): Ecosystem {
   const kels = new KelStore();
   const tels = new TelStore(kels);
 
-  const gleif: AidController = createAid();
+  // GLEIF's real root is council-held multisig; the PoC mirrors that shape.
+  const gleif: AidController = createAid({ keyCount: 3, threshold: 2 });
   kels.register(gleif.kel);
   const gleifRegistry = new CredentialRegistry(gleif);
   tels.register(gleifRegistry);
@@ -64,6 +67,7 @@ export function bootstrapEcosystem(): Ecosystem {
 
   return {
     gleifAid: gleif.aid,
+    gleifKeyState: gleif.currentKeyState(),
     trust,
 
     createLegalEntity(input) {
