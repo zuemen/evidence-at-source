@@ -170,11 +170,11 @@ export function ConsoleView({
                 ))}
                 <div className="claim-row">
                   <span className="name">feeAmount</span>
-                  <span className="redacted" />
+                  <span className="redacted" role="img" aria-label="此欄位未揭露" />
                 </div>
                 <div className="claim-row">
                   <span className="name">salaryAmount</span>
-                  <span className="redacted" />
+                  <span className="redacted" role="img" aria-label="此欄位未揭露" />
                 </div>
               </div>
 
@@ -225,11 +225,11 @@ export function ConsoleView({
                 </div>
                 <div className="claim-row">
                   <span className="name">哪幾位勞工超時</span>
-                  <span className="redacted" />
+                  <span className="redacted" role="img" aria-label="此欄位未揭露" />
                 </div>
                 <div className="claim-row">
                   <span className="name">totalHours</span>
-                  <span className="redacted" />
+                  <span className="redacted" role="img" aria-label="此欄位未揭露" />
                 </div>
               </div>
             </>

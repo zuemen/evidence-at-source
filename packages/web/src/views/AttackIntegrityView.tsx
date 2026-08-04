@@ -36,6 +36,7 @@ export function AttackIntegrityView({ attack, integrity, busy, onReset }: Props)
 
   return (
     <section>
+      <h2 className="sr-only">攻防與完整性</h2>
       <div className="toolbar">
         <span className="badge" data-tone="ok">
           我們 demo 自己被攻擊，並擋下來

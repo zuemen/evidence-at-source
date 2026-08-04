@@ -165,6 +165,7 @@ export function WalletView({
 
   return (
     <section>
+      <h2 className="sr-only">勞工錢包</h2>
       <DelegationCard review={walletReview} />
 
       <div className="toolbar">
@@ -218,7 +219,12 @@ export function WalletView({
               {credential.hiddenFields.map((field) => (
                 <div className="claim-row" key={field}>
                   <span className="name">{field}</span>
-                  <span className="redacted" title="此欄位未揭露：密碼學上不在出示內容中" />
+                  <span
+                    className="redacted"
+                    role="img"
+                    aria-label="此欄位未揭露：密碼學上不在出示內容中"
+                    title="此欄位未揭露：密碼學上不在出示內容中"
+                  />
                 </div>
               ))}
 
