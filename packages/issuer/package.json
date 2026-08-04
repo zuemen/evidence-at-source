@@ -7,6 +7,7 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "@eas/shared": "*"
+    "@eas/shared": "*",
+    "@eas/vlei": "*"
   }
 }
