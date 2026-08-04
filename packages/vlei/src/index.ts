@@ -6,3 +6,11 @@ export type { AidController, KelEvent, KeyMaterial, SignedKelEvent } from './kel
 export { computeLeiCheckDigits, isValidLei, syntheticLei } from './lei.js';
 export { CredentialRegistry, TelStore } from './tel.js';
 export type { CredentialStatus, SignedTelEvent, TelEvent } from './tel.js';
+export {
+  VLEI_RULES,
+  VLEI_SCHEMAS,
+  schemaBySaid,
+  schemaSaid,
+  validateAttributes,
+} from './schemas.js';
+export type { AttributeSpec, VleiSchema, VleiSchemaName } from './schemas.js';
