@@ -190,6 +190,18 @@ npm run demo:dualsign     # 證明事後篡改會被偵測
 
 需要 Node 22 以上。兩支腳本的預期輸出與說明見 [`poc/README.md`](poc/README.md)。
 
+### vLEI 信任鏈展示
+
+```bash
+npm install
+npm run demo:vlei
+```
+
+一條命令跑完：GLEIF→QVI→法人→Agent 簽發、全鏈驗證、竄改攔截（SAID）、
+非查驗角色攔截、單一 ECR 撤銷、**QVI 撤銷全鏈級聯失效**、外來信任根拒絕。
+exit code 0 即全數成立。評審常見提問的逐條回應見
+[`docs/vlei-defense.md`](docs/vlei-defense.md)。
+
 ## 執行 Demo
 
 ```bash
@@ -304,6 +316,7 @@ Agent A 的能力邊界也寫在型別裡：`BankAssessment.requiresHumanReview`
 | [`CLAUDE.md`](CLAUDE.md) | 施工守則：三條不可違反原則 |
 | [`docs/credentials.md`](docs/credentials.md) | 四張憑證的完整欄位表 |
 | [`docs/vlei.md`](docs/vlei.md) | vLEI 機構信任層：信任鏈、schema profiles、明文簡化 |
+| [`docs/vlei-defense.md`](docs/vlei-defense.md) | vLEI 技術防禦 Q&A：每個回答附可執行證據 |
 | `docs/BUILD-SPEC-開發規格書.md` | 模組拆解與測試情境（尚未入庫） |
 | `docs/ADR-001-系統架構與技術選型.md` | 架構決策紀錄（尚未入庫） |
 | `docs/技術設計與論點防禦手冊.md` | 對評審提問的技術防禦（尚未入庫） |
