@@ -22,13 +22,15 @@ import {
   type ReasonCode,
   type RevocationRegistry,
 } from '@eas/shared';
-import { createIssuer, type Issuer } from '@eas/issuer';
+import { createVleiIssuer, type Issuer, type VleiIssuer } from '@eas/issuer';
+import { bootstrapEcosystem } from '@eas/vlei';
 import {
   buildCohortEvidence,
   checkCredentialLayer,
   createBankAgent,
   createBrandAgent,
   createQuerySession,
+  resolveIssuerSigningKey,
   runAuthorizedGate,
   verifyDelegationValidity,
   type BankAssessment,
@@ -195,7 +197,7 @@ export interface DemoWorld {
 
 interface HeldCredential {
   readonly type: WalletCredentialType;
-  readonly issuer: Issuer;
+  readonly issuer: VleiIssuer;
   readonly issuerName: string;
   readonly credential: string;
   attestation: string | null;
@@ -207,6 +209,7 @@ interface CohortMember {
 
 async function buildCohortMember(
   factory: Issuer,
+  factoryKey: PublicJwk,
   index: number,
   withinRBALimit: boolean,
 ): Promise<CohortMember> {
@@ -230,7 +233,7 @@ async function buildCohortMember(
     submission: {
       presentation: await presentCredential(credential, ['withinRBALimit', 'periodStart']),
       attestation,
-      issuerPublicKey: factory.publicKey,
+      issuerPublicKey: factoryKey,
       workerPublicKey: worker.publicKey,
     },
   };
@@ -240,9 +243,30 @@ const BANK_AGENT_DID = 'did:key:zBankAgent';
 const BRAND_AGENT_DID = 'did:key:zBrandAgent';
 
 export async function createDemoWorld(): Promise<DemoWorld> {
-  const agency = await createIssuer('did:web:agency.example');
-  const factory = await createIssuer('did:web:factory.example');
+  // The vLEI ecosystem is the single trust anchor: every institution below is
+  // a Legal Entity qualified through GLEIF → QVI, and every verifier key is
+  // resolved from a verified chain, never from configuration.
+  const eco = bootstrapEcosystem();
+  const agency = await createVleiIssuer({
+    didWeb: 'did:web:agency.example',
+    legalName: '仲介公司',
+    leiTag: 'AGENCYEXAMPLE',
+    ecosystem: eco,
+  });
+  const factory = await createVleiIssuer({
+    didWeb: 'did:web:factory.example',
+    legalName: '工廠打卡系統',
+    leiTag: 'FACTORYEXAMPLE',
+    ecosystem: eco,
+  });
   const issuers = { agency, factory } as const;
+
+  /** L1 only ever sees issuer keys that arrived through a verified LE chain. */
+  function requireIssuerKey(issuer: VleiIssuer): PublicJwk {
+    const resolved = resolveIssuerSigningKey(issuer.legalEntityPresentation(), eco.trust);
+    if (!resolved.ok) throw new Error(`issuer vLEI chain rejected: ${resolved.reason}`);
+    return resolved.issuer.jwk;
+  }
   const issuerNames = {
     agency: '仲介公司 did:web:agency.example',
     factory: '工廠打卡系統 did:web:factory.example',
@@ -253,12 +277,20 @@ export async function createDemoWorld(): Promise<DemoWorld> {
 
   // Institutions that empower the two verifying agents, and the delegations they
   // grant. Agent authority is separate from worker-credential revocation.
-  const bank = await createIssuer('did:web:bank.example');
-  const brand = await createIssuer('did:web:brand.example');
-  const knownInstitutions = {
-    [bank.did]: bank.publicKey,
-    [brand.did]: brand.publicKey,
-  } as const;
+  const bank = await createVleiIssuer({
+    didWeb: 'did:web:bank.example',
+    legalName: '國泰世華銀行',
+    leiTag: 'BANKEXAMPLE',
+    ecosystem: eco,
+  });
+  const brand = await createVleiIssuer({
+    didWeb: 'did:web:brand.example',
+    legalName: '某國際成衣品牌',
+    leiTag: 'BRANDEXAMPLE',
+    ecosystem: eco,
+  });
+  const bankAgentVlei = bank.grantAgentEcr(BANK_AGENT_DID);
+  const brandAgentVlei = brand.grantAgentEcr(BRAND_AGENT_DID);
   const delegationRevocations: RevocationRegistry = createRevocationRegistry();
 
   const bankDelegation = await bank.issueDelegation({
@@ -278,16 +310,18 @@ export async function createDemoWorld(): Promise<DemoWorld> {
 
   const bankL0: DelegationContext = {
     signedDelegation: bankDelegation,
+    agentVlei: bankAgentVlei,
+    trust: eco.trust,
     requestedQueryType: 'boolean',
     requestedCredentialType: 'DocumentCustodyCredential',
-    knownInstitutions,
     revocations: delegationRevocations,
   };
   const brandL0: DelegationContext = {
     signedDelegation: brandDelegation,
+    agentVlei: brandAgentVlei,
+    trust: eco.trust,
     requestedQueryType: 'aggregate',
     requestedCredentialType: 'WorkingHoursCredential',
-    knownInstitutions,
     revocations: delegationRevocations,
   };
 
@@ -299,7 +333,8 @@ export async function createDemoWorld(): Promise<DemoWorld> {
   ): Promise<AgentAuthStatus> {
     const validity = await verifyDelegationValidity({
       signedDelegation: signed,
-      knownInstitutions,
+      agentVlei: role === 'bank' ? bankAgentVlei : brandAgentVlei,
+      trust: eco.trust,
       revocations: delegationRevocations,
     });
 
@@ -334,8 +369,9 @@ export async function createDemoWorld(): Promise<DemoWorld> {
 
   // Five more workers, one of them over the limit, so the cohort clears k=5.
   const others: CohortMember[] = [];
+  const factoryKey = requireIssuerKey(factory);
   for (let i = 2; i <= 6; i += 1) {
-    others.push(await buildCohortMember(factory, i, i !== 5));
+    others.push(await buildCohortMember(factory, factoryKey, i, i !== 5));
   }
 
   async function presentationFor(entry: HeldCredential): Promise<string> {
@@ -368,7 +404,7 @@ export async function createDemoWorld(): Promise<DemoWorld> {
   const t8Decision = await checkCredentialLayer({
     presentation: await presentCredential(t8Credential, ['withinRBALimit', 'periodStart', 'remark']),
     attestation: t8Attestation,
-    issuerPublicKey: factory.publicKey,
+    issuerPublicKey: factoryKey,
     workerPublicKey: t8Worker.publicKey,
     requiredClaims: ['withinRBALimit'],
   });
@@ -505,7 +541,8 @@ export async function createDemoWorld(): Promise<DemoWorld> {
           await agentStatus('brand', BRAND_AGENT_DID, '某國際成衣品牌', brandDelegation),
         ],
         walletReview: await reviewDelegationForWallet(bankDelegation, {
-          knownInstitutions,
+          agentVlei: bankAgentVlei,
+          trust: eco.trust,
           revocations: delegationRevocations,
           heldCredentialTypes: held.map((entry) => entry.type),
         }),
@@ -525,7 +562,7 @@ export async function createDemoWorld(): Promise<DemoWorld> {
           const decision = await checkCredentialLayer({
             presentation: await presentationFor(entry),
             attestation: entry.attestation ?? '',
-            issuerPublicKey: entry.issuer.publicKey,
+            issuerPublicKey: requireIssuerKey(entry.issuer),
             workerPublicKey: workerKeys.publicKey,
             requiredClaims: [HEADLINE_CLAIM[entry.type]],
             revocations,
@@ -565,7 +602,7 @@ export async function createDemoWorld(): Promise<DemoWorld> {
           submissions.unshift({
             presentation: await presentationFor(hours),
             attestation: hours.attestation,
-            issuerPublicKey: hours.issuer.publicKey,
+            issuerPublicKey: requireIssuerKey(hours.issuer),
             workerPublicKey: workerKeys.publicKey,
           });
         }

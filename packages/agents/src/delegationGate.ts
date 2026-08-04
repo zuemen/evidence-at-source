@@ -2,10 +2,12 @@
  * Policy Gate layer 0 — the agent-authorization layer.
  *
  * Before the gate reads a single worker claim, it establishes on whose authority
- * the agent is asking: is there a delegation, is it validly signed by a known
- * institution, is it current, was it revoked, and does it cover this query type
- * and this credential type. Only when all of that holds does worker data get
- * touched — a property `runAuthorizedGate` makes structural, not merely stated.
+ * the agent is asking: is there a delegation, is there an ECR vLEI chain proving
+ * the institution is a real legal entity and this agent its appointed verifier,
+ * is the delegation validly signed by the chain-published key, is it current,
+ * was it revoked, and does it cover this query type and this credential type.
+ * Only when all of that holds does worker data get touched — a property
+ * `runAuthorizedGate` makes structural, not merely stated.
  */
 
 import {
@@ -14,30 +16,31 @@ import {
   verifyPresentation,
   type AllowedQueryType,
   type DelegationClaims,
-  type PublicJwk,
   type ReasonCode,
   type RevocationRegistry,
 } from '@eas/shared';
+import type { VleiPresentation, VleiTrustContext } from '@eas/vlei';
+import { resolveAgentAuthority, type AgentAuthority } from './vleiBridge.js';
 
 export interface DelegationContext {
   /** The agent's signed DelegationCredential, or null if it presented none. */
   readonly signedDelegation: string | null;
+  /** ACDC chain proving the agent's ECR authority, or null if none presented. */
+  readonly agentVlei: VleiPresentation | null;
+  /** GLEIF root, KELs and TELs the verifier trusts. */
+  readonly trust: VleiTrustContext;
   readonly requestedQueryType: AllowedQueryType;
   readonly requestedCredentialType: string;
-  /** Institution DID → public key. An unknown principal is treated as invalid. */
-  readonly knownInstitutions: Readonly<Record<string, PublicJwk>>;
   /** Delegation revocations, keyed by agent DID. */
   readonly revocations?: RevocationRegistry;
 }
 
 export type DelegationDecision =
-  | { readonly ok: true; readonly claims: DelegationClaims }
+  | { readonly ok: true; readonly claims: DelegationClaims; readonly authority: AgentAuthority }
   | { readonly ok: false; readonly reason: ReasonCode };
 
 interface UnverifiedDelegation {
-  readonly principal?: string;
   readonly exp?: number;
-  readonly agentDid?: string;
 }
 
 function readUnverified(signed: string): UnverifiedDelegation {
@@ -48,9 +51,7 @@ function readUnverified(signed: string): UnverifiedDelegation {
     const decoded = JSON.parse(base64urlToUtf8(claimsSegment)) as Record<string, unknown>;
 
     return {
-      principal: typeof decoded['principal'] === 'string' ? decoded['principal'] : undefined,
       exp: typeof decoded['exp'] === 'number' ? decoded['exp'] : undefined,
-      agentDid: typeof decoded['agentDid'] === 'string' ? decoded['agentDid'] : undefined,
     };
   } catch {
     return {};
@@ -77,14 +78,16 @@ function toClaims(payload: Record<string, unknown>): DelegationClaims {
 
 export interface DelegationValidityInput {
   readonly signedDelegation: string | null;
-  readonly knownInstitutions: Readonly<Record<string, PublicJwk>>;
+  readonly agentVlei: VleiPresentation | null;
+  readonly trust: VleiTrustContext;
   readonly revocations?: RevocationRegistry;
 }
 
 /**
- * The query-independent half of L0: is the delegation present, validly signed by
- * a known institution, current, and not revoked. The worker's wallet uses this
- * on its own to decide whether to trust an agent at all, before any query.
+ * The query-independent half of L0: is the delegation present, is the agent's
+ * vLEI chain valid, does the delegation verify against the chain-published key,
+ * is it current, and is it not revoked. The worker's wallet uses this on its
+ * own to decide whether to trust an agent at all, before any query.
  */
 export async function verifyDelegationValidity(
   input: DelegationValidityInput,
@@ -92,27 +95,37 @@ export async function verifyDelegationValidity(
   if (input.signedDelegation === null) {
     return { ok: false, reason: 'AGENT_DELEGATION_MISSING' };
   }
-
-  const unverified = readUnverified(input.signedDelegation);
-  const principalKey =
-    unverified.principal === undefined ? undefined : input.knownInstitutions[unverified.principal];
-
-  // An unknown principal cannot be trusted, and there is no key to verify against.
-  if (principalKey === undefined) {
-    return { ok: false, reason: 'AGENT_DELEGATION_INVALID' };
+  if (input.agentVlei === null) {
+    return { ok: false, reason: 'AGENT_VLEI_MISSING' };
   }
+
+  // On whose authority: the ECR chain must verify up to the GLEIF root before
+  // the delegation signature is even looked at. The signing key comes from the
+  // chain, never from configuration.
+  const resolved = resolveAgentAuthority(input.agentVlei, input.trust);
+  if (!resolved.ok) {
+    return { ok: false, reason: resolved.reason };
+  }
+  const { authority } = resolved;
 
   let claims: DelegationClaims;
   try {
-    const verified = await verifyPresentation(input.signedDelegation, principalKey);
+    const verified = await verifyPresentation(input.signedDelegation, authority.delegationJwk);
     claims = toClaims(verified.payload);
   } catch {
     // Verification fails on both a bad signature and an expired credential; the
     // expiry check separates the two so the reason code is truthful.
+    const unverified = readUnverified(input.signedDelegation);
     if (unverified.exp !== undefined && unverified.exp * 1000 < Date.now()) {
       return { ok: false, reason: 'AGENT_DELEGATION_EXPIRED' };
     }
     return { ok: false, reason: 'AGENT_DELEGATION_INVALID' };
+  }
+
+  // The SD-JWT and the ACDC chain must speak about the same agent and the
+  // same institution, or the pairing proves nothing.
+  if (claims.principal !== authority.principalDid || claims.agentDid !== authority.agentDid) {
+    return { ok: false, reason: 'AGENT_VLEI_BINDING_MISMATCH' };
   }
 
   // Belt and braces: reject an expired delegation even if verification let it by.
@@ -128,7 +141,7 @@ export async function verifyDelegationValidity(
     return { ok: false, reason: 'AGENT_DELEGATION_REVOKED' };
   }
 
-  return { ok: true, claims };
+  return { ok: true, claims, authority };
 }
 
 export async function checkAgentDelegation(ctx: DelegationContext): Promise<DelegationDecision> {
@@ -137,7 +150,7 @@ export async function checkAgentDelegation(ctx: DelegationContext): Promise<Dele
     return validity;
   }
 
-  const { claims } = validity;
+  const { claims, authority } = validity;
 
   if (!claims.allowedQueryTypes.includes(ctx.requestedQueryType)) {
     return { ok: false, reason: 'QUERY_TYPE_NOT_IN_SCOPE' };
@@ -147,7 +160,7 @@ export async function checkAgentDelegation(ctx: DelegationContext): Promise<Dele
     return { ok: false, reason: 'CREDENTIAL_TYPE_NOT_IN_SCOPE' };
   }
 
-  return { ok: true, claims };
+  return { ok: true, claims, authority };
 }
 
 export type AuthorizedGateResult<T> =

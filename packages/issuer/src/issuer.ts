@@ -14,6 +14,7 @@ import {
   type CredentialType,
   type PublicJwk,
 } from '@eas/shared';
+import type { Ecosystem, LegalEntityHandle, VleiPresentation } from '@eas/vlei';
 
 /**
  * One year. Long enough that a worker is not re-collecting evidence mid-posting,
@@ -89,5 +90,48 @@ export async function createIssuer(did: string, options: IssuerOptions = {}): Pr
 
       return signCredential(privateKey, payload, []);
     },
+  };
+}
+
+export interface VleiIssuerInput {
+  readonly didWeb: string;
+  readonly legalName: string;
+  readonly leiTag: string;
+  readonly ecosystem: Ecosystem;
+  readonly options?: IssuerOptions;
+}
+
+/**
+ * An issuer whose SD-JWT signing key is published inside its Legal Entity
+ * vLEI credential. Verifiers must obtain the key from the verified chain —
+ * a bare createIssuer key has no chain and therefore no standing.
+ */
+export interface VleiIssuer extends Issuer {
+  readonly lei: string;
+  readonly legalName: string;
+  legalEntityPresentation(): VleiPresentation;
+  grantAgentEcr(agentDid: string, role?: string): VleiPresentation;
+  revokeAgentEcr(agentDid: string): void;
+  /** QVI-side revocation of this institution's own LE credential. */
+  revokeLegalEntityCredential(): void;
+}
+
+export async function createVleiIssuer(input: VleiIssuerInput): Promise<VleiIssuer> {
+  const base = await createIssuer(input.didWeb, input.options ?? {});
+  const entity: LegalEntityHandle = input.ecosystem.createLegalEntity({
+    legalName: input.legalName,
+    didWeb: input.didWeb,
+    leiTag: input.leiTag,
+    signingJwk: base.publicKey as unknown as Record<string, unknown>,
+  });
+
+  return {
+    ...base,
+    lei: entity.lei,
+    legalName: input.legalName,
+    legalEntityPresentation: () => entity.presentation(),
+    grantAgentEcr: (agentDid, role) => entity.grantEcr(agentDid, role),
+    revokeAgentEcr: (agentDid) => entity.revokeEcr(agentDid),
+    revokeLegalEntityCredential: () => entity.revokeCredential(),
   };
 }

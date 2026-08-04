@@ -76,3 +76,14 @@ export type {
   DisclosedFacts,
   Recommendation,
 } from './bankAgent.js';
+
+export {
+  resolveAgentAuthority,
+  resolveIssuerSigningKey,
+} from './vleiBridge.js';
+export type {
+  AgentAuthority,
+  AgentAuthorityResult,
+  IssuerIdentity,
+  IssuerIdentityResult,
+} from './vleiBridge.js';

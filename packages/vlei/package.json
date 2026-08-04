@@ -1,5 +1,5 @@
 {
-  "name": "@eas/agents",
+  "name": "@eas/vlei",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -7,9 +7,8 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "@eas/integrity": "*",
-    "@eas/reconciliation": "*",
     "@eas/shared": "*",
-    "@eas/vlei": "*"
+    "@noble/curves": "^1.9.0",
+    "@noble/hashes": "^1.8.0"
   }
 }
