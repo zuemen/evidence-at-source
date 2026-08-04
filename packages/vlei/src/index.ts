@@ -14,3 +14,5 @@ export {
   validateAttributes,
 } from './schemas.js';
 export type { AttributeSpec, VleiSchema, VleiSchemaName } from './schemas.js';
+export { issueAcdc, verifyAcdc } from './acdc.js';
+export type { Acdc, AcdcEdge, AcdcFailure, AcdcTrust, IssueAcdcInput, SignedAcdc } from './acdc.js';
