@@ -2,6 +2,15 @@ export { CREDENTIAL_TYPES, getCredentialSchema } from './credentials.js';
 export type { CredentialType, DisclosureSchema } from './credentials.js';
 
 export {
+  base64urlToUtf8,
+  bytesToBase64url,
+  hexToBytes,
+  sha256Base64url,
+  sha256Hex,
+  utf8ToBytes,
+} from './hash.js';
+
+export {
   generateKeyPair,
   presentCredential,
   signCredential,

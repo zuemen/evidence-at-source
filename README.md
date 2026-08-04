@@ -201,7 +201,19 @@ npm run dev --workspace @eas/web    # http://localhost:5173
 
 **▶ 導演模式** — masthead 的「▶ 導演」按鈕啟動一條有序、附旁白的導覽：七幕依序走過四項事實待反簽 → 證據前置反簽 → 錢包驗授權 → SplitDemo → L0 撤銷 Agent → 離境連動撤銷 → 攻防三面板。每幕自足（先 reset 再套用自己的動作，彼此不堆疊），可用點點跳幕或上一幕／下一幕，畫面每次一致——適合錄影配音。幕腳本見 [`packages/web/src/demo/directorScript.ts`](packages/web/src/demo/directorScript.ts)。
 
-> **關於 demo 的一項誠實說明**：簽章與驗證使用 `@sd-jwt/crypto-nodejs`，是 Node 專用的，因此在這個 demo 裡它們跑在 Vite dev server 的 Node 行程中，瀏覽器只是視圖層。真實的錢包必須把私鑰留在勞工裝置上並在該處簽章（改用 `@sd-jwt/crypto-browser`）——「私鑰不離開裝置」是這個系統的前提，demo 的這個簡化不該被誤讀成架構主張。
+### 私鑰從未離開裝置
+
+整個 world——金鑰產生、簽章、驗證、雜湊——**都在瀏覽器端執行**。SD-JWT 的 ES256 用 `@sd-jwt/crypto-browser`（Web Crypto），雜湊用 `@noble/hashes`（同步、同構），base64url 用全域 `btoa/atob`；程式碼裡沒有任何 `node:crypto` 或 `Buffer`。因此：
+
+- **靜態部署**：`npm run build --workspace @eas/web` 產出的 `dist/` 是一個**完全靜態、可互動**的站，不需要任何伺服器或 `/api`——放上任何靜態主機即可（反簽、撤銷、SplitDemo 等全部在瀏覽器內即時運算）。
+- **「私鑰不離開裝置」不再是簡化，而是事實**：勞工的簽章金鑰在瀏覽器產生、在瀏覽器簽章，從未送到任何伺服器。這正是這個系統的前提。
+
+```bash
+npm run build --workspace @eas/web    # 產出 packages/web/dist（靜態站）
+npx vite preview --port 4173          # 本機預覽靜態站
+```
+
+（`npm run dev` 仍可用；dev 模式保留了一個等效的 `/api` middleware，但正式建置不依賴它。）
 
 ## 執行測試
 

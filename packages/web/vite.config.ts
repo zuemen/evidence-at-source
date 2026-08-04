@@ -102,6 +102,8 @@ export default defineConfig({
       '@eas/shared': r('../shared/src/index.ts'),
       '@eas/issuer': r('../issuer/src/index.ts'),
       '@eas/agents': r('../agents/src/index.ts'),
+      '@eas/integrity': r('../integrity/src/index.ts'),
+      '@eas/reconciliation': r('../reconciliation/src/index.ts'),
     },
   },
   server: {

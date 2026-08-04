@@ -7,23 +7,17 @@
  * is promoted unchanged to the next level.
  */
 
-import { createHash } from 'node:crypto';
+import { hexToBytes, sha256Hex, utf8ToBytes } from '@eas/shared';
 
-const LEAF_PREFIX = Buffer.from([0x00]);
-const NODE_PREFIX = Buffer.from([0x01]);
-
-function sha256Hex(...parts: Buffer[]): string {
-  const hash = createHash('sha256');
-  for (const part of parts) hash.update(part);
-  return hash.digest('hex');
-}
+const LEAF_PREFIX = new Uint8Array([0x00]);
+const NODE_PREFIX = new Uint8Array([0x01]);
 
 function hashLeaf(leaf: string): string {
-  return sha256Hex(LEAF_PREFIX, Buffer.from(leaf, 'utf8'));
+  return sha256Hex(LEAF_PREFIX, utf8ToBytes(leaf));
 }
 
 function hashNode(left: string, right: string): string {
-  return sha256Hex(NODE_PREFIX, Buffer.from(left, 'hex'), Buffer.from(right, 'hex'));
+  return sha256Hex(NODE_PREFIX, hexToBytes(left), hexToBytes(right));
 }
 
 export interface MerkleTree {

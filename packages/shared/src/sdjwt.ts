@@ -5,7 +5,7 @@
  */
 
 import { SDJwtVcInstance, type SdJwtVcPayload } from '@sd-jwt/sd-jwt-vc';
-import { ES256, digest, generateSalt } from '@sd-jwt/crypto-nodejs';
+import { ES256, digest, generateSalt } from '@sd-jwt/crypto-browser';
 
 type KeyPair = Awaited<ReturnType<typeof ES256.generateKeyPair>>;
 

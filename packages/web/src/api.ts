@@ -1,10 +1,23 @@
-import type {
-  AgentRole,
-  AttackDemoState,
-  DelegationState,
-  DemoSnapshot,
-  IntegrityDemoState,
-  SplitView,
+/**
+ * Browser-side demo adapter.
+ *
+ * The whole world — key generation, signing, verification — now runs in the
+ * browser (isomorphic crypto), so this instantiates `createDemoWorld()` in-page
+ * rather than fetching a server. The interface is unchanged, so the views do not
+ * know or care. This is what makes the built site fully static *and* what makes
+ * "the private key never leaves the device" literally true.
+ */
+
+import type { CredentialType } from '@eas/shared';
+import {
+  createDemoWorld,
+  type AgentRole,
+  type AttackDemoState,
+  type DelegationState,
+  type DemoSnapshot,
+  type DemoWorld,
+  type IntegrityDemoState,
+  type SplitView,
 } from './demo/world.js';
 
 export interface DemoPayload {
@@ -15,25 +28,39 @@ export interface DemoPayload {
   readonly integrity: IntegrityDemoState;
 }
 
-async function call(path: string, body?: unknown): Promise<DemoPayload> {
-  const response = await fetch(`/api${path}`, {
-    method: body === undefined ? 'GET' : 'POST',
-    headers: body === undefined ? undefined : { 'content-type': 'application/json' },
-    body: body === undefined ? undefined : JSON.stringify(body),
-  });
+let worldPromise: Promise<DemoWorld> = createDemoWorld();
 
-  if (!response.ok) {
-    throw new Error(`demo api ${path} failed with ${response.status}`);
-  }
-
-  return (await response.json()) as DemoPayload;
+async function currentPayload(): Promise<DemoPayload> {
+  const world = await worldPromise;
+  return {
+    snapshot: world.snapshot(),
+    split: await world.split(),
+    delegation: await world.delegationState(),
+    attack: world.attackDemo(),
+    integrity: world.integrityDemo(),
+  };
 }
 
 export const api = {
-  state: () => call('/state'),
-  attest: (type: string) => call('/attest', { type }),
-  attestAll: () => call('/attest-all', {}),
-  revoke: () => call('/revoke', {}),
-  revokeAgent: (role: AgentRole) => call('/revoke-agent', { role }),
-  reset: () => call('/reset', {}),
+  state: () => currentPayload(),
+  attest: async (type: string) => {
+    await (await worldPromise).attest(type as CredentialType);
+    return currentPayload();
+  },
+  attestAll: async () => {
+    await (await worldPromise).attestAll();
+    return currentPayload();
+  },
+  revoke: async () => {
+    (await worldPromise).revokeSubject();
+    return currentPayload();
+  },
+  revokeAgent: async (role: AgentRole) => {
+    (await worldPromise).revokeAgentDelegation(role);
+    return currentPayload();
+  },
+  reset: async () => {
+    worldPromise = createDemoWorld();
+    return currentPayload();
+  },
 };

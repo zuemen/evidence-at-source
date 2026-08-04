@@ -9,6 +9,7 @@
  */
 
 import {
+  base64urlToUtf8,
   credentialHash,
   verifyPresentation,
   type AllowedQueryType,
@@ -44,10 +45,7 @@ function readUnverified(signed: string): UnverifiedDelegation {
   if (claimsSegment === undefined) return {};
 
   try {
-    const decoded = JSON.parse(Buffer.from(claimsSegment, 'base64url').toString('utf8')) as Record<
-      string,
-      unknown
-    >;
+    const decoded = JSON.parse(base64urlToUtf8(claimsSegment)) as Record<string, unknown>;
 
     return {
       principal: typeof decoded['principal'] === 'string' ? decoded['principal'] : undefined,

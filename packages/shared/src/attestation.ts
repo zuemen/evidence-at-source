@@ -8,7 +8,7 @@
  */
 
 import { SignJWT, jwtVerify, importJWK, type JWK } from 'jose';
-import { createHash } from 'node:crypto';
+import { sha256Base64url } from './hash.js';
 import type { PrivateJwk, PublicJwk } from './sdjwt.js';
 import type { ReasonCode } from './reasonCodes.js';
 
@@ -27,7 +27,7 @@ export const ATTESTATION_TYP = 'worker-attestation+jwt';
 export function credentialHash(credentialOrPresentation: string): string {
   const issuerSignedJwt = credentialOrPresentation.split('~')[0] ?? '';
 
-  return createHash('sha256').update(issuerSignedJwt).digest('base64url');
+  return sha256Base64url(issuerSignedJwt);
 }
 
 export interface AttestationInput {

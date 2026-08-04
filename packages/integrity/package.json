@@ -8,6 +8,7 @@
   },
   "dependencies": {
     "@eas/shared": "*",
+    "@noble/hashes": "^1.8.0",
     "jose": "^6.2.3"
   }
 }

@@ -7,6 +7,7 @@
  */
 
 import {
+  base64urlToUtf8,
   credentialHash,
   verifyPairing,
   verifyPresentation,
@@ -42,7 +43,7 @@ function readUnverifiedExpiry(presentation: string): number | undefined {
   if (claimsSegment === undefined) return undefined;
 
   try {
-    const decoded: unknown = JSON.parse(Buffer.from(claimsSegment, 'base64url').toString('utf8'));
+    const decoded: unknown = JSON.parse(base64urlToUtf8(claimsSegment));
     const exp = (decoded as { exp?: unknown }).exp;
 
     return typeof exp === 'number' ? exp : undefined;
