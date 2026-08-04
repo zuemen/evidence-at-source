@@ -5,12 +5,10 @@ import {
   credentialHash,
   generateKeyPair,
   presentCredential,
-  type PublicJwk,
 } from '@eas/shared';
 import { createIssuer } from '@eas/issuer';
 import { checkAgentDelegation, checkCredentialLayer } from '@eas/agents';
-
-const AGENT_DID = 'did:key:zBankAgent';
+import { AGENT_DID, setupVleiWorld } from './helpers/vleiWorld.js';
 
 async function workerCredential(factory: Awaited<ReturnType<typeof createIssuer>>, workerDID: string) {
   const worker = await generateKeyPair();
@@ -81,10 +79,9 @@ describe('P3 — three revocation paths', () => {
   });
 
   test('Path C: an institution revokes an agent; it is refused at L0', async () => {
-    const bank = await createIssuer('did:web:bank.example');
+    const world = await setupVleiWorld();
     const dir = createRevocationDirectory();
-    const knownInstitutions: Record<string, PublicJwk> = { 'did:web:bank.example': bank.publicKey };
-    const delegation = await bank.issueDelegation({
+    const delegation = await world.bank.issueDelegation({
       agentDid: AGENT_DID,
       principalName: '國泰世華銀行',
       allowedQueryTypes: ['boolean'],
@@ -96,9 +93,10 @@ describe('P3 — three revocation paths', () => {
 
     const decision = await checkAgentDelegation({
       signedDelegation: delegation,
+      agentVlei: world.agentVlei,
+      trust: world.trust,
       requestedQueryType: 'boolean',
       requestedCredentialType: 'WorkingHoursCredential',
-      knownInstitutions,
       revocations: dir.delegationRevocations,
     });
 

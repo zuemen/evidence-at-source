@@ -1,18 +1,16 @@
 import { describe, expect, test, vi } from 'vitest';
-import { createRevocationRegistry, type PublicJwk } from '@eas/shared';
-import { createIssuer } from '@eas/issuer';
+import { createRevocationRegistry } from '@eas/shared';
+import { createVleiIssuer } from '@eas/issuer';
 import { checkAgentDelegation, runAuthorizedGate, type DelegationContext } from '@eas/agents';
-
-const AGENT_DID = 'did:key:zBankAgent';
+import { AGENT_DID, setupVleiWorld } from './helpers/vleiWorld.js';
 
 async function setup() {
-  const bank = await createIssuer('did:web:bank.example');
-  const knownInstitutions: Record<string, PublicJwk> = {
-    'did:web:bank.example': bank.publicKey,
-  };
+  const world = await setupVleiWorld();
 
-  async function delegation(overrides: Partial<Parameters<typeof bank.issueDelegation>[0]> = {}) {
-    return bank.issueDelegation({
+  async function delegation(
+    overrides: Partial<Parameters<typeof world.bank.issueDelegation>[0]> = {},
+  ) {
+    return world.bank.issueDelegation({
       agentDid: AGENT_DID,
       principalName: '國泰世華銀行',
       allowedQueryTypes: ['boolean'],
@@ -24,12 +22,13 @@ async function setup() {
 
   const baseCtx = (signed: string | null): DelegationContext => ({
     signedDelegation: signed,
+    agentVlei: world.agentVlei,
+    trust: world.trust,
     requestedQueryType: 'boolean',
     requestedCredentialType: 'WorkingHoursCredential',
-    knownInstitutions,
   });
 
-  return { bank, knownInstitutions, delegation, baseCtx };
+  return { ...world, delegation, baseCtx };
 }
 
 describe('L0 — agent delegation', () => {
@@ -92,11 +91,26 @@ describe('L0 — agent delegation', () => {
     expect(decision.ok === false && decision.reason).toBe('QUERY_TYPE_NOT_IN_SCOPE');
   });
 
-  test('a delegation signed by an unknown institution is invalid', async () => {
-    const { delegation, baseCtx } = await setup();
-    const signed = await delegation();
+  test('a delegation signed by a key outside the vLEI chain is invalid', async () => {
+    const { eco, baseCtx } = await setup();
+    // An impostor institution in the same ecosystem signs the delegation, but
+    // the presented ECR chain belongs to the real bank — the chain-resolved key
+    // does not verify the impostor's signature.
+    const impostor = await createVleiIssuer({
+      didWeb: 'did:web:bank.example',
+      legalName: '假冒銀行',
+      leiTag: 'IMPOSTOREXAMPLE',
+      ecosystem: eco,
+    });
+    const signed = await impostor.issueDelegation({
+      agentDid: AGENT_DID,
+      principalName: '國泰世華銀行',
+      allowedQueryTypes: ['boolean'],
+      scope: ['WorkingHoursCredential'],
+      purpose: '開戶申請的身份與意願查驗',
+    });
 
-    const decision = await checkAgentDelegation({ ...baseCtx(signed), knownInstitutions: {} });
+    const decision = await checkAgentDelegation(baseCtx(signed));
 
     expect(decision.ok).toBe(false);
     expect(decision.ok === false && decision.reason).toBe('AGENT_DELEGATION_INVALID');
@@ -130,5 +144,48 @@ describe('L0 — agent delegation', () => {
     expect(result.ok).toBe(false);
     expect(result.ok === false && result.reason).toBe('QUERY_TYPE_NOT_IN_SCOPE');
     expect(workerReader).not.toHaveBeenCalled();
+  });
+});
+
+describe('L0 — agent vLEI authority', () => {
+  test('V1: no ECR chain presented is refused before any worker data', async () => {
+    const { delegation, baseCtx } = await setup();
+    const signed = await delegation();
+    const workerReader = vi.fn(async () => ({ ok: true }) as const);
+
+    const result = await runAuthorizedGate({ ...baseCtx(signed), agentVlei: null }, workerReader);
+
+    expect(result.ok === false && result.reason).toBe('AGENT_VLEI_MISSING');
+    expect(workerReader).not.toHaveBeenCalled();
+  });
+
+  test('V2: a revoked ECR is refused as AGENT_VLEI_REVOKED', async () => {
+    const { bank, delegation, baseCtx } = await setup();
+    const signed = await delegation();
+    bank.revokeAgentEcr(AGENT_DID);
+
+    const decision = await checkAgentDelegation(baseCtx(signed));
+
+    expect(decision.ok === false && decision.reason).toBe('AGENT_VLEI_REVOKED');
+  });
+
+  test('V3: a delegation naming a different agent than the ECR is a binding mismatch', async () => {
+    const { delegation, baseCtx } = await setup();
+    const signed = await delegation({ agentDid: 'did:key:zSomeoneElse' });
+
+    const decision = await checkAgentDelegation(baseCtx(signed));
+
+    expect(decision.ok === false && decision.reason).toBe('AGENT_VLEI_BINDING_MISMATCH');
+  });
+
+  test('V4: a passing decision carries the verified authority facts', async () => {
+    const { delegation, baseCtx } = await setup();
+    const decision = await checkAgentDelegation(baseCtx(await delegation()));
+
+    expect(decision.ok).toBe(true);
+    if (decision.ok) {
+      expect(decision.authority.principalDid).toBe('did:web:bank.example');
+      expect(decision.authority.principalLegalName).toBe('國泰世華銀行');
+    }
   });
 });

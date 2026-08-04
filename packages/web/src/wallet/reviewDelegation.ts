@@ -3,9 +3,11 @@
  *
  * The institution sets the upper bound (an agent may only do what its delegation
  * grants). This is where the lower bound lives: the worker's wallet independently
- * verifies the agent's delegation and shows the worker its scope, so the worker
- * can decide whether to disclose at all. If the delegation is invalid, expired or
- * revoked, there is nothing to decide — the wallet offers no disclosure.
+ * verifies the agent's delegation and its vLEI chain, and shows the worker who
+ * the institution provably is (its Legal Entity vLEI, not its own claim) and the
+ * scope it granted, so the worker can decide whether to disclose at all. If the
+ * delegation or the chain is invalid, expired or revoked, there is nothing to
+ * decide — the wallet offers no disclosure.
  */
 
 import { verifyDelegationValidity, type DelegationValidityInput } from '@eas/agents';
@@ -22,6 +24,8 @@ export type WalletDelegationView =
       readonly canDisclose: true;
       readonly principal: string;
       readonly principalName: string;
+      /** The institution as proven by its Legal Entity vLEI chain, not by its own claim. */
+      readonly verifiedLegalEntity: { readonly lei: string; readonly legalName: string };
       readonly purpose: string;
       readonly allowedQueryTypes: readonly AllowedQueryType[];
       readonly scope: readonly string[];
@@ -32,7 +36,8 @@ export type WalletDelegationView =
   | { readonly status: 'refused'; readonly canDisclose: false; readonly reason: ReasonCode };
 
 export interface WalletReviewOptions {
-  readonly knownInstitutions: DelegationValidityInput['knownInstitutions'];
+  readonly agentVlei: DelegationValidityInput['agentVlei'];
+  readonly trust: DelegationValidityInput['trust'];
   readonly revocations?: DelegationValidityInput['revocations'];
   /** Credential types the worker holds and might disclose. */
   readonly heldCredentialTypes: readonly string[];
@@ -44,7 +49,8 @@ export async function reviewDelegationForWallet(
 ): Promise<WalletDelegationView> {
   const validity = await verifyDelegationValidity({
     signedDelegation,
-    knownInstitutions: options.knownInstitutions,
+    agentVlei: options.agentVlei,
+    trust: options.trust,
     ...(options.revocations === undefined ? {} : { revocations: options.revocations }),
   });
 
@@ -52,7 +58,7 @@ export async function reviewDelegationForWallet(
     return { status: 'refused', canDisclose: false, reason: validity.reason };
   }
 
-  const { claims } = validity;
+  const { claims, authority } = validity;
   const nowSeconds = Math.floor(Date.now() / 1000);
 
   return {
@@ -60,6 +66,10 @@ export async function reviewDelegationForWallet(
     canDisclose: true,
     principal: claims.principal,
     principalName: claims.principalName,
+    verifiedLegalEntity: {
+      lei: authority.lei,
+      legalName: authority.principalLegalName,
+    },
     purpose: claims.purpose,
     allowedQueryTypes: claims.allowedQueryTypes,
     scope: claims.scope,

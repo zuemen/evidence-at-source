@@ -13,7 +13,8 @@
     "@eas/issuer": "*",
     "@eas/shared": "*",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "react-dom": "^18.3.1",
+    "@eas/vlei": "*"
   },
   "devDependencies": {
     "@types/react": "^18.3.12",
