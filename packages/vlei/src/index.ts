@@ -16,3 +16,14 @@ export {
 export type { AttributeSpec, VleiSchema, VleiSchemaName } from './schemas.js';
 export { issueAcdc, verifyAcdc } from './acdc.js';
 export type { Acdc, AcdcEdge, AcdcFailure, AcdcTrust, IssueAcdcInput, SignedAcdc } from './acdc.js';
+export { AI_AGENT_ROLE, verifyEcrChain, verifyLeChain } from './chain.js';
+export type {
+  AgentAuthorityFacts,
+  ChainResult,
+  LegalEntityFacts,
+  VleiFailure,
+  VleiPresentation,
+  VleiTrustContext,
+} from './chain.js';
+export { bootstrapEcosystem } from './ecosystem.js';
+export type { CreateLegalEntityInput, Ecosystem, LegalEntityHandle } from './ecosystem.js';
