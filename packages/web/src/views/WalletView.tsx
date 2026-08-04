@@ -21,10 +21,34 @@ const CREDENTIAL_LABELS: Record<string, string> = {
 
 const REFUSAL_LABELS: Record<string, string> = {
   AGENT_DELEGATION_MISSING: '此 Agent 未持有任何授權憑證',
-  AGENT_DELEGATION_INVALID: '此 Agent 的授權簽章無效或非由已知機構簽發',
+  AGENT_DELEGATION_INVALID: '此 Agent 的授權簽章與其 vLEI 法人公鑰不符',
   AGENT_DELEGATION_EXPIRED: '此 Agent 的授權已過期',
   AGENT_DELEGATION_REVOKED: '此 Agent 的授權已被機構撤銷',
+  AGENT_VLEI_MISSING: '此 Agent 未出示 vLEI 授權鏈',
+  AGENT_VLEI_CHAIN_INVALID: '此 Agent 的 vLEI 信任鏈驗證失敗——簽章、內容或信任根不成立',
+  AGENT_VLEI_REVOKED: '此 Agent 的 vLEI 信任鏈上有憑證已被撤銷',
+  AGENT_VLEI_BINDING_MISMATCH: '授權憑證與 vLEI 鏈指向不同的 Agent 或機構',
 };
+
+function ShieldCheck(): JSX.Element {
+  return (
+    <svg
+      width="13"
+      height="13"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      style={{ verticalAlign: '-0.15em', marginRight: '0.35em' }}
+    >
+      <path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z" />
+      <path d="m9 12 2 2 4-4" />
+    </svg>
+  );
+}
 
 function describeQueryTypes(types: readonly AllowedQueryType[]): string {
   const parts: string[] = [];
@@ -76,6 +100,13 @@ function DelegationCard({ review }: { review: WalletDelegationView }): JSX.Eleme
         <div className="claim-row">
           <span className="name">授權方</span>
           <span className="value">{review.principalName}（{review.principal}）</span>
+        </div>
+        <div className="claim-row">
+          <span className="name">vLEI 法人驗證</span>
+          <span className="value">
+            <ShieldCheck />
+            {review.verifiedLegalEntity.legalName} · LEI {review.verifiedLegalEntity.lei}
+          </span>
         </div>
         <div className="claim-row">
           <span className="name">授權目的</span>

@@ -18,12 +18,14 @@ import {
   type DemoWorld,
   type IntegrityDemoState,
   type SplitView,
+  type VleiState,
 } from './demo/world.js';
 
 export interface DemoPayload {
   readonly snapshot: DemoSnapshot;
   readonly split: SplitView;
   readonly delegation: DelegationState;
+  readonly vlei: VleiState;
   readonly attack: AttackDemoState;
   readonly integrity: IntegrityDemoState;
 }
@@ -36,6 +38,7 @@ async function currentPayload(): Promise<DemoPayload> {
     snapshot: world.snapshot(),
     split: await world.split(),
     delegation: await world.delegationState(),
+    vlei: world.vleiState(),
     attack: world.attackDemo(),
     integrity: world.integrityDemo(),
   };
@@ -57,6 +60,10 @@ export const api = {
   },
   revokeAgent: async (role: AgentRole) => {
     (await worldPromise).revokeAgentDelegation(role);
+    return currentPayload();
+  },
+  revokeQvi: async () => {
+    (await worldPromise).revokeQvi();
     return currentPayload();
   },
   reset: async () => {

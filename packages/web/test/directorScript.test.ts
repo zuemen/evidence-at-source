@@ -26,7 +26,7 @@ describe('director script', () => {
   });
 
   test('actions are drawn only from the known action set', () => {
-    const known = new Set(['reset', 'attestAll', 'revoke', 'revokeAgentBank']);
+    const known = new Set(['reset', 'attestAll', 'revoke', 'revokeAgentBank', 'revokeQvi']);
     for (const beat of DIRECTOR_BEATS) {
       for (const action of beat.actions) {
         expect(known.has(action)).toBe(true);

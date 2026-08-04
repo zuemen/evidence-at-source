@@ -23,7 +23,7 @@ import {
   type RevocationRegistry,
 } from '@eas/shared';
 import { createVleiIssuer, type Issuer, type VleiIssuer } from '@eas/issuer';
-import { bootstrapEcosystem } from '@eas/vlei';
+import { bootstrapEcosystem, verifyEcrChain, verifyLeChain } from '@eas/vlei';
 import {
   buildCohortEvidence,
   checkCredentialLayer,
@@ -154,6 +154,36 @@ export interface DelegationState {
   readonly walletReview: WalletDelegationView;
 }
 
+/** One node in a rendered vLEI chain: GLEIF root → QVI → Legal Entity → Agent. */
+export interface VleiChainNode {
+  readonly tier: 'root' | 'qvi' | 'legalEntity' | 'agent';
+  readonly title: string;
+  readonly subtitle: string;
+}
+
+export interface VleiChainStatus {
+  readonly role: AgentRole;
+  readonly verified: boolean;
+  /** VleiFailure code when broken; codes carry no field values. */
+  readonly failure: string | null;
+  readonly nodes: readonly VleiChainNode[];
+}
+
+export interface VleiIssuerStanding {
+  readonly name: string;
+  readonly didWeb: string;
+  readonly lei: string;
+  readonly verified: boolean;
+  readonly failure: string | null;
+}
+
+export interface VleiState {
+  readonly gleifAid: string;
+  readonly qviRevoked: boolean;
+  readonly chains: readonly VleiChainStatus[];
+  readonly issuers: readonly VleiIssuerStanding[];
+}
+
 export interface T9Step {
   readonly label: string;
   readonly cohortSize: number;
@@ -189,6 +219,9 @@ export interface DemoWorld {
   attestAll(): Promise<void>;
   revokeSubject(): void;
   revokeAgentDelegation(role: AgentRole): void;
+  /** GLEIF-side revocation of the QVI credential: the whole chain collapses. */
+  revokeQvi(): void;
+  vleiState(): VleiState;
   delegationState(): Promise<DelegationState>;
   split(): Promise<SplitView>;
   attackDemo(): AttackDemoState;
@@ -292,6 +325,38 @@ export async function createDemoWorld(): Promise<DemoWorld> {
   const bankAgentVlei = bank.grantAgentEcr(BANK_AGENT_DID);
   const brandAgentVlei = brand.grantAgentEcr(BRAND_AGENT_DID);
   const delegationRevocations: RevocationRegistry = createRevocationRegistry();
+  let qviRevoked = false;
+
+  function agentChain(role: AgentRole): VleiChainStatus {
+    const principal = role === 'bank' ? bank : brand;
+    const chain = role === 'bank' ? bankAgentVlei : brandAgentVlei;
+    const agentDid = role === 'bank' ? BANK_AGENT_DID : BRAND_AGENT_DID;
+    const verdict = verifyEcrChain(chain, eco.trust);
+
+    return {
+      role,
+      verified: verdict.ok,
+      failure: verdict.ok ? null : verdict.failure,
+      nodes: [
+        { tier: 'root', title: 'GLEIF Root', subtitle: `${eco.gleifAid.slice(0, 20)}…` },
+        { tier: 'qvi', title: 'Qualified vLEI Issuer', subtitle: 'QVI vLEI Credential' },
+        { tier: 'legalEntity', title: principal.legalName, subtitle: `LEI ${principal.lei}` },
+        { tier: 'agent', title: agentDid, subtitle: 'ECR · ai-verification-agent' },
+      ],
+    };
+  }
+
+  function issuerStanding(issuer: VleiIssuer): VleiIssuerStanding {
+    const verdict = verifyLeChain(issuer.legalEntityPresentation(), eco.trust);
+
+    return {
+      name: issuer.legalName,
+      didWeb: issuer.did,
+      lei: issuer.lei,
+      verified: verdict.ok,
+      failure: verdict.ok ? null : verdict.failure,
+    };
+  }
 
   const bankDelegation = await bank.issueDelegation({
     agentDid: BANK_AGENT_DID,
@@ -346,7 +411,8 @@ export async function createDemoWorld(): Promise<DemoWorld> {
     const status =
       validity.reason === 'AGENT_DELEGATION_EXPIRED'
         ? 'expired'
-        : validity.reason === 'AGENT_DELEGATION_REVOKED'
+        : validity.reason === 'AGENT_DELEGATION_REVOKED' ||
+            validity.reason === 'AGENT_VLEI_REVOKED'
           ? 'revoked'
           : 'invalid';
 
@@ -524,6 +590,27 @@ export async function createDemoWorld(): Promise<DemoWorld> {
 
     revokeAgentDelegation(role) {
       delegationRevocations.revokeSubject(role === 'bank' ? BANK_AGENT_DID : BRAND_AGENT_DID);
+    },
+
+    revokeQvi() {
+      if (!qviRevoked) {
+        eco.revokeQviCredential();
+        qviRevoked = true;
+      }
+    },
+
+    vleiState() {
+      return {
+        gleifAid: eco.gleifAid,
+        qviRevoked,
+        chains: [agentChain('bank'), agentChain('brand')],
+        issuers: [
+          issuerStanding(factory),
+          issuerStanding(agency),
+          issuerStanding(bank),
+          issuerStanding(brand),
+        ],
+      };
     },
 
     attackDemo() {

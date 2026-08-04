@@ -107,4 +107,38 @@ describe('demo world', () => {
     expect(after.agents.find((a) => a.role === 'bank')?.status).toBe('revoked');
     expect(after.walletReview.status).toBe('refused');
   });
+
+  test('vleiState reports intact chains for both agents and all four issuers', async () => {
+    const world = await createDemoWorld();
+
+    const vlei = world.vleiState();
+
+    expect(vlei.qviRevoked).toBe(false);
+    expect(vlei.chains).toHaveLength(2);
+    expect(vlei.chains.every((chain) => chain.verified)).toBe(true);
+    expect(vlei.chains.every((chain) => chain.nodes.length === 4)).toBe(true);
+    expect(vlei.issuers).toHaveLength(4);
+    expect(vlei.issuers.every((issuer) => issuer.verified)).toBe(true);
+  });
+
+  test('revoking the QVI collapses every chain and refuses both agents at L0', async () => {
+    const world = await createDemoWorld();
+    await world.attestAll();
+
+    world.revokeQvi();
+
+    const vlei = world.vleiState();
+    expect(vlei.qviRevoked).toBe(true);
+    expect(vlei.chains.every((chain) => chain.verified === false)).toBe(true);
+    expect(vlei.issuers.every((issuer) => issuer.verified === false)).toBe(true);
+
+    const split = await world.split();
+    expect(split.bank.refusedWith).toBe('AGENT_VLEI_REVOKED');
+    expect(Object.keys(split.bank.disclosed)).toHaveLength(0);
+    expect(split.brand.refusedWith).toBe('AGENT_VLEI_REVOKED');
+
+    const delegation = await world.delegationState();
+    expect(delegation.agents.every((agent) => agent.status === 'revoked')).toBe(true);
+    expect(delegation.walletReview.status).toBe('refused');
+  });
 });

@@ -7,7 +7,7 @@
 
 export type DirectorTab = 'wallet' | 'console' | 'attack';
 
-export type DirectorAction = 'reset' | 'attestAll' | 'revoke' | 'revokeAgentBank';
+export type DirectorAction = 'reset' | 'attestAll' | 'revoke' | 'revokeAgentBank' | 'revokeQvi';
 
 export interface DirectorBeat {
   readonly id: string;
@@ -58,6 +58,14 @@ export const DIRECTOR_BEATS: readonly DirectorBeat[] = [
     narration:
       '按下機構撤銷後，該 Agent 的查詢立即在 L0 失效，畫面顯示「一個勞工欄位都沒讀到」。另一側 Agent 不受影響。',
     actions: ['reset', 'attestAll', 'revokeAgentBank'],
+  },
+  {
+    id: 'vlei-cascade',
+    tab: 'console',
+    title: 'GLEIF 撤銷 QVI：整條信任鏈當場塌掉',
+    narration:
+      '機構信任不是一份名單，是一條 vLEI 憑證鏈：GLEIF → QVI → 法人 vLEI → Agent 授權角色。模擬 GLEIF 撤銷 QVI 資格：兩個 Agent 的授權同時在 L0 失效、四家機構的法人憑證全數失去背書——而且沒有任何人需要去同步任何名單。',
+    actions: ['reset', 'attestAll', 'revokeQvi'],
   },
   {
     id: 'subject-revoke',

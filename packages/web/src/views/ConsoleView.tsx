@@ -1,12 +1,21 @@
-import type { AgentAuthStatus, AgentRole, DemoSnapshot, SplitView } from '../demo/world.js';
+import type {
+  AgentAuthStatus,
+  AgentRole,
+  DemoSnapshot,
+  SplitView,
+  VleiState,
+} from '../demo/world.js';
+import { TrustChainPanel } from './TrustChainPanel.js';
 
 interface Props {
   readonly snapshot: DemoSnapshot;
   readonly split: SplitView;
   readonly agents: readonly AgentAuthStatus[];
+  readonly vlei: VleiState;
   readonly busy: boolean;
   readonly onRevoke: () => void;
   readonly onRevokeAgent: (role: AgentRole) => void;
+  readonly onRevokeQvi: () => void;
   readonly onReset: () => void;
 }
 
@@ -71,6 +80,10 @@ const DELEGATION_REASONS = new Set([
   'AGENT_DELEGATION_INVALID',
   'AGENT_DELEGATION_EXPIRED',
   'AGENT_DELEGATION_REVOKED',
+  'AGENT_VLEI_MISSING',
+  'AGENT_VLEI_CHAIN_INVALID',
+  'AGENT_VLEI_REVOKED',
+  'AGENT_VLEI_BINDING_MISMATCH',
   'QUERY_TYPE_NOT_IN_SCOPE',
   'CREDENTIAL_TYPE_NOT_IN_SCOPE',
 ]);
@@ -79,9 +92,11 @@ export function ConsoleView({
   snapshot,
   split,
   agents,
+  vlei,
   busy,
   onRevoke,
   onRevokeAgent,
+  onRevokeQvi,
   onReset,
 }: Props): JSX.Element {
   const bankRefused = split.bank.refusedWith !== null;
@@ -93,6 +108,8 @@ export function ConsoleView({
 
   return (
     <section>
+      <TrustChainPanel vlei={vlei} busy={busy} onRevokeQvi={onRevokeQvi} />
+
       <div className="toolbar">
         <span className="badge" data-tone={snapshot.subjectRevoked ? 'bad' : 'ok'}>
           {snapshot.subjectRevoked ? '主體已撤銷' : `母體 ${snapshot.cohortSize} 人`}

@@ -34,6 +34,7 @@ export function App(): JSX.Element {
       else if (action === 'attestAll') latest = await api.attestAll();
       else if (action === 'revoke') latest = await api.revoke();
       else if (action === 'revokeAgentBank') latest = await api.revokeAgent('bank');
+      else if (action === 'revokeQvi') latest = await api.revokeQvi();
     }
     return latest ?? (await api.state());
   }, []);
@@ -90,7 +91,17 @@ export function App(): JSX.Element {
               }
             }}
           >
-            ▶ 導演
+            <svg
+              width="10"
+              height="10"
+              viewBox="0 0 24 24"
+              fill="currentColor"
+              aria-hidden="true"
+              style={{ marginRight: '0.45em', verticalAlign: '-0.05em' }}
+            >
+              <path d="M8 5v14l11-7z" />
+            </svg>
+            導演
           </button>
         </nav>
       </header>
@@ -151,9 +162,11 @@ export function App(): JSX.Element {
           snapshot={payload.snapshot}
           split={payload.split}
           agents={payload.delegation.agents}
+          vlei={payload.vlei}
           busy={busy}
           onRevoke={() => void run(api.revoke)}
           onRevokeAgent={(role) => void run(() => api.revokeAgent(role))}
+          onRevokeQvi={() => void run(api.revokeQvi)}
           onReset={() => void run(api.reset)}
         />
       ) : (
