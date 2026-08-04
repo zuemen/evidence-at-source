@@ -9,6 +9,7 @@ export default defineConfig({
       // Workspace packages are resolved straight to TypeScript sources so that
       // tests always exercise the code under edit, with no build step.
       '@eas/shared': r('./packages/shared/src/index.ts'),
+      '@eas/vlei': r('./packages/vlei/src/index.ts'),
       '@eas/issuer': r('./packages/issuer/src/index.ts'),
       '@eas/agents': r('./packages/agents/src/index.ts'),
       '@eas/reconciliation': r('./packages/reconciliation/src/index.ts'),
