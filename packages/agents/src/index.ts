@@ -57,6 +57,15 @@ export type {
   IntegrityGrade,
 } from './evidenceIntegrity.js';
 
+export { stubProofVerifier, verifyReconciliationProof } from './zkReconciliation.js';
+export type {
+  BoundCredential,
+  ProofVerifier,
+  ReconciliationProofPublicSignals,
+  ReconciliationProofResult,
+  VerifyReconciliationProofInput,
+} from './zkReconciliation.js';
+
 export { buildCohortEvidence } from './cohort.js';
 export type { CohortRequest, CohortResult, Submission } from './cohort.js';
 

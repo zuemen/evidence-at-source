@@ -30,6 +30,11 @@ export const REASON_CODES = [
   'DIFFERENCING_ATTACK_DETECTED',
   // An agent has spent its per-period allowance of answered queries.
   'QUERY_BUDGET_EXCEEDED',
+  // ZK reconciliation binding (Phase 4). The proof itself is checked by an
+  // injected verifier; these guard the binding between proof and credentials.
+  'PROOF_INVALID',
+  'PROOF_BINDING_MISMATCH',
+  'PROOF_SUBJECT_MISMATCH',
 ] as const;
 
 export type ReasonCode = (typeof REASON_CODES)[number];

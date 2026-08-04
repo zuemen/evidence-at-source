@@ -165,6 +165,12 @@ flowchart TD
 
 唯一同時具備五根支柱的是本專案——不是別人做得差，而是它們解的是相鄰但不同的問題。逐項定位與誠實註記見 [`docs/comparison-matrix.md`](docs/comparison-matrix.md)。
 
+## 錢包端 ZK 對帳（Phase 4，部分降級）
+
+交叉驗證的 M7 有一個弱點：它是唯一同時看得到兩張憑證明文的元件，等於可信第三方。ZK 版本讓**勞工在自己裝置上**證明「工時與入帳一致」，驗證方只收到布林結論，看不到任何數字。其中最關鍵、最容易漏掉的是**憑證綁定**——一個對任意數字的證明毫無意義，必須綁定到特定、有效、未撤銷、同一勞工的兩張憑證。這**四項綁定檢查已完整實作並各有測試**（[`packages/agents/src/zkReconciliation.ts`](packages/agents/src/zkReconciliation.ts)），M7 的新角色從不接觸明文。
+
+**誠實降級**：本機無 circom/Rust 工具鏈，真實電路尚未接上；證明數學置於注入的 `verifyProof` 之後，預設 stub 一律拒絕（缺後端不會被誤判為有效）。伺服器端 M7 照常運作、demo 不變，差別僅在尚不能宣稱「伺服器從未看過任何數字」。設計與接線步驟見 [`docs/zk-reconciliation.md`](docs/zk-reconciliation.md)。
+
 ## 執行 PoC
 
 ```bash
@@ -269,6 +275,7 @@ Agent A 的能力邊界也寫在型別裡：`BankAssessment.requiresHumanReview`
 | 證據完整性指數（P6） | 涵蓋率×一致率×雙簽比率 → 單一 0–100 分＋等級 | ✅ 後端＋純函式測試＋demo 畫面 |
 | 誘因鏈（P1） | 各方誘因論述＋勞工自述 attestation `purpose` 欄位 | ✅ docs＋一個欄位 |
 | 三條撤銷路徑（P3） | 簽發方／主體連動／機構撤銷 Agent，兩層隔離 | ✅ facade＋整合測試 |
+| 錢包端 ZK 對帳（Phase 4） | 憑證綁定四項檢查＋M7 角色轉變＋電路設計 | ⚠️ 綁定與介面完成；真實電路降級（本機無 circom/Rust 工具鏈） |
 | 攻擊演示 | T8 prompt injection 無效、T9 差分攻擊偵測 | ✅ 後端＋demo 畫面（攻防與完整性分頁） |
 
 ## 技術棧
