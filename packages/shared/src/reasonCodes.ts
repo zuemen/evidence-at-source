@@ -12,6 +12,16 @@ export const REASON_CODES = [
   'AGENT_DELEGATION_REVOKED',
   'QUERY_TYPE_NOT_IN_SCOPE',
   'CREDENTIAL_TYPE_NOT_IN_SCOPE',
+  // L0 — vLEI trust chain. The agent's authority must trace through an ECR
+  // credential to a Legal Entity vLEI and up to the GLEIF root.
+  'AGENT_VLEI_MISSING',
+  'AGENT_VLEI_CHAIN_INVALID',
+  'AGENT_VLEI_REVOKED',
+  'AGENT_VLEI_BINDING_MISMATCH',
+  // L1 — issuer identity. A worker-credential issuer's signing key is only
+  // trusted when it arrives inside a valid Legal Entity vLEI chain.
+  'ISSUER_VLEI_CHAIN_INVALID',
+  'ISSUER_VLEI_REVOKED',
   // L1 — credential layer
   'INVALID_ISSUER_SIGNATURE',
   'MISSING_WORKER_ATTESTATION',

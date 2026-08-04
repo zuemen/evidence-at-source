@@ -1,0 +1,62 @@
+# vLEI 信任層規格
+
+機構信任不再來自手動維護的公鑰名單（舊 `knownInstitutions`），而是來自 GLEIF vLEI
+生態系的憑證鏈。勞工面的四張 SD-JWT 憑證與選擇性揭露機制**完全不變**（原則二）；
+vLEI 只回答兩個問題：**這家機構是誰**（Legal Entity vLEI）、**這個 Agent 憑什麼**
+（Engagement Context Role vLEI）。
+
+## 信任鏈
+
+```mermaid
+flowchart LR
+    GLEIF["GLEIF Root AID<br/>（trust anchor）"] -->|QVI vLEI Credential| QVI["QVI<br/>Qualified vLEI Issuer"]
+    QVI -->|Legal Entity vLEI<br/>LEI・legalName・didWeb・credentialSigningJwk| LE["法人機構<br/>銀行／品牌／工廠／仲介"]
+    LE -->|ECR vLEI<br/>agentDid・engagementContextRole| AGENT["AI 查驗 Agent"]
+```
+
+- 每個節點是一個 KERI AID（自我定址識別碼），金鑰輪替寫入 KEL 並帶 pre-rotation 承諾。
+- 每張憑證是 ACDC（v/d/i/ri/s/a/e/r），SAID 自我定址，撤銷狀態在簽發方的 TEL。
+- 驗鏈時每一跳都重驗：SAID、簽章（經 KEL 解出簽發時金鑰）、TEL 狀態、schema SAID、
+  LEI 檢查碼（ISO 17442 mod 97-10）與上下游 LEI 一致性。**上游撤銷即全鏈失效**：
+  QVI 憑證被撤，所有 LE 與 ECR 立刻驗不過。
+
+## 與 SD-JWT 世界的橋接
+
+- LE vLEI 的 `credentialSigningJwk` 是機構簽 SD-JWT（勞工憑證與 DelegationCredential）
+  的 ES256 公鑰。驗證方**只能**從已驗證的 LE 鏈取得這把鑰匙——沒有其他信任來源。
+- L0 要求 Agent 同時出示 DelegationCredential（SD-JWT）與 ECR 鏈（ACDC），並比對
+  `claims.agentDid === ecr.agentDid`、`claims.principal === le.didWeb`，不一致回
+  `AGENT_VLEI_BINDING_MISMATCH`。
+- L1 的 issuer 公鑰由 `resolveIssuerSigningKey`（agents/vleiBridge）從 LE 鏈解出，
+  鏈壞回 `ISSUER_VLEI_CHAIN_INVALID`、被撤回 `ISSUER_VLEI_REVOKED`。
+
+## Schema profiles
+
+credentialType 沿用官方名稱（QualifiedvLEIIssuervLEICredential、
+LegalEntityvLEICredential、LegalEntityOfficialOrganizationalRolevLEICredential、
+LegalEntityEngagementContextRolevLEICredential）。擴充欄位：
+
+| Schema | 官方欄位 | PoC 擴充欄位 | 擴充理由 |
+|---|---|---|---|
+| QVI | LEI | — | — |
+| Legal Entity | LEI, legalName | didWeb, credentialSigningJwk | 綁定機構的 SD-JWT 簽章身分 |
+| OOR | LEI, personLegalName, officialRole | — | 完整性保留，目前未接線 |
+| ECR | LEI, engagementContextRole | agentDid | 指名被授權的 AI Agent |
+
+rules 區塊逐字收錄官方 usageDisclaimer 與 issuanceDisclaimer。
+
+## 明文簡化（PoC）
+
+1. 單簽 KEL（`kt:'1'`），無 witness、無 delegated AID。
+2. 無 OOBI／CESR stream：簽章放 JSON envelope，KEL/TEL 以 in-process store 共享。
+3. Schema SAID 為本 repo 自算，非 GLEIF 登錄之官方 SAID。
+4. 簽章驗證 pin 在 `sigSeq`（簽發時的 establishment event）；rotation 後舊憑證仍有效，
+   偷到舊金鑰可偽簽舊 seq 的問題在真 KERI 由事件錨定解決，此處記為已知限制。
+5. 所有 LEI 由 `syntheticLei()` 產生（tag + X 填充 + 合法檢查碼），明顯為合成值。
+
+## 原因碼
+
+L0：AGENT_VLEI_MISSING／AGENT_VLEI_CHAIN_INVALID／AGENT_VLEI_REVOKED／
+AGENT_VLEI_BINDING_MISMATCH。L1：ISSUER_VLEI_CHAIN_INVALID／ISSUER_VLEI_REVOKED。
+細粒度失因（SAID_MISMATCH 等 `VleiFailure`）只存在 `@eas/vlei` 內部，出閘門一律
+折疊成上述原因碼，不夾帶任何欄位值。
