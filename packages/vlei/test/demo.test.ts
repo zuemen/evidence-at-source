@@ -16,11 +16,13 @@ describe('judge-facing vLEI demo', () => {
       .steps.map((step) => step.label)
       .join('|');
 
-    expect(runVleiDemo().steps.length).toBeGreaterThanOrEqual(10);
+    expect(runVleiDemo().steps.length).toBeGreaterThanOrEqual(13);
     expect(labels).toContain('LEI');
     expect(labels).toContain('竄改');
     expect(labels).toContain('ECR 撤銷');
     expect(labels).toContain('QVI 撤銷');
     expect(labels).toContain('外來信任根');
+    expect(labels).toContain('多簽');
+    expect(labels).toContain('可攜出示包');
   });
 });

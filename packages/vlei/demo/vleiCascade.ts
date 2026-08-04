@@ -9,6 +9,8 @@
 
 import {
   bootstrapEcosystem,
+  exportChainArtifacts,
+  importVerifierContext,
   isValidLei,
   verifyEcrChain,
   verifyLeChain,
@@ -73,6 +75,40 @@ export function runVleiDemo(): DemoReport {
   );
   steps.push(
     step('ECR 鏈驗證通過（銀行 Agent）', 'ok', outcome(verifyEcrChain(agentChain, eco.trust))),
+  );
+
+  // 3b — The root itself is threshold multisig, like GLEIF's council-held root.
+  steps.push(
+    step(
+      '信任根為門檻多簽',
+      '2-of-3',
+      `${eco.gleifKeyState.threshold}-of-${eco.gleifKeyState.keys.length}`,
+    ),
+  );
+
+  // 3c — The presentation travels as one self-contained bundle; the verifier
+  // rebuilds stores from the wire and only pins the root out-of-band.
+  const wire = exportChainArtifacts(agentChain, eco.trust);
+  const far = importVerifierContext(wire, eco.trust.trustedRoots);
+  steps.push(
+    step('可攜出示包跨驗證方驗證', 'ok', outcome(verifyEcrChain(far.presentation, far.trust))),
+  );
+
+  const wireTampered = JSON.parse(wire) as {
+    presentation: {
+      focus: string;
+      credentials: Record<string, { acdc: { a: Record<string, unknown> } }>;
+    };
+  };
+  wireTampered.presentation.credentials[wireTampered.presentation.focus]!.acdc.a['agentDid'] =
+    'did:key:zEvilAgent';
+  const farTampered = importVerifierContext(JSON.stringify(wireTampered), eco.trust.trustedRoots);
+  steps.push(
+    step(
+      '可攜出示包線上竄改被攔截',
+      'SAID_MISMATCH',
+      outcome(verifyEcrChain(farTampered.presentation, farTampered.trust)),
+    ),
   );
 
   // 4 — Tampering with one attribute breaks the SAID and is caught.

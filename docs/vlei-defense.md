@@ -16,7 +16,7 @@ QVI 撤銷級聯 → 外來信任根拒絕，exit code 0 即全數成立）。
 codes、KERI version string、SAID、pre-rotation KEL、TEL），驗證邏輯全部有測試。
 簡化清單白紙黑字寫在 [`docs/vlei.md`](vlei.md) 的「明文簡化」一節。
 
-**證據**：`packages/vlei/test/`（49 個測試）；`npm run demo:vlei`。
+**證據**：`packages/vlei/test/`（全套測試，含多簽、錨定、可攜出示包）；`npm run demo:vlei`。
 
 ### Q2. 你們的 schema SAID 不是 GLEIF 官方登錄的，互通性呢？
 
@@ -30,14 +30,14 @@ Blake3-256 over saidified serialization）。credentialType 沿用官方名稱�
 
 ### Q3. 金鑰輪替後，偷到舊金鑰的人可以偽簽舊序號的憑證嗎？
 
-在本 PoC：可以，這是已知限制（docs/vlei.md 明文第 4 條）。簽章驗證 pin 在
-`sigSeq`（簽發當下的 establishment event），輪替後舊憑證仍可驗——這是功能；
-但偽簽舊 seq 的新憑證需要真 KERI 的事件錨定（TEL 錨進 KEL）才能徹底封死。
-我們選擇誠實標註而不是假裝解決。值得指出的是：**pre-rotation 已實作**——
-下一把金鑰的承諾寫在前一個事件裡，偷到現行金鑰也改寫不了輪替歷史，這是
-KERI 相對傳統 PKI 的核心優勢，測試可證。
+已封死。每個 TEL 事件（vcp/iss/rev）在簽發前都由**現行金鑰**在控制者 KEL 寫入
+seal（ixn 互動事件）；驗證方對每個 TEL 事件都要求錨存在。偷到舊金鑰的人可以
+偽造事件本體與舊 seq 簽章，但無法在不持有現行金鑰的情況下延長 KEL 補錨——
+未錨定事件一律 fail-closed 為 unknown。加上 pre-rotation（下一把金鑰的承諾寫在
+前一個事件裡），現行金鑰與歷史兩個方向都由 KEL 封鎖。
 
-**證據**：`packages/vlei/test/kel.test.ts`（pre-rotation 承諾被破壞即整條 KEL 驗證失敗）。
+**證據**：`packages/vlei/test/tel.test.ts`（a validly-signed but unanchored event
+fails closed）；`packages/vlei/test/kel.test.ts`（anchoring 與 pre-rotation 系列）。
 
 ### Q4. LE credential 塞 `credentialSigningJwk`、ECR 塞 `agentDid`，這不是偏離標準嗎？
 
@@ -95,7 +95,7 @@ agent authority / cascades 系列）；`npm run demo:vlei` 步驟 6–9。
 noble 純 JS，demo 網站實測含 UI 全流程 3 秒內）。真實部署的快取策略（驗過的
 事件前綴記 memo）不影響安全模型，因為 SAID 鏈使任何竄改都會讓 memo 失配。
 
-**證據**：`npx vitest run packages/vlei`（49 測試 1.4 秒，含數百次全鏈重放）。
+**證據**：`npx vitest run packages/vlei`（全套測試數秒內完成，含數百次全鏈重放）。
 
 ### Q10. 為什麼評審要相信這不是「看起來像 vLEI 的自製品」？
 

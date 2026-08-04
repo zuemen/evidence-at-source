@@ -45,13 +45,14 @@ LegalEntityEngagementContextRolevLEICredential）。擴充欄位：
 
 rules 區塊逐字收錄官方 usageDisclaimer 與 issuanceDisclaimer。
 
-## 明文簡化（PoC）
+## 明文簡化與已補實項（PoC）
 
-1. 單簽 KEL（`kt:'1'`），無 witness、無 delegated AID。
-2. 無 OOBI／CESR stream：簽章放 JSON envelope，KEL/TEL 以 in-process store 共享。
-3. Schema SAID 為本 repo 自算，非 GLEIF 登錄之官方 SAID。
-4. 簽章驗證 pin 在 `sigSeq`（簽發時的 establishment event）；rotation 後舊憑證仍有效，
-   偷到舊金鑰可偽簽舊 seq 的問題在真 KERI 由事件錨定解決，此處記為已知限制。
+1. ~~單簽 KEL~~ → **已支援 kt 門檻多簽**（GLEIF root 為 2-of-3）；witness 與 delegated AID 仍未實作。
+2. ~~KEL/TEL 以 in-process store 共享~~ → **可攜出示包**：出示以單一 JSON（credentials + KELs + TELs）傳遞，
+   驗證方僅需帶外釘選 root AID，匯入時全部重驗；CESR stream framing 仍未實作。
+3. Schema SAID 為本 repo 自算，非 GLEIF 登錄之官方 SAID（接軌路徑見 defense Q2）。
+4. ~~偷到舊金鑰可偽簽舊 seq~~ → **TEL 事件已錨定控制者 KEL**：每個 vcp/iss/rev 先以現行金鑰
+   在 KEL 寫入 seal（ixn）再簽發；偽簽者無法用舊金鑰延長 KEL 補錨，未錨定事件 fail-closed。
 5. 所有 LEI 由 `syntheticLei()` 產生（tag + X 填充 + 合法檢查碼），明顯為合成值。
 
 ## 原因碼
