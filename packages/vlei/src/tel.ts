@@ -97,19 +97,32 @@ export class CredentialRegistry {
 }
 
 export class TelStore {
-  private readonly registries = new Map<string, CredentialRegistry>();
+  private readonly registries = new Map<string, readonly SignedTelEvent[]>();
 
   constructor(private readonly kels: KelStore) {}
 
+  /** Live reference: later issue/revoke by the registry are visible. */
   register(registry: CredentialRegistry): void {
-    this.registries.set(registry.registryId, registry);
+    this.registries.set(registry.registryId, registry.events);
+  }
+
+  /** For rebuilt contexts (portable bundles): raw event lists, verified on read. */
+  registerEvents(registryId: string, events: readonly SignedTelEvent[]): void {
+    this.registries.set(registryId, events);
+  }
+
+  eventsOf(registryId: string): readonly SignedTelEvent[] | undefined {
+    return this.registries.get(registryId);
   }
 
   status(registryId: string, credentialSaid: string): CredentialStatus {
-    const registry = this.registries.get(registryId);
-    if (registry === undefined) return 'unknown';
+    const events = this.registries.get(registryId);
+    if (events === undefined) return 'unknown';
 
-    const controllerAid = registry.events[0]?.event.ii;
+    const inception = events[0]?.event;
+    // The registry id is the vcp SAID; a mislabelled bundle proves nothing.
+    if (inception === undefined || inception.i !== registryId) return 'unknown';
+    const controllerAid = inception.ii;
     if (controllerAid === undefined) return 'unknown';
 
     // The controller KEL is verified once per status query; every event check
@@ -118,7 +131,7 @@ export class TelStore {
     if (kel === undefined) return 'unknown';
 
     let status: CredentialStatus = 'unknown';
-    for (const signed of registry.events) {
+    for (const signed of events) {
       if (!this.eventValid(kel, signed)) return 'unknown';
       if (signed.event.t === 'iss' && signed.event.i === credentialSaid) status = 'issued';
       if (signed.event.t === 'rev' && signed.event.i === credentialSaid) status = 'revoked';

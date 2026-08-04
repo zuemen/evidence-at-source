@@ -293,6 +293,11 @@ export class KelStore {
     return kel;
   }
 
+  /** Raw export for portable bundles; importers re-verify on registration. */
+  kelOf(aid: string): readonly SignedKelEvent[] | undefined {
+    return this.kels.get(aid);
+  }
+
   /** Re-verifies the whole KEL on every read; a tampered log resolves nothing. */
   keyStateAt(aid: string, seq: number): KeyState | undefined {
     const kel = this.verifiedKel(aid);

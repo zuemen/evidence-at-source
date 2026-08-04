@@ -34,3 +34,5 @@ export type {
 } from './chain.js';
 export { bootstrapEcosystem } from './ecosystem.js';
 export type { CreateLegalEntityInput, Ecosystem, LegalEntityHandle } from './ecosystem.js';
+export { exportChainArtifacts, importVerifierContext } from './portable.js';
+export type { ChainArtifacts } from './portable.js';
