@@ -91,7 +91,7 @@ describe('ACDC issue and verify', () => {
     const world = setup();
     const signed = issueQvi(world);
     const stranger = setup();
-    const forged: SignedAcdc = { ...signed, sig: issueQvi(stranger).sig };
+    const forged: SignedAcdc = { ...signed, sigs: issueQvi(stranger).sigs };
 
     expect(verifyAcdc(forged, world.trust)).toEqual({ ok: false, failure: 'SIGNATURE_INVALID' });
   });

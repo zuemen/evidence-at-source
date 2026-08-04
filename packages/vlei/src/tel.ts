@@ -7,11 +7,9 @@
  * answer `unknown`, never `issued`.
  */
 
-import { ed25519 } from '@noble/curves/ed25519';
 import { utf8ToBytes } from '@eas/shared';
-import { decodeMatter } from './cesr.js';
 import { saidify, verifySaid, versify, type Ked } from './said.js';
-import { KelStore, type AidController } from './kel.js';
+import { KelStore, verifyThreshold, type AidController } from './kel.js';
 
 export interface TelEvent {
   readonly v: string;
@@ -27,7 +25,7 @@ export interface TelEvent {
 
 export interface SignedTelEvent {
   readonly event: TelEvent;
-  readonly sig: string;
+  readonly sigs: readonly string[];
   readonly sigSeq: number;
 }
 
@@ -50,8 +48,8 @@ export class CredentialRegistry {
   }
 
   private append(event: TelEvent): void {
-    const { sig, sigSeq } = this.controller.sign(utf8ToBytes(JSON.stringify(event)));
-    this.events.push({ event, sig, sigSeq });
+    const { sigs, sigSeq } = this.controller.sign(utf8ToBytes(JSON.stringify(event)));
+    this.events.push({ event, sigs, sigSeq });
   }
 
   issue(credentialSaid: string, dt: string = new Date().toISOString()): void {
@@ -119,13 +117,9 @@ export class TelStore {
     const labels = signed.event.t === 'vcp' ? ['d', 'i'] : ['d'];
     if (!verifySaid(signed.event as unknown as Ked, labels)) return false;
 
-    const verfer = this.kels.verferAt(controllerAid, signed.sigSeq);
-    if (verfer === undefined) return false;
+    const state = this.kels.keyStateAt(controllerAid, signed.sigSeq);
+    if (state === undefined) return false;
 
-    return ed25519.verify(
-      decodeMatter(signed.sig).raw,
-      utf8ToBytes(JSON.stringify(signed.event)),
-      decodeMatter(verfer).raw,
-    );
+    return verifyThreshold(state, signed.sigs, utf8ToBytes(JSON.stringify(signed.event)));
   }
 }

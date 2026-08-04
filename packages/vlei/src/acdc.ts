@@ -7,11 +7,9 @@
  * rotations.
  */
 
-import { ed25519 } from '@noble/curves/ed25519';
 import { utf8ToBytes } from '@eas/shared';
-import { decodeMatter } from './cesr.js';
 import { saidify, verifySaid, versify, type Ked } from './said.js';
-import { KelStore, type AidController } from './kel.js';
+import { KelStore, verifyThreshold, type AidController } from './kel.js';
 import { CredentialRegistry, TelStore } from './tel.js';
 import {
   VLEI_RULES,
@@ -39,7 +37,7 @@ export interface Acdc {
 
 export interface SignedAcdc {
   readonly acdc: Acdc;
-  readonly sig: string;
+  readonly sigs: readonly string[];
   readonly sigSeq: number;
 }
 
@@ -73,8 +71,8 @@ export function issueAcdc(input: IssueAcdcInput): SignedAcdc {
   const acdc = saidify(body) as unknown as Acdc;
   input.registry.issue(acdc.d, dt);
 
-  const { sig, sigSeq } = input.issuer.sign(utf8ToBytes(JSON.stringify(acdc)));
-  return { acdc, sig, sigSeq };
+  const { sigs, sigSeq } = input.issuer.sign(utf8ToBytes(JSON.stringify(acdc)));
+  return { acdc, sigs, sigSeq };
 }
 
 export type AcdcFailure =
@@ -108,14 +106,11 @@ export function verifyAcdc(
     return { ok: false, failure: 'ATTRIBUTE_INVALID' };
   }
 
-  const verfer = trust.kels.verferAt(acdc.i, signed.sigSeq);
-  if (verfer === undefined) return { ok: false, failure: 'SIGNATURE_INVALID' };
-  const signatureOk = ed25519.verify(
-    decodeMatter(signed.sig).raw,
-    utf8ToBytes(JSON.stringify(acdc)),
-    decodeMatter(verfer).raw,
-  );
-  if (!signatureOk) return { ok: false, failure: 'SIGNATURE_INVALID' };
+  const state = trust.kels.keyStateAt(acdc.i, signed.sigSeq);
+  if (state === undefined) return { ok: false, failure: 'SIGNATURE_INVALID' };
+  if (!verifyThreshold(state, signed.sigs, utf8ToBytes(JSON.stringify(acdc)))) {
+    return { ok: false, failure: 'SIGNATURE_INVALID' };
+  }
 
   const status = trust.tels.status(acdc.ri, acdc.d);
   if (status === 'revoked') return { ok: false, failure: 'REGISTRY_REVOKED' };
