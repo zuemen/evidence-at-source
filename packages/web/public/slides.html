@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Evidence at Source — Demo Day</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link
+  href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600;900&family=IBM+Plex+Mono:wght@400;500&display=swap"
+  rel="stylesheet"
+/>
+<style>
+  :root { --ink:#0b0e0d; --paper:#141917; --line:#2b332e; --text:#e9e5dc;
+    --dim:#97a099; --jade:#5fb89c; --amber:#d59a3c; --rust:#cf6a5b;
+    --serif:'Noto Serif TC',Georgia,serif; --mono:'IBM Plex Mono',monospace; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--ink); color:var(--text); font-family:var(--serif); }
+  section { display:none; min-height:100dvh; padding:8vh 9vw; flex-direction:column;
+    justify-content:center; gap:1.1rem; }
+  section.active { display:flex; }
+  h1 { font-size:clamp(2rem,5vw,3.8rem); margin:0; line-height:1.15; }
+  h2 { font-size:clamp(1.4rem,3.2vw,2.3rem); margin:0 0 .4rem; }
+  .kicker { font-family:var(--mono); color:var(--jade); letter-spacing:.22em;
+    text-transform:uppercase; font-size:clamp(.7rem,1.3vw,.9rem); }
+  p, li { font-size:clamp(1rem,1.9vw,1.35rem); line-height:1.85; color:var(--dim); margin:.2rem 0; }
+  ul { margin:.4rem 0; padding-left:1.3em; }
+  strong { color:var(--text); }
+  .jade { color:var(--jade); } .amber { color:var(--amber); } .rust { color:var(--rust); }
+  .huge { font-size:clamp(1.5rem,3.2vw,2.4rem); color:var(--text); line-height:1.6; }
+  table { border-collapse:collapse; font-size:clamp(.8rem,1.5vw,1.05rem); margin-top:.6rem; }
+  td, th { border:1px solid var(--line); padding:.45em .9em; text-align:left; color:var(--dim); }
+  th { color:var(--jade); font-family:var(--mono); font-size:.82em; letter-spacing:.08em; }
+  td strong { color:var(--text); }
+  code { font-family:var(--mono); color:var(--amber); font-size:.92em; }
+  .foot { position:fixed; bottom:1rem; right:1.4rem; font-family:var(--mono);
+    font-size:.7rem; color:var(--dim); }
+  a { color:var(--jade); }
+  .bar { border-left:2px solid var(--jade); padding-left:1rem; }
+  @media (prefers-reduced-motion: no-preference) {
+    section.active { animation: rise .35s ease-out; }
+    @keyframes rise { from { opacity:0; transform:translateY(8px); } to { opacity:1; } }
+  }
+</style>
+</head>
+<body>
+
+<section class="active">
+  <p class="kicker">可信 AI 黑客松 2026 · Track 05 移工數位信任 × Track 06 RBA 合規</p>
+  <h1>Evidence at Source<br />證據前置</h1>
+  <p class="huge">事實在發生當下雙簽封存——<br />AI Agent <strong>只能問到答案，拿不到資料</strong>。</p>
+  <p>Live demo：<a href="https://zuemen.github.io/evidence-at-source/">zuemen.github.io/evidence-at-source</a></p>
+</section>
+
+<section>
+  <p class="kicker">問題</p>
+  <h2>兩個場景，同一個根因</h2>
+  <ul>
+    <li><strong>80 萬移工</strong>：近三成曾受詐、估逾 17 億；離境後帳戶沒人知道，成為現成人頭帳戶。</li>
+    <li><strong>RBA 供應鏈稽核</strong>：稽核員永遠只看到工廠<strong>願意給的那一批</strong>紙本。</li>
+  </ul>
+  <p class="huge bar">出示權在雇主手上——<strong>勞工在自己的證據鏈裡沒有位置</strong>。</p>
+</section>
+
+<section>
+  <p class="kicker">解法</p>
+  <h2>勞工自持雙簽憑證錢包 ＋ 兩個機構 Agent</h2>
+  <ul>
+    <li>每件事實（仲介費、證件、契約、工時）發生當下由<strong>簽發方＋勞工雙簽封存</strong>，事後改不了。</li>
+    <li>銀行 Agent 拿到<strong>布林結論</strong>＋建議（人類覆核）；品牌 Agent 拿到<strong>合規率</strong>。</li>
+    <li>實際工時、金額、薪資？<span class="rust">payload 裡那個 key <strong>密碼學上不存在</strong></span>——不是遮蔽。</li>
+  </ul>
+</section>
+
+<section>
+  <p class="kicker">六信任點 · 逐點命中</p>
+  <table>
+    <tr><th>Principal</th><td>Agent 屬於 GLEIF vLEI 法人鏈上的機構（LEI），持 ECR 授權角色憑證——「代表誰」<strong>可驗證</strong></td></tr>
+    <tr><th>Authorization</th><td>機構給上限（查詢型別／範圍／目的／最低簽發層級）×勞工給下限（看過範圍才出示）</td></tr>
+    <tr><th>Tool / Action</th><td><strong>能力不存在</strong>：approveAccount／transferFunds… grep 不到，不是被 if 擋掉</td></tr>
+    <tr><th>Policy Gate</th><td>L0 授權 → L1 憑證 → L2 提問；L0 失敗＝勞工資料<strong>零讀取</strong></td></tr>
+    <tr><th>Audit Log</th><td>每次決策記層級／准駁／原因碼／<strong>授權依據</strong>（授權雜湊＋ECR SAID）＋可驗簽收據</td></tr>
+    <tr><th>Expiry / Revocation</th><td>授權 24h 到期；<strong>四路撤銷</strong>即時生效，含 GLEIF 撤 QVI 全鏈級聯</td></tr>
+  </table>
+</section>
+
+<section>
+  <p class="kicker">Policy Gate</p>
+  <h2>三層閘門：先驗人、再驗料、最後驗問題</h2>
+  <ul>
+    <li><strong class="jade">L0 授權層</strong>——這個 Agent 憑什麼問？（授權憑證＋vLEI 鏈，每次重驗）</li>
+    <li><strong class="amber">L1 憑證層</strong>——這份證據成立嗎？（雙簽配對／撤銷／簽發層級／產線綁定）</li>
+    <li><strong class="rust">L2 提問層</strong>——這個問題能問嗎？（拒個體查詢／k-匿名／差分攻擊偵測）</li>
+  </ul>
+  <p class="bar">順序顛倒的話，未授權的 Agent 會在被拒之前就讀到勞工資料——<strong>順序即保證，測試可證</strong>。</p>
+</section>
+
+<section>
+  <p class="kicker">機構信任層</p>
+  <h2>vLEI：信任是一條憑證鏈，不是一份名單</h2>
+  <p class="huge">GLEIF Root <span class="jade">(2-of-3 多簽)</span> → QVI → 法人 vLEI (LEI) → Agent ECR</p>
+  <ul>
+    <li>上游任何一張被撤銷，下游<strong>立即全部失效</strong>——沒有名單要同步。</li>
+    <li>TEL 事件錨定 KEL：偷到舊金鑰也<strong>偽造不了撤銷紀錄</strong>。</li>
+    <li>出示打成單一 JSON <strong>可攜出示包</strong>：驗證方只釘 root，離線重驗整條鏈。</li>
+  </ul>
+</section>
+
+<section>
+  <p class="kicker">攻防</p>
+  <h2>所有隊伍 demo 快樂路徑——我們 demo 自己被攻擊</h2>
+  <ul>
+    <li><strong>Prompt injection 無效</strong>：判斷路徑上沒有 LLM，注入的指令只是資料。</li>
+    <li><strong>差分攻擊被擋</strong>：兩次查詢相減可回推個人 → 第三次查詢被拒＋審計序號。</li>
+    <li><strong>竄改被攔</strong>：改一個欄位，SAID 斷鏈；雇主事後重簽，勞工反簽雜湊不符。</li>
+  </ul>
+</section>
+
+<section>
+  <p class="kicker">稽核與撤銷</p>
+  <h2>可以被質疑，也可以自證</h2>
+  <ul>
+    <li><strong>稽核軌跡</strong>：每次決策的層級／准駁／授權依據，稽核台即時可看。</li>
+    <li><strong>查驗收據</strong>：被 NGO 質疑時，出示可獨立驗簽的「何時驗了哪些項目」。</li>
+    <li><strong>撤銷反向通知</strong>：憑證被撤，日誌反向索引通知所有曾驗證者。</li>
+    <li><strong>離境連動</strong>：勞工離境＝全部憑證失效，人頭帳戶的窗口直接關上。</li>
+  </ul>
+</section>
+
+<section>
+  <p class="kicker">可信度</p>
+  <h2>不要相信我們說的任何一句話</h2>
+  <ul>
+    <li><strong>237 個測試</strong>，GitHub Actions 每次 push 全跑。</li>
+    <li><code>npm run demo:vlei</code>——一條命令、14 步主張、<strong>exit code 0 即全數成立</strong>。</li>
+    <li>全部合成資料；私鑰在瀏覽器產生、<strong>從未離開裝置</strong>；靜態站無後端。</li>
+  </ul>
+</section>
+
+<section>
+  <p class="kicker">請直接跑</p>
+  <h1>zuemen.github.io/<br />evidence-at-source</h1>
+  <p class="huge">錢包反簽 → 稽核台雙 Agent → 撤銷級聯 → 攻防三連發</p>
+  <p>Repo：github.com/zuemen/evidence-at-source ·
+     治理說明：<code>docs/governance-memo.md</code></p>
+</section>
+
+<div class="foot"><span id="page"></span> · ←→ 翻頁</div>
+<script>
+  const slides = [...document.querySelectorAll('section')];
+  let at = 0;
+  function go(n) {
+    at = Math.max(0, Math.min(slides.length - 1, n));
+    slides.forEach((s, i) => s.classList.toggle('active', i === at));
+    document.getElementById('page').textContent = (at + 1) + ' / ' + slides.length;
+  }
+  addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') go(at + 1);
+    if (e.key === 'ArrowLeft' || e.key === 'PageUp') go(at - 1);
+  });
+  addEventListener('click', () => go(at + 1));
+  go(0);
+</script>
+</body>
+</html>
