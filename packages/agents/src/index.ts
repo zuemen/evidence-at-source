@@ -109,3 +109,6 @@ export type { ApplicationMonitor, ApplicationRisk } from './applicationMonitor.j
 
 export { RBA_ITEM_CLASSIFICATION, classifyRbaItem } from './rbaItems.js';
 export type { RbaItemClass } from './rbaItems.js';
+
+export { createAuditTrail } from './auditTrail.js';
+export type { AuditBasis, AuditEntry, AuditTrail } from './auditTrail.js';

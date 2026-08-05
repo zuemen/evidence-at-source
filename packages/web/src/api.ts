@@ -13,6 +13,7 @@ import {
   createDemoWorld,
   type AgentRole,
   type AttackDemoState,
+  type AuditEntry,
   type DelegationState,
   type DemoSnapshot,
   type DemoWorld,
@@ -26,6 +27,7 @@ export interface DemoPayload {
   readonly split: SplitView;
   readonly delegation: DelegationState;
   readonly vlei: VleiState;
+  readonly audit: readonly AuditEntry[];
   readonly attack: AttackDemoState;
   readonly integrity: IntegrityDemoState;
 }
@@ -39,6 +41,7 @@ async function currentPayload(): Promise<DemoPayload> {
     split: await world.split(),
     delegation: await world.delegationState(),
     vlei: world.vleiState(),
+    audit: world.auditLog(),
     attack: world.attackDemo(),
     integrity: world.integrityDemo(),
   };

@@ -13,6 +13,7 @@
 import {
   createRevocationRegistry,
   createWorkerAttestation,
+  credentialHash,
   generateKeyPair,
   presentCredential,
   getCredentialSchema,
@@ -33,6 +34,8 @@ import {
 import {
   buildCohortEvidence,
   checkCredentialLayer,
+  createAuditTrail,
+  type AuditEntry,
   createBankAgent,
   createBrandAgent,
   createQuerySession,
@@ -48,6 +51,8 @@ import {
   type Submission,
 } from '@eas/agents';
 import { reviewDelegationForWallet, type WalletDelegationView } from '../wallet/reviewDelegation.js';
+
+export type { AuditEntry } from '@eas/agents';
 
 const WORKER_DID = 'did:key:zWorker001';
 const COHORT = 'factory-a-2026-08';
@@ -234,6 +239,8 @@ export interface DemoWorld {
   vleiState(): VleiState;
   /** Portable bundle (credentials + KELs + TELs) for the agent's chain. */
   exportAgentBundle(role: AgentRole): string;
+  /** Every gate decision so far: layer, verdict, reason, authorization basis. */
+  auditLog(): readonly AuditEntry[];
   delegationState(): Promise<DelegationState>;
   split(): Promise<SplitView>;
   attackDemo(): AttackDemoState;
@@ -395,6 +402,17 @@ export async function createDemoWorld(): Promise<DemoWorld> {
     scope: ['WorkingHoursCredential'],
     purpose: 'RBA 供應鏈工時合規稽核',
   });
+
+  // Audit trail: who asked, what the gate decided, and on whose authority.
+  const audit = createAuditTrail();
+  const bankBasis = {
+    delegationHash: credentialHash(bankDelegation),
+    ecrSaid: bankAgentVlei.credentials[bankAgentVlei.focus]?.acdc.d ?? null,
+  };
+  const brandBasis = {
+    delegationHash: credentialHash(brandDelegation),
+    ecrSaid: brandAgentVlei.credentials[brandAgentVlei.focus]?.acdc.d ?? null,
+  };
 
   const bankL0: DelegationContext = {
     signedDelegation: bankDelegation,
@@ -626,6 +644,10 @@ export async function createDemoWorld(): Promise<DemoWorld> {
       return exportChainArtifacts(role === 'bank' ? bankAgentVlei : brandAgentVlei, eco.trust);
     },
 
+    auditLog() {
+      return audit.entries();
+    },
+
     vleiState() {
       return {
         gleifAid: eco.gleifAid,
@@ -712,6 +734,15 @@ export async function createDemoWorld(): Promise<DemoWorld> {
         ? bankResult.worker
         : { disclosed: {}, assessment: null, refusedWith: bankResult.reason };
 
+      audit.record({
+        agentRole: 'bank',
+        layer: bankResult.ok ? 'L1' : 'L0',
+        action: 'boolean:wallet-credentials',
+        decision: bankResult.ok && bank.refusedWith === null ? 'ALLOW' : 'DENY',
+        reason: bank.refusedWith,
+        basis: bankBasis,
+      });
+
       // Agent B (brand): L0 first, same guarantee.
       const brandResult = await runAuthorizedGate(brandL0, async () => {
         const hours = held.find((entry) => entry.type === 'WorkingHoursCredential');
@@ -755,6 +786,29 @@ export async function createDemoWorld(): Promise<DemoWorld> {
             refusedWith: brandResult.reason,
             workingHoursIssuerTier: FACTORY_TIER,
           };
+
+      audit.record({
+        agentRole: 'brand',
+        layer: brandResult.ok ? 'L2' : 'L0',
+        action: 'aggregate:workingHoursComplianceRate',
+        decision: brandResult.ok && brand.answer?.ok === true ? 'ALLOW' : 'DENY',
+        reason: brandResult.ok
+          ? brand.answer !== null && brand.answer.ok === false
+            ? brand.answer.reason
+            : null
+          : brandResult.reason,
+        basis: brandBasis,
+      });
+      if (brandResult.ok && brand.individualQuery !== null && brand.individualQuery.ok === false) {
+        audit.record({
+          agentRole: 'brand',
+          layer: 'L2',
+          action: `individual:${WORKER_DID}`,
+          decision: 'DENY',
+          reason: brand.individualQuery.reason,
+          basis: brandBasis,
+        });
+      }
 
       return { bank, brand };
     },

@@ -152,6 +152,22 @@ describe('demo world', () => {
     );
   });
 
+  test('every split query leaves an audit entry with its authorization basis', async () => {
+    const world = await createDemoWorld();
+    await world.attestAll();
+    await world.split();
+
+    const audit = world.auditLog();
+    expect(audit.length).toBeGreaterThanOrEqual(2);
+    expect(
+      audit.some(
+        (entry) => entry.decision === 'DENY' && entry.reason === 'INDIVIDUAL_QUERY_REJECTED',
+      ),
+    ).toBe(true);
+    expect(audit.every((entry) => entry.basis.ecrSaid !== null)).toBe(true);
+    expect(audit.every((entry) => entry.basis.delegationHash !== null)).toBe(true);
+  });
+
   test('the exported agent bundle verifies in a rebuilt context pinned to the demo root', async () => {
     const world = await createDemoWorld();
     const vlei = world.vleiState();

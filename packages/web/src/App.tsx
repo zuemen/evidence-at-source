@@ -164,6 +164,7 @@ export function App(): JSX.Element {
           split={payload.split}
           agents={payload.delegation.agents}
           vlei={payload.vlei}
+          audit={payload.audit}
           busy={busy}
           onRevoke={() => void run(api.revoke)}
           onRevokeAgent={(role) => void run(() => api.revokeAgent(role))}

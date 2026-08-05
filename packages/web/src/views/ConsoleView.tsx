@@ -1,6 +1,7 @@
 import type {
   AgentAuthStatus,
   AgentRole,
+  AuditEntry,
   DemoSnapshot,
   SplitView,
   VleiState,
@@ -12,6 +13,7 @@ interface Props {
   readonly split: SplitView;
   readonly agents: readonly AgentAuthStatus[];
   readonly vlei: VleiState;
+  readonly audit: readonly AuditEntry[];
   readonly busy: boolean;
   readonly onRevoke: () => void;
   readonly onRevokeAgent: (role: AgentRole) => void;
@@ -94,6 +96,7 @@ export function ConsoleView({
   split,
   agents,
   vlei,
+  audit,
   busy,
   onRevoke,
   onRevokeAgent,
@@ -290,6 +293,26 @@ export function ConsoleView({
           )}
         </div>
       </div>
+
+      {audit.length > 0 && (
+        <details className="audit-panel">
+          <summary>稽核軌跡（{audit.length} 筆）——每次決策的層級、准駁與授權依據</summary>
+          <ol className="audit-list">
+            {audit.map((entry) => (
+              <li key={entry.seq}>
+                <span className="badge" data-tone={entry.decision === 'ALLOW' ? 'ok' : 'bad'}>
+                  {entry.layer} {entry.decision}
+                </span>{' '}
+                #{entry.seq} · {entry.agentRole} · {entry.action}
+                {entry.reason !== null && <> · {entry.reason}</>}
+                {entry.basis.ecrSaid !== null && (
+                  <span className="audit-basis"> · ECR {entry.basis.ecrSaid.slice(0, 12)}…</span>
+                )}
+              </li>
+            ))}
+          </ol>
+        </details>
+      )}
 
       <p className="footnote">
         每個 Agent 各自持有機構簽發的授權憑證（<strong>L0</strong>）。閘門順序是
