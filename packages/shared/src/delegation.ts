@@ -9,6 +9,8 @@
  * mirroring how `BankAssessment.requiresHumanReview` is typed as literal `true`.
  */
 
+import type { IssuerTier } from './issuerTier.js';
+
 export type AllowedQueryType = 'boolean' | 'aggregate';
 
 export const DELEGATION_VCT = 'DelegationCredential';
@@ -29,6 +31,8 @@ export interface DelegationClaims {
   readonly scope: readonly string[];
   /** Human-readable purpose, for the worker to judge. */
   readonly purpose: string;
+  /** Optional: the minimum issuer tier this agent's principal will accept (題06 Q1). */
+  readonly minimumIssuerTier?: IssuerTier;
   readonly iat: number;
   readonly exp: number;
 }
