@@ -143,6 +143,15 @@ describe('demo world', () => {
     expect(delegation.walletReview.status).toBe('refused');
   });
 
+  test('the demo world exposes the working-hours issuer tier for display', async () => {
+    const world = await createDemoWorld();
+    const split = await world.split();
+
+    expect(['SELF_DECLARED', 'THIRD_PARTY_VERIFIED', 'AUTHORITY_CERTIFIED']).toContain(
+      split.brand.workingHoursIssuerTier,
+    );
+  });
+
   test('the exported agent bundle verifies in a rebuilt context pinned to the demo root', async () => {
     const world = await createDemoWorld();
     const vlei = world.vleiState();

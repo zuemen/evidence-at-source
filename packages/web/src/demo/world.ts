@@ -17,6 +17,7 @@ import {
   presentCredential,
   getCredentialSchema,
   type CredentialType,
+  type IssuerTier,
   type PrivateJwk,
   type PublicJwk,
   type ReasonCode,
@@ -139,6 +140,8 @@ export interface SplitView {
     readonly rejected: readonly ReasonCode[];
     readonly individualQuery: BrandAnswer | null;
     readonly refusedWith: ReasonCode | null;
+    /** Trust tier of the working-hours issuer — self-declared unless verified (題06 Q1). */
+    readonly workingHoursIssuerTier: IssuerTier;
   };
 }
 
@@ -295,6 +298,9 @@ export async function createDemoWorld(): Promise<DemoWorld> {
     leiTag: 'AGENCYEXAMPLE',
     ecosystem: eco,
   });
+  // Hours are self-declared by the factory unless a third party verifies them —
+  // the console shows this tier so a viewer sees exactly how much it is worth.
+  const FACTORY_TIER: IssuerTier = 'SELF_DECLARED';
   const factory = await createVleiIssuer({
     didWeb: 'did:web:factory.example',
     legalName: '工廠打卡系統',
@@ -741,8 +747,14 @@ export async function createDemoWorld(): Promise<DemoWorld> {
       });
 
       const brand = brandResult.ok
-        ? { ...brandResult.worker, refusedWith: null }
-        : { answer: null, rejected: [] as ReasonCode[], individualQuery: null, refusedWith: brandResult.reason };
+        ? { ...brandResult.worker, refusedWith: null, workingHoursIssuerTier: FACTORY_TIER }
+        : {
+            answer: null,
+            rejected: [] as ReasonCode[],
+            individualQuery: null,
+            refusedWith: brandResult.reason,
+            workingHoursIssuerTier: FACTORY_TIER,
+          };
 
       return { bank, brand };
     },

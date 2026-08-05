@@ -179,6 +179,19 @@ flowchart TD
 
 **誠實降級**：本機無 circom/Rust 工具鏈，真實電路尚未接上；證明數學置於注入的 `verifyProof` 之後，預設 stub 一律拒絕（缺後端不會被誤判為有效）。伺服器端 M7 照常運作、demo 不變，差別僅在尚不能宣稱「伺服器從未看過任何數字」。設計與接線步驟見 [`docs/zk-reconciliation.md`](docs/zk-reconciliation.md)。
 
+## 命題對照（題目 05／06）
+
+| 命題 | 要求 | 狀態 | 對應實作 |
+|---|---|---|---|
+| 題06 Q1 | 簽發者可信層級（自我聲明／第三方／主管機關）分級與門檻 | ✅ | `issuerTier` 憑證欄位＋`minimumIssuerTier` L1 閘門（`ISSUER_TIER_BELOW_THRESHOLD`）；稽核台顯示層級徽章 |
+| 題06 Q3 | 哪些 RBA 項目可憑證化、哪些須實地稽核 | ✅ | `RBA_ITEM_CLASSIFICATION`＋`classifyRbaItem`；不可憑證化項目回 `REQUIRES_ONSITE_AUDIT`，未列項目回 `UNKNOWN` 而非默默作答 |
+| 題06 Q4 | 被 NGO 質疑時可出示「何時驗了哪些項目」的盡職調查證明 | ✅ | 可獨立驗簽的查驗收據（`issueVerificationReceipt`／`verifyReceipt`）——只含項目名稱與憑證雜湊，不含原始值 |
+| 題06 Q5 | 撤銷要能通知所有曾經驗證過的人 | ✅ | 查驗日誌反向索引（憑證雜湊 → 驗證方），`createVerificationLog` 產生撤銷通知名單 |
+| 題06 GS1 | 憑證綁定產線，防止 A 廠憑證挪用到 B 廠 | ✅ | `facilityId` 憑證欄位＋`expectedFacilityId` 閘門（`CREDENTIAL_FACILITY_MISMATCH`） |
+| 題05 Q3 | 攔截同一身分短期在多機構申辦的異常模式 | ✅ | 匿名化申辦計數器（`createApplicationMonitor`）——只回報超閾與否，不回報申辦去向；風險旗標只供人類覆核參考，不做決定 |
+
+**紅線註記**：`RecruitmentFeeCredential` 的 `feeWithinLegalCap` 判準所依據的「法定上限」數字仍在查證清單（`docs/research/outline.yaml`），憑證結構不依賴該數字，但對外主張前應完成查證。
+
 ## 執行 PoC
 
 ```bash

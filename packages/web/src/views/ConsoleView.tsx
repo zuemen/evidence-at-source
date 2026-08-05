@@ -212,6 +212,18 @@ export function ConsoleView({
 
           <AgentAuthBar agent={brandAgent} busy={busy} onRevokeAgent={onRevokeAgent} />
 
+          <div style={{ marginBottom: '1.2rem' }}>
+            <span
+              className="badge"
+              data-tone={split.brand.workingHoursIssuerTier === 'SELF_DECLARED' ? 'pending' : 'ok'}
+            >
+              工時憑證來源：
+              {split.brand.workingHoursIssuerTier === 'SELF_DECLARED'
+                ? '工廠自我聲明（T1）'
+                : '第三方驗證（T2+）'}
+            </span>
+          </div>
+
           {brandRefusedAtL0 || brandAnswer === null ? (
             <>
               <p className="verdict" data-tone="bad">
