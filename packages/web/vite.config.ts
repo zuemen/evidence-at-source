@@ -96,6 +96,8 @@ async function readJson(req: IncomingMessage): Promise<Record<string, unknown>> 
 }
 
 export default defineConfig({
+  // Relative asset paths: the same dist works at github.io/<repo>/ and locally.
+  base: './',
   plugins: [react(), demoApi()],
   resolve: {
     alias: {
