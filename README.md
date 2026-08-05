@@ -1,5 +1,7 @@
 # Evidence at Source（證據前置）
 
+[![CI](https://github.com/zuemen/evidence-at-source/actions/workflows/ci.yml/badge.svg)](https://github.com/zuemen/evidence-at-source/actions/workflows/ci.yml)
+
 > 讓「關於勞工的事實」由勞工本人持有，並在事件發生當下就簽章封存，使銀行與品牌的 AI Agent 只能問到答案、拿不到資料。
 
 **專案狀態：Work in progress — hackathon prototype**
@@ -216,6 +218,9 @@ exit code 0 即全數成立。評審常見提問的逐條回應見
 [`docs/vlei-defense.md`](docs/vlei-defense.md)。
 
 ## 執行 Demo
+
+> **線上版（免安裝）**：<https://zuemen.github.io/evidence-at-source/> —
+> main 分支每次全綠自動部署；全部運算在你的瀏覽器內執行，沒有後端。
 
 ```bash
 npm install
