@@ -335,10 +335,22 @@ Agent A 的能力邊界也寫在型別裡：`BankAssessment.requiresHumanReview`
 | [`docs/credentials.md`](docs/credentials.md) | 四張憑證的完整欄位表 |
 | [`docs/vlei.md`](docs/vlei.md) | vLEI 機構信任層：信任鏈、schema profiles、明文簡化 |
 | [`docs/vlei-defense.md`](docs/vlei-defense.md) | vLEI 技術防禦 Q&A：每個回答附可執行證據 |
+| [`docs/governance-memo.md`](docs/governance-memo.md) | 治理／信任設計說明：六信任點逐點＋證據（必交件） |
+| [`docs/demo-video-script.md`](docs/demo-video-script.md) | Demo Day／錄影 5 分鐘講稿與備援 |
 | `docs/BUILD-SPEC-開發規格書.md` | 模組拆解與測試情境（尚未入庫） |
 | `docs/ADR-001-系統架構與技術選型.md` | 架構決策紀錄（尚未入庫） |
 | `docs/技術設計與論點防禦手冊.md` | 對評審提問的技術防禦（尚未入庫） |
 | `docs/痛點證據與可解決性評估.md` | 問題的證據基礎（尚未入庫） |
+
+## 黑客松繳交清單（可信 AI 黑客松 2026）
+
+| 交件 | 位置 |
+|---|---|
+| 程式碼 | 本 repo（CI 每次 push 跑 237 tests + `demo:vlei` 閘門） |
+| 簡報 | <https://zuemen.github.io/evidence-at-source/slides.html>（←→ 翻頁） |
+| Demo | <https://zuemen.github.io/evidence-at-source/>（免安裝）＋[講稿](docs/demo-video-script.md) |
+| 治理／信任設計說明 | [`docs/governance-memo.md`](docs/governance-memo.md)（六信任點逐點＋證據） |
+| README | 本文件（命題對照見上） |
 
 ## 資料使用聲明
 
