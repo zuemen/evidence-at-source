@@ -29,6 +29,10 @@ export const REASON_CODES = [
   'CREDENTIAL_REVOKED',
   'CREDENTIAL_EXPIRED',
   'CLAIM_NOT_DISCLOSED',
+  // The issuer's trust tier is below what this verifier requires (題06 Q1).
+  'ISSUER_TIER_BELOW_THRESHOLD',
+  // The credential is bound to a different facility than the one queried (GS1).
+  'CREDENTIAL_FACILITY_MISMATCH',
   // A required fact was disclosed and did not satisfy policy. Distinct from
   // CLAIM_NOT_DISCLOSED so a human reviewer can tell "missing" from "failing".
   'POLICY_CHECK_FAILED',

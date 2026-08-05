@@ -12,6 +12,7 @@ import {
   signCredential,
   type AllowedQueryType,
   type CredentialType,
+  type IssuerTier,
   type PublicJwk,
 } from '@eas/shared';
 import type { Ecosystem, LegalEntityHandle, VleiPresentation } from '@eas/vlei';
@@ -25,6 +26,12 @@ export const DEFAULT_CREDENTIAL_LIFETIME_SECONDS = 365 * 24 * 60 * 60;
 
 export interface IssuerOptions {
   readonly credentialLifetimeSeconds?: number;
+  /** How much a verifier should weigh this issuer's claims. Defaults to T1. */
+  readonly tier?: IssuerTier;
+  /** For T2: the DID of the body whose verification backs these credentials. */
+  readonly verifiedBy?: string;
+  /** GS1 or equivalent facility identifier this issuer's records belong to. */
+  readonly facilityId?: string;
 }
 
 export interface DelegationGrant {
@@ -48,6 +55,8 @@ export interface Issuer {
 export async function createIssuer(did: string, options: IssuerOptions = {}): Promise<Issuer> {
   const { privateKey, publicKey } = await generateKeyPair();
   const lifetime = options.credentialLifetimeSeconds ?? DEFAULT_CREDENTIAL_LIFETIME_SECONDS;
+  const tier: IssuerTier = options.tier ?? 'SELF_DECLARED';
+  const { verifiedBy, facilityId } = options;
 
   return {
     did,
@@ -63,6 +72,9 @@ export async function createIssuer(did: string, options: IssuerOptions = {}): Pr
         iat: issuedAt,
         vct: type,
         exp: issuedAt + lifetime,
+        issuerTier: tier,
+        ...(verifiedBy === undefined ? {} : { verifiedBy }),
+        ...(facilityId === undefined ? {} : { facilityId }),
       };
 
       return signCredential(privateKey, payload, schema.hidden);

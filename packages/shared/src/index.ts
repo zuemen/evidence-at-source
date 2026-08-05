@@ -27,6 +27,9 @@ export type { RevocationDirectory, RevocationPath } from './revocationPaths.js';
 export { REASON_CODES } from './reasonCodes.js';
 export type { ReasonCode } from './reasonCodes.js';
 
+export { ISSUER_TIERS, meetsMinimumTier, tierRank } from './issuerTier.js';
+export type { IssuerTier } from './issuerTier.js';
+
 export {
   DEFAULT_DELEGATION_LIFETIME_SECONDS,
   DELEGATION_VCT,

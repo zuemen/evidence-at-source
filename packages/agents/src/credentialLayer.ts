@@ -9,8 +9,10 @@
 import {
   base64urlToUtf8,
   credentialHash,
+  meetsMinimumTier,
   verifyPairing,
   verifyPresentation,
+  type IssuerTier,
   type PublicJwk,
   type ReasonCode,
   type RevocationRegistry,
@@ -25,6 +27,10 @@ export interface CredentialLayerInput {
   readonly requiredClaims: readonly string[];
   /** Omitted means the verifier has no revocation source, not "nothing is revoked". */
   readonly revocations?: RevocationRegistry;
+  /** If set, the credential's issuerTier must be at or above this (題06 Q1). */
+  readonly minimumIssuerTier?: IssuerTier;
+  /** If set, the credential must be bound to this facility (GS1 anti-reuse). */
+  readonly expectedFacilityId?: string;
 }
 
 export type CredentialDecision =
@@ -97,6 +103,22 @@ export async function checkCredentialLayer(
   const expiresAt = payload['exp'];
   if (hasExpired(typeof expiresAt === 'number' ? expiresAt : undefined)) {
     return { ok: false, reason: 'CREDENTIAL_EXPIRED' };
+  }
+
+  // 題06 Q1: a factory self-declaration must not pass where the verifier's
+  // policy demands third-party or authority backing.
+  if (input.minimumIssuerTier !== undefined) {
+    const tier = payload['issuerTier'];
+    const graded =
+      typeof tier === 'string' && meetsMinimumTier(tier as IssuerTier, input.minimumIssuerTier);
+    if (!graded) {
+      return { ok: false, reason: 'ISSUER_TIER_BELOW_THRESHOLD' };
+    }
+  }
+
+  // GS1: a compliant factory's credential must not answer for another line.
+  if (input.expectedFacilityId !== undefined && payload['facilityId'] !== input.expectedFacilityId) {
+    return { ok: false, reason: 'CREDENTIAL_FACILITY_MISMATCH' };
   }
 
   for (const claim of input.requiredClaims) {
