@@ -44,6 +44,8 @@ export const REASON_CODES = [
   'DIFFERENCING_ATTACK_DETECTED',
   // An agent has spent its per-period allowance of answered queries.
   'QUERY_BUDGET_EXCEEDED',
+  // The queried RBA item cannot be answered by a credential (題06 Q3).
+  'REQUIRES_ONSITE_AUDIT',
   // ZK reconciliation binding (Phase 4). The proof itself is checked by an
   // injected verifier; these guard the binding between proof and credentials.
   'PROOF_INVALID',

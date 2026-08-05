@@ -23,10 +23,17 @@ export interface BankAssessment {
   readonly reasons: readonly ReasonCode[];
   /** Literal `true`: an assessment is never a decision. */
   readonly requiresHumanReview: true;
+  /** Anomaly signals for the human reviewer, e.g. MULTIPLE_APPLICATIONS. */
+  readonly riskFlags: readonly string[];
+}
+
+/** Anonymised anomaly signal from the application monitor (題05 Q3). */
+export interface ApplicationRiskSignal {
+  readonly flagged: boolean;
 }
 
 export interface BankAgent {
-  assess(facts: DisclosedFacts): BankAssessment;
+  assess(facts: DisclosedFacts, risk?: ApplicationRiskSignal): BankAssessment;
 }
 
 const REQUIRED_FACTS = [
@@ -37,7 +44,7 @@ const REQUIRED_FACTS = [
 
 export function createBankAgent(): BankAgent {
   return {
-    assess(facts) {
+    assess(facts, risk) {
       const reasons: ReasonCode[] = [];
 
       for (const fact of REQUIRED_FACTS) {
@@ -56,6 +63,8 @@ export function createBankAgent(): BankAgent {
           reasons.length === 0 ? 'APPROVE_PENDING_HUMAN_REVIEW' : 'DECLINE_PENDING_HUMAN_REVIEW',
         reasons,
         requiresHumanReview: true,
+        // A flag informs the human reviewer; it never decides anything itself.
+        riskFlags: risk?.flagged === true ? ['MULTIPLE_APPLICATIONS'] : [],
       };
     },
   };

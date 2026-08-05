@@ -87,3 +87,25 @@ export type {
   IssuerIdentity,
   IssuerIdentityResult,
 } from './vleiBridge.js';
+
+export {
+  RECEIPT_TYP,
+  createVerificationLog,
+  issueVerificationReceipt,
+  verifyReceipt,
+} from './receipt.js';
+export type {
+  RevocationNotice,
+  VerificationLog,
+  VerificationReceipt,
+  VerificationResult,
+} from './receipt.js';
+
+export {
+  DEFAULT_APPLICATION_THRESHOLD,
+  createApplicationMonitor,
+} from './applicationMonitor.js';
+export type { ApplicationMonitor, ApplicationRisk } from './applicationMonitor.js';
+
+export { RBA_ITEM_CLASSIFICATION, classifyRbaItem } from './rbaItems.js';
+export type { RbaItemClass } from './rbaItems.js';
