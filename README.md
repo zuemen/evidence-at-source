@@ -360,6 +360,7 @@ Agent A 的能力邊界也寫在型別裡：`BankAssessment.requiresHumanReview`
 | [`docs/demo-video-script.md`](docs/demo-video-script.md) | Demo Day／錄影 5 分鐘講稿與備援 |
 | [`docs/incentive-chain.md`](docs/incentive-chain.md) | 誘因鏈：為什麼每一方都會簽 |
 | [`docs/research/outline.yaml`](docs/research/outline.yaml) | 資料查證進度與來源追蹤 |
+| [`docs/adoption-path.md`](docs/adoption-path.md) | 落地導入路徑、誰付錢、12 個月時程與已知風險 |
 
 ## 黑客松繳交清單（可信 AI 黑客松 2026）
 
