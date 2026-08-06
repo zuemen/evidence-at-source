@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'vitest';
 import { createWorkerAttestation, generateKeyPair, presentCredential } from '@eas/shared';
+import { CREDENTIAL_LIFETIME_SECONDS } from '@eas/issuer';
 import { checkCredentialLayer } from '@eas/agents';
 import { setupIssuerWorld } from './helpers/vleiWorld.js';
 
@@ -36,7 +37,9 @@ async function present(lifetimeSeconds?: number) {
 }
 
 describe('credential expiry', () => {
-  test('issued credentials carry an expiry a year out by default', async () => {
+  test('an hours credential expires on the schedule its own fact justifies', async () => {
+    // 題06 Q5: not one lifetime for everything. A pay period's hours go stale
+    // in a quarter; a contract does not. The window comes from the type.
     const { issuerKey, worker, attestation, presentation } = await present();
 
     const decision = await checkCredentialLayer({
@@ -50,7 +53,8 @@ describe('credential expiry', () => {
     expect(decision.ok).toBe(true);
 
     const exp = decision.ok === true ? Number(decision.payload['exp']) : 0;
-    const expectedExp = Math.floor(Date.now() / 1000) + 365 * 24 * 60 * 60;
+    const expectedExp =
+      Math.floor(Date.now() / 1000) + CREDENTIAL_LIFETIME_SECONDS.WorkingHoursCredential;
     expect(Math.abs(exp - expectedExp)).toBeLessThan(60);
   });
 

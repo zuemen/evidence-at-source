@@ -206,6 +206,23 @@ Header：`{ alg: 'ES256', typ: 'worker-attestation+jwt' }`
 
 ---
 
+## 有效期：一張憑證該活多久（題06 Q5）
+
+「合規憑證應該有多長的有效期」沒有單一答案，因為這些憑證記的事實**半衰期不一樣**。一個薪資週期會結束，一份契約不會。全部給同一個有效期，結果不是契約憑證太早過期，就是讓去年的加班時數回答今年的稽核——而**後者沒有人會發現**。
+
+判準只有一條：**當這個事實可能已經改變、卻沒有人重新簽發時，憑證就該過期。**
+
+| 憑證 | 有效期 | 理由 |
+|---|---:|---|
+| `WorkingHoursCredential` | 90 天 | 週期性事實，新一期應該取代舊一期。一季足夠稽核回溯，又短到讓過期工時無法回答當期問題 |
+| `SalaryDepositCredential` | 90 天 | 與工時同窗口——這兩張是拿來互相對帳的，週期不一致就對不起來 |
+| `DocumentCustodyCredential` | 180 天 | 護照一移動，保管狀態就變了。半年對上 RBA 稽核實際的節奏，並強制期間重新聲明一次 |
+| `RecruitmentFeeCredential` | 3 年 | 一次性事件，但它的意義存續整個契約期。移工契約典型為三年 |
+| `ContractConsentCredential` | 3 年 | 同上 |
+| `ResidencyCredential` | 1 年 | 但真正的上限是許可本身：閘門另外檢查 `permitValidUntil`（`RESIDENCY_PERMIT_EXPIRED`），**兩者取先到的那個** |
+
+實作在 `CREDENTIAL_LIFETIME_SECONDS`（[`packages/issuer/src/issuer.ts`](../packages/issuer/src/issuer.ts)），個別簽發者仍可覆寫。**追溯撤銷不受有效期影響**：工廠被發現違規時，先前核發的憑證由撤銷登記立即失效，並由查驗日誌的反向索引產生「該通知誰」的名單——有效期管的是「自然老化」，撤銷管的是「事後發現它本來就不該成立」，兩者不能互相取代。
+
 ## 欄位新增規則
 
 **不得自行擴充憑證欄位。** 要新增：

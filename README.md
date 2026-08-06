@@ -230,17 +230,27 @@ flowchart TD
 
 > 主辦命題：「RBA 稽核仍高度依賴人工與紙本；如何讓供應鏈合規證明持續可驗證，同時不必揭露工廠的完整內部資料？」
 
+**逐題回答五個核心可信問題**：
+
+| 核心可信問題 | 本專案的回答 | 可執行證據 |
+|---|---|---|
+| **Q1 Principal／Authorization**：誰有權簽發合規憑證，三種可信層級是否需區分 | **需要，而且不只是標註——是閘門**：T1 工廠自我聲明／T2 第三方稽核機構／T3 主管機關認證，驗證方以 `minimumIssuerTier` 設定門檻，不足即 `ISSUER_TIER_BELOW_THRESHOLD`。工廠自我聲明過不了要求第三方背書的查詢 | [`packages/agents/test/issuerTierGate.test.ts`](packages/agents/test/issuerTierGate.test.ts) |
+| **Q2 Tool／Action**：能問加班是否超標，但能不能反推完整出勤或薪資明細 | **不能，而且不是被擋掉——是不存在**：L2 只放行布林與 k-匿名匯總；個體查詢 `INDIVIDUAL_QUERY_REJECTED`；連續匯總相減想回推個人回 `DIFFERENCING_ATTACK_DETECTED`＋審計序號 | [`packages/agents/test/differencing.test.ts`](packages/agents/test/differencing.test.ts)、[`packages/agents/test/policyGate.test.ts`](packages/agents/test/policyGate.test.ts) |
+| **Q3 Policy Gate**：哪些項目可以是／否作答，哪些必須實地查核 | `classifyRbaItem` 明確分類：命題點名的四項（招募費用、證件保管、契約知情同意、工時）**正好就是本專案的四張憑證**；宿舍、消防、申訴機制回 `REQUIRES_ONSITE_AUDIT`，未列項目回 `UNKNOWN` 而不是默默作答 | 稽核台「RBA 項目」面板；[`packages/agents/test/rbaItemQuery.test.ts`](packages/agents/test/rbaItemQuery.test.ts) |
+| **Q4 Audit Log**：被 NGO 質疑時能否調出「哪次驗證、什麼時間、驗了哪些項目」 | 兩層：①可獨立驗簽的**查驗收據**（只含項目名稱與憑證雜湊，不含原始值）；②**雜湊鏈接＋簽章的稽核軌跡**——改掉一筆舊決策，之後每一筆的 `prev` 都對不上；抽掉中間一筆，序號斷裂。`verifyAuditTrail` 可由挑戰方獨立執行，**持有者不能同時是唯一的裁判** | [`packages/agents/test/auditIntegrity.test.ts`](packages/agents/test/auditIntegrity.test.ts)、[`packages/agents/test/receiptFlow.test.ts`](packages/agents/test/receiptFlow.test.ts) |
+| **Q5 Expiry／Revocation**：有效期多長？違規時能否追溯撤銷並通知曾查驗的品牌 | **有效期依事實的半衰期分級**（工時 90 天／保管 180 天／契約與仲介費 3 年），判準是「這個事實可能已改變卻沒人重新簽發時就該過期」；**追溯撤銷**由撤銷登記立即生效，**通知名單**由查驗日誌反向索引產生。有效期管自然老化、撤銷管事後發現本來就不該成立，兩者不能互相取代 | [`packages/agents/test/auditIntegrity.test.ts`](packages/agents/test/auditIntegrity.test.ts)、[`packages/agents/test/receiptFlow.test.ts`](packages/agents/test/receiptFlow.test.ts)；[`docs/credentials.md`](docs/credentials.md) 有效期表 |
+
+**方向提示對照**：命題建議的四張憑證欄位設計——招募費用、身份文件保管、契約知情同意、工時合規——**四張全部已實作**；選擇性揭露是本專案的預設架構；**串接 GS1 識別碼**也已實作（`facilityId` 欄位＋`expectedFacilityId` 閘門，A 廠憑證挪用到 B 廠回 `CREDENTIAL_FACILITY_MISMATCH`，`packages/adapters` 的來源事件即以 `gs1:` 前綴綁定產線）。
+
+其餘支撐機制：
+
 | 命題要素 | 本專案的回答 | 可執行證據 |
 |---|---|---|
 | **持續可驗證**，不是一年一次紙本稽核 | 事件當下簽章封存＋每期 Merkle 承諾；稽核從「事後追查誰說謊」變成「當場驗簽章是否成立」 | [`packages/agents/test/scenarioT11.test.ts`](packages/agents/test/scenarioT11.test.ts) |
 | **不揭露工廠完整內部資料** | 品牌 Agent 只拿得到合規率與母體人數，拿不到任何一位勞工的工時 | [`packages/agents/test/brandAgent.test.ts`](packages/agents/test/brandAgent.test.ts) |
-| 哪些項目可憑證化、哪些須實地稽核 | `RBA_ITEM_CLASSIFICATION`＋`classifyRbaItem`；不可憑證化回 `REQUIRES_ONSITE_AUDIT`，未列項目回 `UNKNOWN` 而非默默作答 | 稽核台「RBA 項目：憑證能答的與不能答的」面板；[`packages/agents/test/rbaItemQuery.test.ts`](packages/agents/test/rbaItemQuery.test.ts) |
-| 被 NGO 質疑時的盡職調查證明 | 可獨立驗簽的查驗收據——只含項目名稱與憑證雜湊，不含原始值 | 稽核台「查驗收據」面板（含獨立驗簽結果）；[`packages/agents/test/receiptFlow.test.ts`](packages/agents/test/receiptFlow.test.ts) |
-| 撤銷要能通知所有曾經驗證過的人 | 查驗日誌反向索引（憑證雜湊 → 驗證方），產生撤銷通知名單 | 稽核台「撤銷反向通知名單」面板；[`packages/agents/test/receiptFlow.test.ts`](packages/agents/test/receiptFlow.test.ts) |
-| 憑證綁定產線，防 A 廠憑證挪用到 B 廠 | `facilityId` 欄位＋`expectedFacilityId` 閘門（`CREDENTIAL_FACILITY_MISMATCH`） | [`packages/agents/test/credentialLayer.test.ts`](packages/agents/test/credentialLayer.test.ts) |
 | **防報復**（RBA 稽核最容易被忽略的一層） | 「哪幾位勞工申報超時」這個能力在架構上不存在，不是被擋掉 | [`packages/agents/test/policyGate.test.ts`](packages/agents/test/policyGate.test.ts) |
 
-> **命題細節註記**：主辦方載明 Track 05／06 的完整命題（背景、核心可信問題、方向提示）於入選後工作坊公布（8/15 線上、8/22 線下）。上表對照的是**目前已公開的命題文字**；取得完整命題後本表將重做。
+> **命題細節註記**：以上兩表對照的是**完整命題文字**（背景與痛點、核心可信問題、方向提示），逐題編號回答。工作坊（8/15 線上、8/22 線下）若補充或修訂命題，本表隨之更新。
 
 **紅線註記**：`RecruitmentFeeCredential` 的 `feeWithinLegalCap` 判準所依據的「法定上限」數字仍在查證清單（`docs/research/outline.yaml`），憑證結構不依賴該數字，但對外主張前應完成查證。
 
@@ -313,7 +323,7 @@ npx vite preview --port 4173          # 本機預覽靜態站
 
 ```bash
 npm install      # 於 repo 根目錄，安裝 workspace 依賴
-npm test         # vitest，目前 289 個測試全綠
+npm test         # vitest，目前 301 個測試全綠
 npm run typecheck
 ```
 
@@ -414,7 +424,7 @@ Agent A 的能力邊界也寫在型別裡：`BankAssessment.requiresHumanReview`
 | 交件 | 位置 |
 |---|---|
 | 挑戰命題 | **Track 05（主賽道）＋ Track 06（加分題）**——主辦載明命題 06 為 Track 01 延伸的加分題、可與其他命題同時挑戰，本作品同時交付兩軌，對照見上 |
-| 程式碼 | 本 repo（CI 每次 push 跑 289 tests + `demo:vlei` 閘門） |
+| 程式碼 | 本 repo（CI 每次 push 跑 301 tests + `demo:vlei` 閘門） |
 | 簡報 | <https://zuemen.github.io/evidence-at-source/slides.html>（←→ 翻頁） |
 | Demo | <https://zuemen.github.io/evidence-at-source/>（免安裝）＋[講稿](docs/demo-video-script.md) |
 | 治理／信任設計說明 | [`docs/governance-memo.md`](docs/governance-memo.md)（六信任點逐點＋證據） |

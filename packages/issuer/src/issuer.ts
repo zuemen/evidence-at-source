@@ -26,6 +26,38 @@ import type { Ecosystem, LegalEntityHandle, VleiPresentation } from '@eas/vlei';
  */
 export const DEFAULT_CREDENTIAL_LIFETIME_SECONDS = 365 * 24 * 60 * 60;
 
+const DAYS = 24 * 60 * 60;
+
+/**
+ * How long each kind of evidence stays true — 題06 Q5.
+ *
+ * "How long should a compliance credential be valid for?" has no single
+ * answer, because the credentials describe facts with different half-lives.
+ * A pay period ends; a contract does not. Giving them all one lifetime means
+ * either expiring contracts too early or letting last year's overtime answer
+ * this year's audit, and the second failure is the one nobody notices.
+ *
+ * The rule: a credential should expire when the fact it records could
+ * plausibly have changed without anyone re-issuing it.
+ */
+export const CREDENTIAL_LIFETIME_SECONDS: Record<CredentialType, number> = {
+  // Periodic facts. A new period's credential should supersede the last one,
+  // so the window is one quarter — long enough for an audit cycle to reach
+  // back, short enough that stale hours cannot answer a current question.
+  WorkingHoursCredential: 90 * DAYS,
+  SalaryDepositCredential: 90 * DAYS,
+  // Custody changes whenever a passport moves. Half a year matches the rhythm
+  // RBA audits actually run at, and forces a fresh declaration in between.
+  DocumentCustodyCredential: 180 * DAYS,
+  // One-off events whose meaning lasts as long as the contract does. A typical
+  // migrant worker contract is three years.
+  RecruitmentFeeCredential: 3 * 365 * DAYS,
+  ContractConsentCredential: 3 * 365 * DAYS,
+  // The permit's own expiry is the real limit and the gate enforces it
+  // separately (RESIDENCY_PERMIT_EXPIRED), so whichever is sooner wins.
+  ResidencyCredential: 365 * DAYS,
+};
+
 export interface IssuerOptions {
   readonly credentialLifetimeSeconds?: number;
   /** How much a verifier should weigh this issuer's claims. Defaults to T1. */
@@ -93,7 +125,7 @@ async function commitmentFieldsFor(
 
 export async function createIssuer(did: string, options: IssuerOptions = {}): Promise<Issuer> {
   const { privateKey, publicKey } = await generateKeyPair();
-  const lifetime = options.credentialLifetimeSeconds ?? DEFAULT_CREDENTIAL_LIFETIME_SECONDS;
+  const overrideLifetime = options.credentialLifetimeSeconds;
   const tier: IssuerTier = options.tier ?? 'SELF_DECLARED';
   const { verifiedBy, facilityId } = options;
 
@@ -103,6 +135,9 @@ export async function createIssuer(did: string, options: IssuerOptions = {}): Pr
     async issue(type, claims) {
       const schema = getCredentialSchema(type);
       const issuedAt = Math.floor(Date.now() / 1000);
+      // An explicit override wins; otherwise the window comes from what kind
+      // of fact this is, not from one number shared by every credential.
+      const lifetime = overrideLifetime ?? CREDENTIAL_LIFETIME_SECONDS[type];
       // Envelope fields go last: a caller must not be able to spoof the issuer
       // identity, the credential type, or the expiry through the claims object.
       const payload = {
