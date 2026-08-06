@@ -201,6 +201,24 @@ export function ConsoleView({
                   ))}
                 </ul>
               )}
+
+              {split.bank.assessment !== null && split.bank.assessment.riskFlags.length > 0 && (
+                <div
+                  style={{
+                    marginTop: '0.6rem',
+                    padding: '0.5rem 0.7rem',
+                    border: '1px solid var(--amber, #d59a3c)',
+                    borderRadius: '4px',
+                    fontSize: '0.85rem',
+                  }}
+                >
+                  <strong>風險旗標：{split.bank.assessment.riskFlags.join('、')}</strong>
+                  <div style={{ opacity: 0.75, marginTop: '0.25rem' }}>
+                    同一身分短期在多家機構申辦。旗標只提供人類覆核參考，Agent 不據此做任何決定，
+                    也拿不到申辦去向。
+                  </div>
+                </div>
+              )}
             </>
           )}
         </div>

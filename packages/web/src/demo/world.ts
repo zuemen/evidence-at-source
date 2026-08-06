@@ -36,6 +36,7 @@ import {
   checkCredentialLayer,
   createAuditTrail,
   type AuditEntry,
+  createApplicationMonitor,
   createBankAgent,
   createBrandAgent,
   createQuerySession,
@@ -328,6 +329,13 @@ export async function createDemoWorld(): Promise<DemoWorld> {
 
   const workerKeys: { privateKey: PrivateJwk; publicKey: PublicJwk } = await generateKeyPair();
   const revocations: RevocationRegistry = createRevocationRegistry();
+
+  // 題05 Q3: the mule-account fingerprint is one identity applying at several
+  // institutions in a short window. The monitor only ever answers "over the
+  // threshold or not" — never where the applications went.
+  const applications = createApplicationMonitor();
+  // Synthetic history: this worker has already applied at four institutions.
+  for (let i = 0; i < 4; i += 1) applications.record(WORKER_DID);
 
   // Institutions that empower the two verifying agents, and the delegations they
   // grant. Agent authority is separate from worker-credential revocation.
@@ -717,13 +725,16 @@ export async function createDemoWorld(): Promise<DemoWorld> {
 
         const assessment =
           refusedWith === null
-            ? createBankAgent().assess({
-                feeWithinLegalCap: disclosed['feeWithinLegalCap'] as boolean | undefined,
-                passportHeldByWorker: disclosed['passportHeldByWorker'] as boolean | undefined,
-                nativeLanguageVersionProvided: disclosed['nativeLanguageVersionProvided'] as
-                  | boolean
-                  | undefined,
-              })
+            ? createBankAgent().assess(
+                {
+                  feeWithinLegalCap: disclosed['feeWithinLegalCap'] as boolean | undefined,
+                  passportHeldByWorker: disclosed['passportHeldByWorker'] as boolean | undefined,
+                  nativeLanguageVersionProvided: disclosed['nativeLanguageVersionProvided'] as
+                    | boolean
+                    | undefined,
+                },
+                { flagged: applications.risk(WORKER_DID).flagged },
+              )
             : null;
 
         return { disclosed, assessment, refusedWith };
