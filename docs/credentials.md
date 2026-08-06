@@ -102,6 +102,8 @@
 | `periodStart` | string | 公開 | 週期起日（ISO 8601 日期） |
 | `totalHours` | number | 隱藏 | 本週期總工時 |
 | `overtimeHours` | number | 隱藏 | 本週期加班時數 |
+| `valueCommitment` | string | 公開 | `Poseidon(totalHours, overtimeHours, commitmentSalt)`。出示時一定揭露——它是零知識對帳證明的公開輸入 |
+| `commitmentSalt` | string | 隱藏 | 承諾的隨機遮罩。只有勞工持有 |
 | 逐日打卡紀錄 | — | 不入憑證 | 只存工廠系統與勞工裝置，憑證只放週期匯總 |
 | 打卡地點 GPS | — | 不入憑證 | 不收集。位置軌跡對移工是報復風險 |
 
@@ -122,12 +124,26 @@
 | `issuerType` | string | 公開 | `BANK` 或 `REMITTANCE` |
 | `depositedAmountTWD` | number | 隱藏 | 該期實際入帳金額 |
 | `depositCount` | number | 隱藏 | 該期入帳筆數 |
+| `valueCommitment` | string | 公開 | `Poseidon(depositedAmountTWD, commitmentSalt)`。出示時一定揭露 |
+| `commitmentSalt` | string | 隱藏 | 承諾的隨機遮罩。只有勞工持有 |
 | 逐筆交易明細 | — | 不入憑證 | 只存銀行系統與勞工裝置 |
 | 帳號 | — | 不入憑證 | 不收集 |
 
 設計要點：這張憑證存在的唯一理由是引入一個**工廠控制不了的資料源**。工廠控制不了銀行、銀行控制不了打卡系統，於是造假從「單方說謊」變成「兩個利益相反的機構共謀」。M7 對帳模組比對它與工時憑證：入帳金額大於申報工時應得，代表有工時沒被記錄（`DISCREPANCY_OVERPAID`）——這是「省略式造假」的指紋。對帳邏輯與結果碼見 [`packages/reconciliation`](../packages/reconciliation)。
 
 **隱私約束**：M7 的輸出只能是結果碼，永遠不得回傳 `depositedAmountTWD`、`totalHours`、`overtimeHours` 或推算出的預期薪資。此約束由 `packages/reconciliation/test/reconcile.privacy.test.ts` 守門。
+
+---
+
+## 為什麼這兩張憑證需要承諾欄位
+
+零知識證明可以證明「我知道一組算得出一致的數字」——但那**不等於**「那組數字就是這張憑證裡的數字」。少了這一段，證明對任意數字都成立，也就毫無意義。
+
+承諾欄位補上它：簽發方在簽發當下就把數值雜湊進 `valueCommitment`，電路必須證明它知道符合該承諾的原像。於是「證明的是這張憑證裡的數字」不再是要求別人相信的事。
+
+`commitmentSalt` 必須是隱藏欄位，這一點沒有妥協空間：工時的取值範圍很小（一個月最多幾百小時），入帳金額的範圍也有限，**沒有遮罩的話任何人都能用暴力枚舉反推出承諾的原像**——那等於把隱藏欄位公開。
+
+只有這兩張憑證帶承諾。其餘三張沒有零知識對帳的需求，讓它們也背一個承諾等於為一個用不到的功能付代價。
 
 ---
 
