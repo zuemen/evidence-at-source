@@ -44,6 +44,7 @@ export type {
   OmissionCountAnswer,
   PayrollConsistencyAnswer,
   PayrollRateAnswer,
+  RbaItemAnswer,
   ReconciliationCohort,
 } from './brandAgent.js';
 

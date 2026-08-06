@@ -11,6 +11,7 @@ import type { ReasonCode } from '@eas/shared';
 import type { ReconciliationCode } from '@eas/reconciliation';
 import { checkQueryLayer, type AggregateMetric, type Query } from './policyGate.js';
 import { computeEvidenceIntegrityIndex, type IntegrityGrade } from './evidenceIntegrity.js';
+import { classifyRbaItem } from './rbaItems.js';
 
 export interface CohortEvidence {
   readonly cohort: string;
@@ -69,6 +70,15 @@ export type EvidenceIntegrityAnswer =
     }
   | { readonly ok: false; readonly reason: ReasonCode };
 
+/**
+ * 題06 Q3 — the honest half of the answer. Saying "this one needs a human on
+ * the floor" is a stronger claim than a generic refusal, and an unlisted item
+ * is refused rather than guessed at.
+ */
+export type RbaItemAnswer =
+  | { readonly ok: true; readonly item: string; readonly answerable: true }
+  | { readonly ok: false; readonly reason: ReasonCode };
+
 export type BrandAnswer =
   | {
       readonly ok: true;
@@ -87,6 +97,7 @@ export interface BrandAgent {
   getOmissionSignalCount(cohort: string, window: string): OmissionCountAnswer;
   getCommitmentCoverage(cohort: string, window: string): CommitmentCoverageAnswer;
   getEvidenceIntegrityIndex(cohort: string, window: string): EvidenceIntegrityAnswer;
+  answerRbaItem(item: string): RbaItemAnswer;
 }
 
 /** Discrepancy = a verdict that is neither consistent nor unassessable. */
@@ -201,6 +212,18 @@ export function createBrandAgent(
       }
 
       return { ok: true, cohort, window, index, grade, components };
+    },
+
+    answerRbaItem(item) {
+      const classification = classifyRbaItem(item);
+      if (classification === 'REQUIRES_ON_SITE') {
+        return { ok: false, reason: 'REQUIRES_ONSITE_AUDIT' };
+      }
+      if (classification === 'UNKNOWN') {
+        return { ok: false, reason: 'CLAIM_NOT_DISCLOSED' };
+      }
+
+      return { ok: true, item, answerable: true };
     },
 
     answer(query) {

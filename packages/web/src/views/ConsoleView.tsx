@@ -14,6 +14,7 @@ interface Props {
   readonly agents: readonly AgentAuthStatus[];
   readonly vlei: VleiState;
   readonly audit: readonly AuditEntry[];
+  readonly rbaItems: readonly { readonly item: string; readonly verdict: string }[];
   readonly busy: boolean;
   readonly onRevoke: () => void;
   readonly onRevokeAgent: (role: AgentRole) => void;
@@ -97,6 +98,7 @@ export function ConsoleView({
   agents,
   vlei,
   audit,
+  rbaItems,
   busy,
   onRevoke,
   onRevokeAgent,
@@ -309,6 +311,21 @@ export function ConsoleView({
               ))}
             </ul>
           )}
+
+          <div style={{ marginTop: '1.4rem' }}>
+            <h4 style={{ margin: '0 0 0.4rem' }}>RBA 項目：憑證能答的與不能答的</h4>
+            <p className="note" style={{ margin: '0 0 0.5rem' }}>
+              系統明說自己不能取代什麼。未列在分類表上的項目回 CLAIM_NOT_DISCLOSED，而不是默默作答。
+            </p>
+            <ul style={{ margin: 0, paddingLeft: '1.2em', fontSize: '0.85rem' }}>
+              {rbaItems.map((row) => (
+                <li key={row.item}>
+                  <code style={{ fontFamily: 'var(--mono)' }}>{row.item}</code> —{' '}
+                  {row.verdict === 'CREDENTIAL_ANSWERABLE' ? '憑證可答' : row.verdict}
+                </li>
+              ))}
+            </ul>
+          </div>
         </div>
       </div>
 

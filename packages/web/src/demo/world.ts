@@ -245,6 +245,8 @@ export interface DemoWorld {
   auditLog(): readonly AuditEntry[];
   delegationState(): Promise<DelegationState>;
   split(): Promise<SplitView>;
+  /** 題06 Q3 shown as a list rather than buried in a test. */
+  rbaCoverage(): readonly { readonly item: string; readonly verdict: string }[];
   attackDemo(): AttackDemoState;
   integrityDemo(): IntegrityDemoState;
 }
@@ -821,6 +823,23 @@ export async function createDemoWorld(): Promise<DemoWorld> {
       }
 
       return { bank, brand };
+    },
+
+    rbaCoverage() {
+      const probe = createBrandAgent([]);
+      const items = [
+        'workingHoursWithinLimit',
+        'recruitmentFeeWithinLegalCap',
+        'passportHeldByWorker',
+        'dormitoryLivingConditions',
+        'fireSafetyConditions',
+        'grievanceMechanismEffectiveness',
+      ] as const;
+
+      return items.map((item) => {
+        const answer = probe.answerRbaItem(item);
+        return { item, verdict: answer.ok ? 'CREDENTIAL_ANSWERABLE' : answer.reason };
+      });
     },
   };
 }

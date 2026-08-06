@@ -284,7 +284,7 @@ npx vite preview --port 4173          # 本機預覽靜態站
 
 ```bash
 npm install      # 於 repo 根目錄，安裝 workspace 依賴
-npm test         # vitest，目前 246 個測試全綠
+npm test         # vitest，目前 249 個測試全綠
 npm run typecheck
 ```
 
@@ -366,7 +366,7 @@ Agent A 的能力邊界也寫在型別裡：`BankAssessment.requiresHumanReview`
 
 | 交件 | 位置 |
 |---|---|
-| 程式碼 | 本 repo（CI 每次 push 跑 246 tests + `demo:vlei` 閘門） |
+| 程式碼 | 本 repo（CI 每次 push 跑 249 tests + `demo:vlei` 閘門） |
 | 簡報 | <https://zuemen.github.io/evidence-at-source/slides.html>（←→ 翻頁） |
 | Demo | <https://zuemen.github.io/evidence-at-source/>（免安裝）＋[講稿](docs/demo-video-script.md) |
 | 治理／信任設計說明 | [`docs/governance-memo.md`](docs/governance-memo.md)（六信任點逐點＋證據） |
