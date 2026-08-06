@@ -5,7 +5,11 @@ import type { ZkProofResult } from './demo/world.js';
 import { WalletView } from './views/WalletView.js';
 import { ConsoleView } from './views/ConsoleView.js';
 import { AttackIntegrityView } from './views/AttackIntegrityView.js';
-import { DIRECTOR_BEATS, type DirectorAction } from './demo/directorScript.js';
+import {
+  DIRECTOR_BEATS,
+  directorTranscript,
+  type DirectorAction,
+} from './demo/directorScript.js';
 
 type Tab = 'wallet' | 'console' | 'attack';
 
@@ -150,6 +154,22 @@ export function App(): JSX.Element {
               disabled={busy || beatIndex === DIRECTOR_BEATS.length - 1}
             >
               下一幕 →
+            </button>
+            <button
+              className="act"
+              onClick={() => {
+                const blob = new Blob([directorTranscript()], {
+                  type: 'text/plain;charset=utf-8',
+                });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = 'evidence-at-source-逐字稿.txt';
+                link.click();
+                URL.revokeObjectURL(url);
+              }}
+            >
+              下載逐字稿
             </button>
           </div>
         </div>

@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'vitest';
 import {
   DIRECTOR_BEATS,
+  directorTranscript,
   type DirectorAction,
   type DirectorBeat,
 } from '../src/demo/directorScript.js';
@@ -84,5 +85,25 @@ describe('director script', () => {
     const last = DIRECTOR_BEATS[DIRECTOR_BEATS.length - 1] as DirectorBeat;
     expect(first.tab).toBe('wallet');
     expect(last.tab).toBe('attack');
+  });
+});
+
+describe('the transcript a presenter takes into the recording booth', () => {
+  test('it carries every beat, in order, with its narration', () => {
+    const transcript = directorTranscript();
+
+    for (const [index, beat] of DIRECTOR_BEATS.entries()) {
+      expect(transcript).toContain(`${index + 1}. ${beat.title}`);
+      expect(transcript).toContain(beat.narration);
+    }
+  });
+
+  test('it says up front that the data and the person are synthetic', () => {
+    // The transcript leaves this repository and gets read aloud. Whatever a
+    // listener remembers about Andi, they should not remember him as real.
+    const transcript = directorTranscript();
+
+    expect(transcript).toContain('合成資料');
+    expect(transcript).toContain('虛構');
   });
 });

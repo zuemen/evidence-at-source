@@ -32,6 +32,25 @@ export interface DirectorBeat {
   readonly actions: readonly DirectorAction[];
 }
 
+/**
+ * The whole arc as a script a presenter can hold.
+ *
+ * Reading narration off a screen while also driving the demo is how a rehearsed
+ * pitch turns into a stilted one. This produces the same words as plain text,
+ * so the run-through and the recording use one source rather than two that
+ * drift — the failure this repository keeps finding in its own documents.
+ */
+export function directorTranscript(beats: readonly DirectorBeat[] = DIRECTOR_BEATS): string {
+  const lines = beats.map((beat, index) => [`${index + 1}. ${beat.title}`, '', beat.narration, '']);
+
+  return [
+    'Evidence at Source — 導演模式逐字稿',
+    '（合成資料；Andi 為虛構人物，名字不存在於任何憑證中）',
+    '',
+    ...lines.flat(),
+  ].join('\n');
+}
+
 export const DIRECTOR_BEATS: readonly DirectorBeat[] = [
   {
     id: 'intro',
