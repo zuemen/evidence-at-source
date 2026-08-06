@@ -52,6 +52,14 @@ export const DIRECTOR_BEATS: readonly DirectorBeat[] = [
     actions: ['reset', 'attestAll'],
   },
   {
+    id: 'risk-and-limits',
+    tab: 'console',
+    title: '查得到風險，查不到人——以及我們不能取代什麼',
+    narration:
+      '銀行側的風險旗標是防詐的那一半：同一身分短期在多家機構申辦，系統只回報「超過門檻」，不回報申辦去向，而且旗標只供人類覆核、不決定任何事。品牌側的 RBA 項目清單則是誠實聲明：宿舍條件、消防、申訴機制回 REQUIRES_ONSITE_AUDIT——憑證不能取代走進廠房，這句話寫在程式裡。',
+    actions: ['reset', 'attestAll'],
+  },
+  {
     id: 'l0-revoke',
     tab: 'console',
     title: '機構撤銷 Agent：L0 當場失效、零讀取',
@@ -74,6 +82,14 @@ export const DIRECTOR_BEATS: readonly DirectorBeat[] = [
     narration:
       '模擬勞工離境：他的全部憑證同時失效，銀行端拒絕；但母體中其他勞工的證據不受影響，品牌仍拿得到匯總答案。',
     actions: ['reset', 'attestAll', 'revoke'],
+  },
+  {
+    id: 'receipts',
+    tab: 'console',
+    title: '被質疑時拿得出證明，撤銷時找得到該通知的人',
+    narration:
+      '查驗留下一張收據：只有項目名稱與憑證雜湊，沒有任何原始數值，被 NGO 質疑「你到底驗過什麼」時可以直接出示。畫面上那個勾不是寫死的，是拿查驗方公鑰當場重新驗簽的結果。旁邊的名單則是反向索引：這張憑證一旦被撤銷，每一個曾經驗過它的人都會收到通知。',
+    actions: ['reset', 'attestAll'],
   },
   {
     id: 'attacks',

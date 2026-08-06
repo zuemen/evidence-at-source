@@ -21,6 +21,9 @@ const PUBLIC_DOCUMENTS = [
   'README.md',
   'docs/governance-memo.md',
   'packages/web/public/slides.html',
+  // A required deliverable too, and the one that drifted unnoticed while the
+  // other three were guarded — a judge hears this script, they do not read it.
+  'docs/demo-video-script.md',
 ] as const;
 
 /**

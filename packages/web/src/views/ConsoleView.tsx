@@ -228,7 +228,7 @@ export function ConsoleView({
                   }}
                 >
                   <strong>風險旗標：{split.bank.assessment.riskFlags.join('、')}</strong>
-                  <div style={{ opacity: 0.75, marginTop: '0.25rem' }}>
+                  <div className="note" style={{ marginTop: '0.25rem' }}>
                     同一身分短期在多家機構申辦。旗標只提供人類覆核參考，Agent 不據此做任何決定，
                     也拿不到申辦去向。
                   </div>
@@ -326,7 +326,7 @@ export function ConsoleView({
           )}
 
           <div style={{ marginTop: '1.4rem' }}>
-            <h4 style={{ margin: '0 0 0.4rem' }}>RBA 項目：憑證能答的與不能答的</h4>
+            <h3 style={{ margin: '0 0 0.4rem', fontSize: '1rem' }}>RBA 項目：憑證能答的與不能答的</h3>
             <p className="note" style={{ margin: '0 0 0.5rem' }}>
               系統明說自己不能取代什麼。未列在分類表上的項目回 CLAIM_NOT_DISCLOSED，而不是默默作答。
             </p>
@@ -363,7 +363,7 @@ export function ConsoleView({
       )}
 
       <div style={{ marginTop: '1.4rem' }}>
-        <h4 style={{ margin: '0 0 0.4rem' }}>查驗收據（被質疑時可出示）</h4>
+        <h3 style={{ margin: '0 0 0.4rem', fontSize: '1rem' }}>查驗收據（被質疑時可出示）</h3>
         {receipts.length === 0 ? (
           <p className="note" style={{ margin: 0 }}>
             尚未產生——先執行一次 SplitDemo。
@@ -386,7 +386,7 @@ export function ConsoleView({
       </div>
 
       <div style={{ marginTop: '1.4rem' }}>
-        <h4 style={{ margin: '0 0 0.4rem' }}>撤銷反向通知名單</h4>
+        <h3 style={{ margin: '0 0 0.4rem', fontSize: '1rem' }}>撤銷反向通知名單</h3>
         {revocationNotices.length === 0 ? (
           <p className="note" style={{ margin: 0 }}>
             尚無曾驗證者。
