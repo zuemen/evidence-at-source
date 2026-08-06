@@ -11,6 +11,7 @@
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
     "demo:vlei": "tsx packages/vlei/demo/run.ts",
+    "bench": "tsx scripts/benchmark.ts",
     "build:circuit": "node circuits/build.mjs"
   },
   "devDependencies": {
