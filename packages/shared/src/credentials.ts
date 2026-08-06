@@ -36,16 +36,19 @@ const SCHEMAS: Record<CredentialType, DisclosureSchema> = {
     public: ['nativeLanguageVersionProvided', 'language', 'consentTimestamp'],
     hidden: ['salaryAmount', 'contractDocumentHash'],
   },
+  // valueCommitment is public because the verifier needs it as a public input
+  // to the reconciliation proof; commitmentSalt is hidden because disclosing it
+  // would let anyone brute force the small range of plausible hour counts.
   WorkingHoursCredential: {
-    public: ['withinRBALimit', 'periodStart'],
-    hidden: ['totalHours', 'overtimeHours'],
+    public: ['withinRBALimit', 'periodStart', 'valueCommitment'],
+    hidden: ['totalHours', 'overtimeHours', 'commitmentSalt'],
   },
   // Issued by a bank or remittance operator — a data source the factory cannot
   // control. Cross-checking it against working hours turns single-party lying
   // into a two-party conspiracy between institutions with opposing interests.
   SalaryDepositCredential: {
-    public: ['periodStart', 'periodEnd', 'issuerType'],
-    hidden: ['depositedAmountTWD', 'depositCount'],
+    public: ['periodStart', 'periodEnd', 'issuerType', 'valueCommitment'],
+    hidden: ['depositedAmountTWD', 'depositCount', 'commitmentSalt'],
   },
 };
 

@@ -9,6 +9,8 @@ import {
   DELEGATION_VCT,
   generateKeyPair,
   getCredentialSchema,
+  poseidonCommit,
+  randomSalt,
   signCredential,
   type AllowedQueryType,
   type CredentialType,
@@ -52,6 +54,43 @@ export interface Issuer {
   issueDelegation(grant: DelegationGrant): Promise<string>;
 }
 
+/**
+ * Binds the credential's figures to a commitment the reconciliation circuit can
+ * check against. Only the two credentials that proof consumes carry one —
+ * making every credential pay for a feature two of them use would be waste.
+ *
+ * The salt is generated here, at issuance, and travels as a hidden claim: the
+ * worker needs it to build a proof, and nobody else may see it.
+ */
+async function commitmentFieldsFor(
+  type: string,
+  claims: Record<string, unknown>,
+): Promise<Record<string, string>> {
+  const salt = randomSalt();
+
+  if (type === 'WorkingHoursCredential') {
+    return {
+      valueCommitment: await poseidonCommit([
+        BigInt(Number(claims['totalHours'])),
+        BigInt(Number(claims['overtimeHours'])),
+        salt,
+      ]),
+      commitmentSalt: salt.toString(),
+    };
+  }
+  if (type === 'SalaryDepositCredential') {
+    return {
+      valueCommitment: await poseidonCommit([
+        BigInt(Number(claims['depositedAmountTWD'])),
+        salt,
+      ]),
+      commitmentSalt: salt.toString(),
+    };
+  }
+
+  return {};
+}
+
 export async function createIssuer(did: string, options: IssuerOptions = {}): Promise<Issuer> {
   const { privateKey, publicKey } = await generateKeyPair();
   const lifetime = options.credentialLifetimeSeconds ?? DEFAULT_CREDENTIAL_LIFETIME_SECONDS;
@@ -68,6 +107,7 @@ export async function createIssuer(did: string, options: IssuerOptions = {}): Pr
       // identity, the credential type, or the expiry through the claims object.
       const payload = {
         ...claims,
+        ...(await commitmentFieldsFor(type, claims)),
         iss: did,
         iat: issuedAt,
         vct: type,

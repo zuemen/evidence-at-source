@@ -1,6 +1,8 @@
 export { CREDENTIAL_TYPES, getCredentialSchema } from './credentials.js';
 export type { CredentialType, DisclosureSchema } from './credentials.js';
 
+export { poseidonCommit, randomSalt } from './commitment.js';
+
 export {
   base64urlToUtf8,
   bytesToBase64url,

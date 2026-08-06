@@ -5,8 +5,13 @@ describe('credential schema', () => {
   test('WorkingHoursCredential marks raw hour counts as hidden', () => {
     const schema = getCredentialSchema('WorkingHoursCredential');
 
-    expect(schema.hidden).toEqual(['totalHours', 'overtimeHours']);
+    // commitmentSalt is hidden for the same reason the hour counts are: the
+    // range of plausible hours is small enough to brute force without a mask.
+    expect(schema.hidden).toEqual(['totalHours', 'overtimeHours', 'commitmentSalt']);
     expect(schema.public).toContain('withinRBALimit');
+    // The commitment itself must be disclosable — it is a public input to the
+    // reconciliation proof.
+    expect(schema.public).toContain('valueCommitment');
   });
 
   test('all credential types from docs/credentials.md have a schema', () => {
@@ -22,8 +27,8 @@ describe('credential schema', () => {
   test('SalaryDepositCredential keeps the deposited amount and count hidden', () => {
     const schema = getCredentialSchema('SalaryDepositCredential');
 
-    expect(schema.hidden).toEqual(['depositedAmountTWD', 'depositCount']);
-    expect(schema.public).toEqual(['periodStart', 'periodEnd', 'issuerType']);
+    expect(schema.hidden).toEqual(['depositedAmountTWD', 'depositCount', 'commitmentSalt']);
+    expect(schema.public).toEqual(['periodStart', 'periodEnd', 'issuerType', 'valueCommitment']);
   });
 
   test('no field is both public and hidden', () => {

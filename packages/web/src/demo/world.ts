@@ -634,7 +634,11 @@ export async function createDemoWorld(): Promise<DemoWorld> {
             headlineClaim: HEADLINE_CLAIM[entry.type],
             attested: entry.attestation !== null,
             publicFields: schema.public,
-            hiddenFields: schema.hidden,
+            // A redacted block means "a fact about you the verifier cannot
+            // see". The commitment salt is a cryptographic mask, not a fact
+            // about the worker, so showing it would be jargon rather than
+            // information.
+            hiddenFields: schema.hidden.filter((field) => field !== 'commitmentSalt'),
           };
         }),
       };
