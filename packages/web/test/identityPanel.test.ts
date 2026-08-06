@@ -50,3 +50,47 @@ describe('demo world — the audit trail verifies against the chain (題06 Q4)',
     expect(verdict.ok === true && verdict.verifiedEntries).toBeGreaterThan(0);
   });
 });
+
+describe('demo world — the governance chain panel (題06 Q1／Q4)', () => {
+  test('the working-hours issuer reports the tier its chain grants', async () => {
+    const world = await createDemoWorld();
+
+    const governance = await world.governanceState();
+
+    expect(governance.workingHoursChainTier).toBe('SELF_DECLARED');
+  });
+
+  test('striking off the audit body drops its endorsement, without touching anything else', async () => {
+    const world = await createDemoWorld();
+    expect((await world.governanceState()).auditor.legalName).toBe('SGS 稽核（合成）');
+
+    world.revokeAuditor();
+    const after = await world.governanceState();
+
+    expect(after.auditor.legalName).toBeNull();
+    // The reviewer is a different office under a different entity: revoking an
+    // auditor must not quietly take anyone else down with it.
+    expect(after.reviewer.personLegalName).not.toBeNull();
+  });
+
+  test('a reviewer who leaves can approve nothing further', async () => {
+    const world = await createDemoWorld();
+    expect((await world.governanceState()).reviewer.personLegalName).toBe('王小明（合成）');
+
+    world.revokeReviewer();
+
+    expect((await world.governanceState()).reviewer.personLegalName).toBeNull();
+  });
+
+  test('the panel reports the trail as a challenger would see it, sealed', async () => {
+    const world = await createDemoWorld();
+    await world.attestAll();
+    await world.split();
+
+    const governance = await world.governanceState();
+
+    expect(governance.auditIntegrity.ok).toBe(true);
+    expect(governance.auditIntegrity.sealed).toBe(true);
+    expect(governance.auditIntegrity.verifiedEntries).toBeGreaterThan(0);
+  });
+})

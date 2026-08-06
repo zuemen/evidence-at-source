@@ -174,6 +174,9 @@ export function App(): JSX.Element {
           receipts={payload.receipts}
           revocationNotices={payload.revocationNotices}
           identity={payload.identity}
+          governance={payload.governance}
+          onRevokeAuditor={() => void run(api.revokeAuditor)}
+          onRevokeReviewer={() => void run(api.revokeReviewer)}
           onAttemptBrokerWallet={() => void run(api.attemptBrokerWallet)}
           presence={presence}
           onVerifyDevice={() => {

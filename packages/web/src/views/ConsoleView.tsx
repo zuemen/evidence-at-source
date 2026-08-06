@@ -5,6 +5,7 @@ import type {
   DemoSnapshot,
   SplitView,
   VleiState,
+  GovernanceState,
   IdentityState,
   ZkProofResult,
 } from '../demo/world.js';
@@ -29,6 +30,9 @@ interface Props {
     readonly subjectCredentialHash: string;
   }[];
   readonly identity: IdentityState;
+  readonly governance: GovernanceState;
+  readonly onRevokeAuditor: () => void;
+  readonly onRevokeReviewer: () => void;
   readonly onAttemptBrokerWallet: () => void;
   readonly presence: string | null;
   readonly onVerifyDevice: () => void;
@@ -122,6 +126,9 @@ export function ConsoleView({
   receipts,
   revocationNotices,
   identity,
+  governance,
+  onRevokeAuditor,
+  onRevokeReviewer,
   onAttemptBrokerWallet,
   presence,
   onVerifyDevice,
@@ -416,6 +423,76 @@ export function ConsoleView({
         )}
         <p className="note" style={{ margin: '0.4rem 0 0' }}>
           這份憑證一旦被撤銷，上列每一個查驗方都會收到通知。名單由憑證雜湊反向索引產生，不含勞工識別碼。
+        </p>
+      </div>
+
+      <div style={{ marginTop: '1.4rem' }}>
+        <h3 style={{ margin: '0 0 0.4rem', fontSize: '1rem' }}>
+          治理鏈：資格、背書、紀錄、決策者，全部掛在同一條鏈上
+        </h3>
+        <p className="note" style={{ margin: '0 0 0.6rem' }}>
+          機構身分可驗證只是第一步。下面四件事本來各自散落——有的是簽發者自己寫的欄位、
+          有的是沒人驗的字串、有的根本沒有身分——現在<strong>全部由鏈決定，而且都可以被撤銷</strong>。
+        </p>
+        <div style={{ fontSize: '0.85rem' }}>
+          <div className="claim-row">
+            <span className="name">工時簽發者的鏈上層級</span>
+            <span className="value">
+              {governance.workingHoursChainTier}
+              <span className="note">（憑證敢報得比這高就 ISSUER_TIER_MISMATCH）</span>
+            </span>
+          </div>
+          <div className="claim-row">
+            <span className="name">第三方稽核背書</span>
+            <span className="value">
+              {governance.auditor.legalName ?? '解析不到 → AUDITOR_CHAIN_INVALID'}
+            </span>
+          </div>
+          <div className="claim-row">
+            <span className="name">覆核者（按下核准的人）</span>
+            <span className="value">
+              {governance.reviewer.personLegalName === null
+                ? '已離職 → 不能再核准'
+                : `${governance.reviewer.personLegalName}／${governance.reviewer.officialRole}`}
+            </span>
+          </div>
+          <div className="claim-row">
+            <span className="name">稽核軌跡獨立重驗</span>
+            <span className="value">
+              {governance.auditIntegrity.ok
+                ? `通過 ✅ · ${governance.auditIntegrity.verifiedEntries} 筆 · ${
+                    governance.auditIntegrity.sealed ? '已封緘' : '未封緘'
+                  }`
+                : `失敗 ❌ ${governance.auditIntegrity.failure}`}
+            </span>
+          </div>
+        </div>
+        <p className="note" style={{ margin: '0.5rem 0 0' }}>
+          最後一列不是「我們自己說有記」：它是拿<strong>銀行法人憑證公布的公鑰</strong>重新驗過每一筆
+          封緘、並重算整條雜湊鏈的結果。改掉任何一筆舊決策、或抽掉中間一筆，這裡就會變紅。
+        </p>
+        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '0.6rem' }}>
+          <button
+            className="act"
+            data-danger="true"
+            onClick={onRevokeAuditor}
+            disabled={busy || governance.auditor.legalName === null}
+          >
+            模擬：稽核機構被除名
+          </button>
+          <button
+            className="act"
+            data-danger="true"
+            onClick={onRevokeReviewer}
+            disabled={busy || governance.reviewer.personLegalName === null}
+          >
+            模擬：覆核者離職
+          </button>
+        </div>
+        <p className="note" style={{ margin: '0.5rem 0 0' }}>
+          按下去不用重新設定任何名單——它們的失效是<strong>鏈的結果</strong>，不是誰去同步了什麼。
+          稽核機構被除名，它背書過的每一張 T2 憑證同時降級；覆核者離職，
+          他<strong>在職期間簽過的仍然成立</strong>，但不能再核准任何新案。
         </p>
       </div>
 

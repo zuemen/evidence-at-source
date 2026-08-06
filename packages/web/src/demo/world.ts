@@ -29,6 +29,7 @@ import {
 } from '@eas/shared';
 import { createVleiIssuer, type Issuer, type VleiIssuer } from '@eas/issuer';
 import {
+  AUDITOR_ROLE,
   bootstrapEcosystem,
   exportChainArtifacts,
   verifyEcrChain,
@@ -45,8 +46,11 @@ import {
   createApplicationMonitor,
   createBankAgent,
   createBrandAgent,
+  chainTierOf,
+  createAuditorDirectory,
   createGroth16Verifier,
   createQuerySession,
+  resolveReviewerAuthority,
   verifyAuditTrail,
   type AuditVerification,
   requireIssuerSigningKey,
@@ -68,6 +72,9 @@ import { reviewDelegationForWallet, type WalletDelegationView } from '../wallet/
 export type { AuditEntry } from '@eas/agents';
 
 const WORKER_DID = 'did:key:zWorker001';
+const AUDITOR_DID = 'did:web:sgs.example';
+const REVIEWER_DID = 'did:key:zComplianceOfficer';
+const REVIEWER_ROLE = 'compliance-officer';
 const COHORT = 'factory-a-2026-08';
 const DEVICE = 'sha256:synthetic-device-001';
 
@@ -239,6 +246,27 @@ export interface AttackDemoState {
   };
 }
 
+export interface GovernanceState {
+  /** What the QVI vetted the working-hours issuer as, read off the chain. */
+  readonly workingHoursChainTier: string;
+  readonly auditor: {
+    readonly did: string;
+    /** Null once the body can no longer be shown to be an auditor. */
+    readonly legalName: string | null;
+  };
+  readonly reviewer: {
+    readonly personLegalName: string | null;
+    readonly officialRole: string;
+  };
+  /** What a challenger sees when they re-check the exported trail themselves. */
+  readonly auditIntegrity: {
+    readonly ok: boolean;
+    readonly sealed: boolean;
+    readonly verifiedEntries: number;
+    readonly failure: string | null;
+  };
+}
+
 export interface IdentityState {
   readonly identityAnchor: string;
   readonly holderDid: string;
@@ -302,6 +330,12 @@ export interface DemoWorld {
   proveReconciliation(): Promise<ZkProofResult>;
   /** 題05 Q1: is this wallet still the one bound to this person? */
   identityState(): IdentityState;
+  /** 題06 Q1/Q4: tier, endorsement, reviewer and record — all off the chain. */
+  governanceState(): Promise<GovernanceState>;
+  /** Strike off the audit body; every endorsement it gave stops resolving. */
+  revokeAuditor(): void;
+  /** The reviewer leaves; they can approve nothing further. */
+  revokeReviewer(): void;
   /**
    * Plays the broker's move: enrol a second wallet against the same person.
    * Nothing is mutated when it is refused, which is the point.
@@ -456,6 +490,19 @@ export async function createDemoWorld(): Promise<DemoWorld> {
     ecosystem: eco,
     options: { tier: 'AUTHORITY_CERTIFIED' },
   });
+  // The audit body that backs the factory's third-party claims, and the bank
+  // officer who actually approves. Both are legal entities / offices on the
+  // same root as everything else — see README's "掛在這條鏈上的不只是機構是誰".
+  const auditBody = await createVleiIssuer({
+    didWeb: AUDITOR_DID,
+    legalName: 'SGS 稽核（合成）',
+    leiTag: 'SGSEXAMPLE',
+    ecosystem: eco,
+  });
+  const auditors = createAuditorDirectory(eco.trust, [
+    { did: AUDITOR_DID, presentation: auditBody.grantAgentEcr(AUDITOR_DID, AUDITOR_ROLE) },
+  ]);
+
   const enrollments = createEnrollmentRegistry();
   const residency = {
     identityAnchor: 'sha256:synthetic-anchor-0417',
@@ -535,6 +582,7 @@ export async function createDemoWorld(): Promise<DemoWorld> {
   // Audit trail: who asked, what the gate decided, and on whose authority.
   // Sealed with the verifier's own key so the exported trail is something a
   // challenger can check, rather than a list this page could have written.
+  const reviewerOor = bank.grantOfficialRole(REVIEWER_DID, '王小明（合成）', REVIEWER_ROLE);
   const audit = createAuditTrail({
     signingKey: bankKeys.privateKey,
     verifierDid: 'did:web:bank.example',
@@ -1126,6 +1174,38 @@ export async function createDemoWorld(): Promise<DemoWorld> {
         // proof", never like a passing one.
         return { available: false as const, reason: 'PROVER_UNAVAILABLE' };
       }
+    },
+
+    async governanceState() {
+      const standing = auditors.standing(AUDITOR_DID);
+      const reviewer = resolveReviewerAuthority(reviewerOor, eco.trust, REVIEWER_ROLE);
+      const integrity = await verifyAuditTrail(
+        await audit.export(),
+        requireIssuerKey(bank) as unknown as PublicJwk,
+      );
+
+      return {
+        workingHoursChainTier: chainTierOf(requireIssuerKey(factory)) ?? 'SELF_DECLARED',
+        auditor: { did: AUDITOR_DID, legalName: standing?.legalName ?? null },
+        reviewer: {
+          personLegalName: reviewer.ok ? reviewer.reviewer.personLegalName : null,
+          officialRole: REVIEWER_ROLE,
+        },
+        auditIntegrity: {
+          ok: integrity.ok,
+          sealed: integrity.ok ? integrity.sealed : false,
+          verifiedEntries: integrity.ok ? integrity.verifiedEntries : 0,
+          failure: integrity.ok ? null : integrity.reason,
+        },
+      };
+    },
+
+    revokeAuditor() {
+      auditBody.revokeAgentEcr(AUDITOR_DID);
+    },
+
+    revokeReviewer() {
+      bank.revokeOfficialRole(REVIEWER_DID);
     },
 
     identityState() {

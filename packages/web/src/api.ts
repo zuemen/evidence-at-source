@@ -17,6 +17,7 @@ import {
   type DelegationState,
   type DemoSnapshot,
   type DemoWorld,
+  type GovernanceState,
   type IdentityState,
   type IntegrityDemoState,
   type SplitView,
@@ -33,6 +34,7 @@ export interface DemoPayload {
   readonly attack: AttackDemoState;
   readonly integrity: IntegrityDemoState;
   readonly identity: IdentityState;
+  readonly governance: GovernanceState;
   readonly rbaItems: readonly { readonly item: string; readonly verdict: string }[];
   readonly receipts: readonly {
     readonly verifierDid: string;
@@ -60,6 +62,7 @@ async function currentPayload(): Promise<DemoPayload> {
     attack: world.attackDemo(),
     integrity: world.integrityDemo(),
     identity: world.identityState(),
+    governance: await world.governanceState(),
     rbaItems: world.rbaCoverage(),
     receipts: await world.receipts(),
     revocationNotices: world.revocationNotices(),
@@ -90,6 +93,14 @@ export const api = {
   },
   attemptBrokerWallet: async () => {
     (await worldPromise).attemptBrokerWallet();
+    return currentPayload();
+  },
+  revokeAuditor: async () => {
+    (await worldPromise).revokeAuditor();
+    return currentPayload();
+  },
+  revokeReviewer: async () => {
+    (await worldPromise).revokeReviewer();
     return currentPayload();
   },
   exportBundle: async (role: AgentRole) => (await worldPromise).exportAgentBundle(role),
