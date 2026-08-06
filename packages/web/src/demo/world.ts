@@ -11,6 +11,7 @@
  */
 
 import {
+  createEnrollmentRegistry,
   createRevocationRegistry,
   createWorkerAttestation,
   credentialHash,
@@ -19,6 +20,7 @@ import {
   verifyPresentation,
   getCredentialSchema,
   type CredentialType,
+  type EnrollmentStatus,
   type IssuerTier,
   type PrivateJwk,
   type PublicJwk,
@@ -235,6 +237,19 @@ export interface AttackDemoState {
   };
 }
 
+export interface IdentityState {
+  readonly identityAnchor: string;
+  readonly holderDid: string;
+  readonly deviceCredentialId: string;
+  readonly status: EnrollmentStatus;
+  /** How many wallets this person has ever had. A second one is a story. */
+  readonly bindingCount: number;
+  /** The reason the last broker attempt was refused, if one has been made. */
+  readonly brokerAttempt: ReasonCode | null;
+  /** Whether this browser could produce a real WebAuthn assertion. */
+  readonly webauthnAvailable: boolean;
+}
+
 export interface IntegrityDemoState {
   readonly index: number;
   readonly grade: IntegrityGrade;
@@ -277,6 +292,13 @@ export interface DemoWorld {
    * artifacts are unreachable.
    */
   proveReconciliation(): Promise<ZkProofResult>;
+  /** 題05 Q1: is this wallet still the one bound to this person? */
+  identityState(): IdentityState;
+  /**
+   * Plays the broker's move: enrol a second wallet against the same person.
+   * Nothing is mutated when it is refused, which is the point.
+   */
+  attemptBrokerWallet(): void;
   /** 題06 Q4: independently checkable proof of what was verified, and when. */
   receipts(): Promise<
     readonly {
@@ -407,6 +429,32 @@ export async function createDemoWorld(): Promise<DemoWorld> {
     leiTag: 'BRANDEXAMPLE',
     ecosystem: eco,
   });
+  // The immigration authority is the only T3 issuer here, and the only one
+  // whose credential is about the wallet rather than about the work.
+  const immigration = await createVleiIssuer({
+    didWeb: 'did:web:immigration.example',
+    legalName: '內政部移民署',
+    leiTag: 'IMMIGRATIONTW',
+    ecosystem: eco,
+    options: { tier: 'AUTHORITY_CERTIFIED' },
+  });
+  const enrollments = createEnrollmentRegistry();
+  const residency = {
+    identityAnchor: 'sha256:synthetic-anchor-0417',
+    holderDid: WORKER_DID,
+    deviceCredentialId: 'webauthn:synthetic-device-0417',
+    permitValidUntil: '2029-07-31',
+  };
+  await immigration.issue('ResidencyCredential', {
+    workerDID: WORKER_DID,
+    ...residency,
+    anchorSalt: 'synthetic-anchor-salt',
+    arcReference: 'synthetic-arc-reference',
+  });
+  enrollments.enroll(residency);
+  /** Set when the demo has been asked to play the broker's move. */
+  let brokerAttempt: ReasonCode | null = null;
+
   const bankAgentVlei = bank.grantAgentEcr(BANK_AGENT_DID);
   const brandAgentVlei = brand.grantAgentEcr(BRAND_AGENT_DID);
   const delegationRevocations: RevocationRegistry = createRevocationRegistry();
@@ -1054,6 +1102,28 @@ export async function createDemoWorld(): Promise<DemoWorld> {
         // proof", never like a passing one.
         return { available: false as const, reason: 'PROVER_UNAVAILABLE' };
       }
+    },
+
+    identityState() {
+      return {
+        identityAnchor: residency.identityAnchor,
+        holderDid: residency.holderDid,
+        deviceCredentialId: residency.deviceCredentialId,
+        status: enrollments.statusOf(WORKER_DID, new Date()),
+        bindingCount: enrollments.bindingCountFor(residency.identityAnchor),
+        brokerAttempt,
+        // A real assertion needs a platform authenticator. Absence is reported
+        // rather than papered over: the gate refuses without one, and a demo
+        // that hid that would be claiming a guarantee it did not have.
+        webauthnAvailable:
+          typeof globalThis.PublicKeyCredential !== 'undefined' &&
+          typeof globalThis.navigator?.credentials?.get === 'function',
+      };
+    },
+
+    attemptBrokerWallet() {
+      const result = enrollments.enroll({ ...residency, holderDid: 'did:key:zBrokerWallet' });
+      brokerAttempt = result.ok ? null : result.reason;
     },
 
     rbaCoverage() {

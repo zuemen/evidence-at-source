@@ -5,6 +5,7 @@ import type {
   DemoSnapshot,
   SplitView,
   VleiState,
+  IdentityState,
   ZkProofResult,
 } from '../demo/world.js';
 import { TrustChainPanel } from './TrustChainPanel.js';
@@ -27,6 +28,8 @@ interface Props {
     readonly verifierDid: string;
     readonly subjectCredentialHash: string;
   }[];
+  readonly identity: IdentityState;
+  readonly onAttemptBrokerWallet: () => void;
   readonly zk: ZkProofResult | null;
   readonly zkBusy: boolean;
   readonly onProveZk: () => void;
@@ -116,6 +119,8 @@ export function ConsoleView({
   rbaItems,
   receipts,
   revocationNotices,
+  identity,
+  onAttemptBrokerWallet,
   zk,
   zkBusy,
   onProveZk,
@@ -408,6 +413,55 @@ export function ConsoleView({
         <p className="note" style={{ margin: '0.4rem 0 0' }}>
           這份憑證一旦被撤銷，上列每一個查驗方都會收到通知。名單由憑證雜湊反向索引產生，不含勞工識別碼。
         </p>
+      </div>
+
+      <div style={{ marginTop: '1.4rem' }}>
+        <h3 style={{ margin: '0 0 0.4rem', fontSize: '1rem' }}>
+          一人一憑證：仲介開不了第二個錢包
+        </h3>
+        <p className="note" style={{ margin: '0 0 0.6rem' }}>
+          雙簽擋得住<strong>竄改紀錄的雇主</strong>，擋不住<strong>拿走手機的仲介</strong>——他手上有私鑰，
+          每個簽章都是真的。所以身分要另外錨定：移民署簽發的在留憑證帶一個唯一性錨，
+          同一個錨<strong>只能有一個 active 錢包</strong>。
+        </p>
+        <div style={{ fontSize: '0.85rem' }}>
+          <div className="claim-row">
+            <span className="name">identityAnchor</span>
+            <span className="value" style={{ fontFamily: 'var(--mono)', fontSize: '0.72rem' }}>
+              {identity.identityAnchor}
+            </span>
+          </div>
+          <div className="claim-row">
+            <span className="name">綁定狀態</span>
+            <span className="value">{identity.status}</span>
+          </div>
+          <div className="claim-row">
+            <span className="name">此人歷來錢包數</span>
+            <span className="value">{identity.bindingCount}</span>
+          </div>
+          <div className="claim-row">
+            <span className="name">裝置在場驗證（FIDO）</span>
+            <span className="value">
+              {identity.webauthnAvailable ? '此瀏覽器支援 ✅' : '此瀏覽器不支援——閘門一律拒絕'}
+            </span>
+          </div>
+        </div>
+        <button
+          className="act"
+          data-danger="true"
+          onClick={onAttemptBrokerWallet}
+          disabled={busy}
+          style={{ marginTop: '0.6rem' }}
+        >
+          模擬仲介：替同一人再開一個錢包
+        </button>
+        {identity.brokerAttempt !== null && (
+          <p className="note" style={{ margin: '0.5rem 0 0' }}>
+            被拒絕：<code style={{ fontFamily: 'var(--mono)' }}>{identity.brokerAttempt}</code>
+            ——註冊表沒有被改動，原本那個錢包仍然是唯一有效的那一個。
+            裝置遺失後的正當換綁必須<strong>先撤銷再重綁</strong>，所以換綁一定留下計數，不會安靜地發生。
+          </p>
+        )}
       </div>
 
       <div style={{ marginTop: '1.4rem' }}>

@@ -171,6 +171,8 @@ export function App(): JSX.Element {
           rbaItems={payload.rbaItems}
           receipts={payload.receipts}
           revocationNotices={payload.revocationNotices}
+          identity={payload.identity}
+          onAttemptBrokerWallet={() => void run(api.attemptBrokerWallet)}
           zk={zk}
           zkBusy={zkBusy}
           onProveZk={() => {

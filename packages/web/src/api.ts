@@ -17,6 +17,7 @@ import {
   type DelegationState,
   type DemoSnapshot,
   type DemoWorld,
+  type IdentityState,
   type IntegrityDemoState,
   type SplitView,
   type ZkProofResult,
@@ -31,6 +32,7 @@ export interface DemoPayload {
   readonly audit: readonly AuditEntry[];
   readonly attack: AttackDemoState;
   readonly integrity: IntegrityDemoState;
+  readonly identity: IdentityState;
   readonly rbaItems: readonly { readonly item: string; readonly verdict: string }[];
   readonly receipts: readonly {
     readonly verifierDid: string;
@@ -57,6 +59,7 @@ async function currentPayload(): Promise<DemoPayload> {
     audit: world.auditLog(),
     attack: world.attackDemo(),
     integrity: world.integrityDemo(),
+    identity: world.identityState(),
     rbaItems: world.rbaCoverage(),
     receipts: await world.receipts(),
     revocationNotices: world.revocationNotices(),
@@ -83,6 +86,10 @@ export const api = {
   },
   revokeQvi: async () => {
     (await worldPromise).revokeQvi();
+    return currentPayload();
+  },
+  attemptBrokerWallet: async () => {
+    (await worldPromise).attemptBrokerWallet();
     return currentPayload();
   },
   exportBundle: async (role: AgentRole) => (await worldPromise).exportAgentBundle(role),
