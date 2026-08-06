@@ -13,6 +13,7 @@ export default defineConfig({
       '@eas/issuer': r('./packages/issuer/src/index.ts'),
       '@eas/agents': r('./packages/agents/src/index.ts'),
       '@eas/reconciliation': r('./packages/reconciliation/src/index.ts'),
+      '@eas/adapters': r('./packages/adapters/src/index.ts'),
       '@eas/integrity': r('./packages/integrity/src/index.ts'),
       '@eas/web': r('./packages/web/src/demo/world.ts'),
     },

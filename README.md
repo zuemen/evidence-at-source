@@ -289,7 +289,7 @@ npx vite preview --port 4173          # 本機預覽靜態站
 
 ```bash
 npm install      # 於 repo 根目錄，安裝 workspace 依賴
-npm test         # vitest，目前 263 個測試全綠
+npm test         # vitest，目前 274 個測試全綠
 npm run typecheck
 ```
 
@@ -324,6 +324,22 @@ npm run typecheck
 
 Agent A 的能力邊界也寫在型別裡：`BankAssessment.requiresHumanReview` 的型別是字面量 `true`，任何程式碼都無法產生一份聲稱自己是最終決定的評估結果。
 
+## 與真實系統怎麼接：推送，不是查詢
+
+「這東西要怎麼接上工廠的打卡系統？」——這個問題的答案不是一個 API，是**介接的形狀**，而形狀本身就是論點。
+
+[`packages/adapters`](packages/adapters) 定義了那個形狀：**來源系統在事件發生的當下把事實推出來**，adapter 把它映射成簽發方要簽的 claims。adapter 是純函式，**不能查詢**——這是刻意的。一個能查詢的 adapter，等於讓工廠決定什麼時候給、給哪一批，那正是這個專案要消滅的失敗模式。能查就能篩，能篩就回到原點。
+
+三件事 adapter 在結構上做不到：
+
+- **不能簽發**。它只回傳 claims；簽章要用簽發方的金鑰，而那把金鑰只能從已驗證的 vLEI 鏈取得。
+- **不能讓任何東西算數**。簽出來的憑證在勞工反簽之前一律不成立。
+- **不能加欄位**。任何不在揭露 schema 裡的欄位一律拒絕——因為**沒被列為隱藏的欄位就是公開欄位**，一個順手 pass through 的「主管備註」會直接被公開。這條規則由 `claimsWithinSchema` 強制，不是靠人記得。
+
+三個 adapter 對應三個來源：工廠打卡（→ 工時憑證）、仲介收費（→ 仲介費憑證）、移民署在留狀態（→ **主體連動撤銷**，不是憑證）。RBA 工時上限與仲介費法定上限都是**設定值不是常數**——不同買家畫的線不一樣，這種數字要放在可稽核的設定裡，不是藏在程式碼裡。
+
+**這裡沒有接上任何真實系統，一個都沒有。** 這是 P1 試點的第一件工程工作；成立的主張只有一個——真接上去的時候，憑證結構與閘門一行都不用改。
+
 ## 模組進度
 
 | 模組 | 內容 | 狀態 |
@@ -341,6 +357,7 @@ Agent A 的能力邊界也寫在型別裡：`BankAssessment.requiresHumanReview`
 | 三條撤銷路徑（P3） | 簽發方／主體連動／機構撤銷 Agent，兩層隔離 | ✅ facade＋整合測試 |
 | 錢包端 ZK 對帳（Phase 4） | Poseidon 承諾綁定＋circom 電路＋Groth16 驗證 | ✅ 電路已接上、與 `reconcile()` 邊界值相符；⚠️ 可信設定仍是單方 demo 等級 |
 | 攻擊演示 | T8 prompt injection 無效、T9 差分攻擊偵測 | ✅ 後端＋demo 畫面（攻防與完整性分頁） |
+| adapters | 與來源系統的介接邊界：打卡／仲介收費／在留狀態 → 憑證 claims | ✅ 型別＋純函式＋[`packages/adapters/test/adapters.test.ts`](packages/adapters/test/adapters.test.ts)；⚠️ **沒有接上任何真實系統**，見下 |
 
 ## 技術棧
 
@@ -373,7 +390,7 @@ Agent A 的能力邊界也寫在型別裡：`BankAssessment.requiresHumanReview`
 | 交件 | 位置 |
 |---|---|
 | 挑戰命題 | **Track 05（主賽道）＋ Track 06（加分題）**——主辦載明命題 06 為 Track 01 延伸的加分題、可與其他命題同時挑戰，本作品同時交付兩軌，對照見上 |
-| 程式碼 | 本 repo（CI 每次 push 跑 263 tests + `demo:vlei` 閘門） |
+| 程式碼 | 本 repo（CI 每次 push 跑 274 tests + `demo:vlei` 閘門） |
 | 簡報 | <https://zuemen.github.io/evidence-at-source/slides.html>（←→ 翻頁） |
 | Demo | <https://zuemen.github.io/evidence-at-source/>（免安裝）＋[講稿](docs/demo-video-script.md) |
 | 治理／信任設計說明 | [`docs/governance-memo.md`](docs/governance-memo.md)（六信任點逐點＋證據） |
@@ -400,7 +417,7 @@ Agent A 的能力邊界也寫在型別裡：`BankAssessment.requiresHumanReview`
 | **生物辨識綁定** | 架構敘事裡有，程式碼裡沒有。勞工金鑰是瀏覽器產生的 ES256 金鑰對，未綁裝置安全區 | WebAuthn／passkey 綁定，讓私鑰進入安全元件而非記憶體 |
 | **勞工端金鑰遺失與輪替** | 未實作。機構層已有 KERI pre-rotation，勞工層沒有 | 勞工層的輪替流程與既有憑證的重新反簽 |
 | **ZK 可信設定** | 單方 demo 等級儀式 | 多方儀式或改用 universal setup，見 [`docs/zk-reconciliation.md`](docs/zk-reconciliation.md) |
-| **與真實系統的介接** | 零。沒有接聯徵、移民署或任何工廠打卡系統 | P1 試點的第一件工程工作；憑證結構本身不需要改 |
+| **與真實系統的介接** | 介接**邊界**已定型並有測試（[`packages/adapters`](packages/adapters)），但**沒有接上任何真實系統**——沒有聯徵、沒有移民署、沒有任何工廠打卡機 | P1 試點的第一件工程工作；憑證結構與閘門本身不需要改 |
 | **母體規模** | demo 母體 6 人，測試母體同量級 | 數百人母體下的 k-匿名與省略偵測成本，見 [`docs/performance.md`](docs/performance.md) |
 | **資料** | 全部合成，`fixtures/` 下，且刻意不像真實資料 | 這一條**不會**改：真實移工資料不進這個 repo |
 
