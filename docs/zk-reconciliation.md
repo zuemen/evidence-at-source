@@ -39,18 +39,42 @@ consistent    = (depositedAmount >= expectedPay - tolerance) AND (depositedAmoun
 
 在 ZK 版本裡，M7 **不再接觸明文**。它的職責變成：提供公開參數、驗證證明 + 綁定、匿名匯總。`verifyReconciliationProof` 就是這個新 M7 的核心——它從不讀取 `totalHours` 或 `depositedAmount`，只驗證證明與綁定，然後回一個布林。
 
-## 降級狀態（誠實說明）
+## 實作狀態
 
-**本環境沒有 circom / Rust 工具鏈**（`circom`、`cargo`、`rustc` 皆不存在），因此**真實的 ZK 電路尚未接上**。依開發規格 §S4 的降級路徑（「工具鏈裝不起來即停手，保留伺服器端 M7；跑不通不拖累其他模組」），本階段交付的是：
+**電路已接上**（circom 2.2.3 ＋ Groth16 ＋ snarkjs）。本階段交付的是：
 
-- ✅ **憑證綁定的四項檢查**：完整實作、各有測試（這是「省略即失去意義」的關鍵部分）。
-- ✅ **M7 角色轉變的介面**：`verifyReconciliationProof` 從不接觸明文。
-- ✅ **電路設計文件**（本檔）。
-- ⛔ **真實電路的編譯／產證**：降級未做（工具鏈不可用）。證明數學置於注入的 `verifyProof` 之後；預設的 `stubProofVerifier` **一律拒絕**，因此缺少後端永遠不會被誤判為有效證明。
-- ✅ **可運行的對帳仍在**：伺服器端的 M7（[`packages/reconciliation`](../packages/reconciliation)）照常運作，demo 畫面不變。差別僅在於「我們的伺服器從未看過任何一個數字」這句話目前尚不能說。
+- ✅ **憑證綁定的四項檢查**：完整實作、各有測試（有效／未撤銷／同一勞工／雜湊相符）。
+- ✅ **數值層級的綁定**：Poseidon 承諾。簽發方在簽發當下把數值雜湊進憑證的
+  `valueCommitment`，電路必須證明它知道符合該承諾的原像。**沒有這一層，證明對任意
+  數字都成立**——四項檢查驗的是「這張憑證是真的」，承諾驗的是「證的是這張憑證裡的數字」。
+- ✅ **M7 角色轉變**：`verifyReconciliationProof` 從不接觸明文。
+- ✅ **真實電路的編譯／產證／驗證**：見 [`../circuits/`](../circuits/)。
+- ✅ **與 `reconcile()` 的等價性**：五個邊界情境逐一比對，見
+  [`../packages/agents/test/zkCircuit.test.ts`](../packages/agents/test/zkCircuit.test.ts)。
 
-### 要接上真實電路
+### 電路訊號
 
-1. 安裝 circom + snarkjs，用上表的訊號與約束撰寫 `PayrollConsistency.circom`，編譯出 `.wasm` 與 `.zkey`。
-2. 錢包端用 snarkjs 以私有數字 + 公開參數產證。
-3. 提供一個由 snarkjs verifier 支撐的 `verifyProof` 傳入 `verifyReconciliationProof`——**其餘綁定邏輯一行都不用改**。
+| 類別 | 訊號 |
+|---|---|
+| 私有 | `totalHours`、`overtimeHours`、`hoursSalt`、`deposit`、`salarySalt` |
+| 公開輸入 | `hoursCommitment`、`salaryCommitment`、`legalWageRate`、`overtimeMultiplierBps`、`toleranceBps` |
+| 公開輸出 | `verdict`（0 一致／1 少付／2 溢付） |
+
+### 兩個必須知道的實作限制
+
+**不做除法。** `reconcile()` 用浮點數乘 1.34，電路只能算整數。兩者若各自捨入，
+邊界值上會給出不同結論——同一份證據兩條路徑不同答案，比沒有電路更糟。電路因此
+改用放大整數，比較式兩邊同乘，全程不做除法。
+
+**只有二次約束。** circom 不接受三個 signal 相乘，薪資計算拆成中間 signal。
+
+### fail-closed 仍然成立
+
+`stubProofVerifier`（一律拒絕）**仍是預設值**。真實驗證器 `createGroth16Verifier`
+必須由呼叫端明確傳入並附上驗證金鑰——缺少後端絕不能看起來像通過。
+
+### 仍然誠實標註的界限
+
+可信設定是**本機單方產生的 demo 等級儀式**。正式部署需要多方參與的儀式；單方 setup
+若保留 toxic waste 就能偽造證明。詳見 [`../circuits/README.md`](../circuits/README.md)。
+

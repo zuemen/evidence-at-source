@@ -103,7 +103,7 @@ flowchart TD
 | `RecruitmentFeeCredential` | 仲介公司 | 是 | `feeWithinLegalCap`、`currency`、`contractPeriod` | `feeAmount`、`paymentSchedule`、`lenderName` |
 | `DocumentCustodyCredential` | 雇主／工廠 | 是 | `passportHeldByWorker`、`custodyConsentGiven`、`documentType` | `documentHash`、`custodyLocation` |
 | `ContractConsentCredential` | 仲介公司 | 是 | `nativeLanguageVersionProvided`、`language`、`consentTimestamp` | `salaryAmount`、`contractDocumentHash` |
-| `WorkingHoursCredential` | 工廠打卡系統 | 是 | `withinRBALimit`、`periodStart` | `totalHours`、`overtimeHours` |
+| `WorkingHoursCredential` | 工廠打卡系統 | 是 | `withinRBALimit`、`periodStart`、`valueCommitment` | `totalHours`、`overtimeHours`、`commitmentSalt` |
 
 完整欄位定義（含「不入憑證」的項目）見 [`docs/credentials.md`](docs/credentials.md)。
 
@@ -175,11 +175,15 @@ flowchart TD
 
 唯一同時具備五根支柱的是本專案——不是別人做得差，而是它們解的是相鄰但不同的問題。逐項定位與誠實註記見 [`docs/comparison-matrix.md`](docs/comparison-matrix.md)。
 
-## 錢包端 ZK 對帳（Phase 4，部分降級）
+## 錢包端 ZK 對帳（Phase 4）
 
 交叉驗證的 M7 有一個弱點：它是唯一同時看得到兩張憑證明文的元件，等於可信第三方。ZK 版本讓**勞工在自己裝置上**證明「工時與入帳一致」，驗證方只收到布林結論，看不到任何數字。其中最關鍵、最容易漏掉的是**憑證綁定**——一個對任意數字的證明毫無意義，必須綁定到特定、有效、未撤銷、同一勞工的兩張憑證。這**四項綁定檢查已完整實作並各有測試**（[`packages/agents/src/zkReconciliation.ts`](packages/agents/src/zkReconciliation.ts)），M7 的新角色從不接觸明文。
 
-**誠實降級**：本機無 circom/Rust 工具鏈，真實電路尚未接上；證明數學置於注入的 `verifyProof` 之後，預設 stub 一律拒絕（缺後端不會被誤判為有效）。伺服器端 M7 照常運作、demo 不變，差別僅在尚不能宣稱「伺服器從未看過任何數字」。設計與接線步驟見 [`docs/zk-reconciliation.md`](docs/zk-reconciliation.md)。
+**電路已接上**（circom 2.2.3 ＋ Groth16）。承諾綁定讓數值層級的主張第一次成立：簽發方在簽發當下把數值雜湊進憑證的 `valueCommitment`，電路必須證明它知道符合該承諾的原像——「證明的是**這張憑證裡**的數字」不再是要求別人相信的事。
+
+電路與 `reconcile()` 在五個邊界情境上逐一比對相符（[`packages/agents/test/zkCircuit.test.ts`](packages/agents/test/zkCircuit.test.ts)）；這件事需要刻意處理，因為 `reconcile()` 用浮點數乘 1.34，而電路只能算整數——兩者若各自捨入，邊界值上會給出不同結論，那比沒有電路更糟。電路因此全程用放大整數、不做除法。重建方式見 [`circuits/README.md`](circuits/README.md)。
+
+**仍然誠實標註的界限**：可信設定（powers of tau 與 zkey contribution）是**本機單方產生的 demo 等級儀式**。正式部署需要多方參與——單方 setup 若保留 toxic waste 就能偽造證明。本專案主張的是「伺服器不再看到數字」，**不包含**「這個 setup 可以信任到上線」。此外 `createGroth16Verifier` 刻意不是預設值：沒有驗證金鑰的呼叫端一律 fail-closed，缺後端絕不能看起來像通過。
 
 ## 命題對照
 
@@ -335,7 +339,7 @@ Agent A 的能力邊界也寫在型別裡：`BankAssessment.requiresHumanReview`
 | 證據完整性指數（P6） | 涵蓋率×一致率×雙簽比率 → 單一 0–100 分＋等級 | ✅ 後端＋純函式測試＋demo 畫面 |
 | 誘因鏈（P1） | 各方誘因論述＋勞工自述 attestation `purpose` 欄位 | ✅ docs＋一個欄位 |
 | 三條撤銷路徑（P3） | 簽發方／主體連動／機構撤銷 Agent，兩層隔離 | ✅ facade＋整合測試 |
-| 錢包端 ZK 對帳（Phase 4） | 憑證綁定四項檢查＋M7 角色轉變＋電路設計 | ⚠️ 綁定與介面完成；真實電路降級（本機無 circom/Rust 工具鏈） |
+| 錢包端 ZK 對帳（Phase 4） | Poseidon 承諾綁定＋circom 電路＋Groth16 驗證 | ✅ 電路已接上、與 `reconcile()` 邊界值相符；⚠️ 可信設定仍是單方 demo 等級 |
 | 攻擊演示 | T8 prompt injection 無效、T9 差分攻擊偵測 | ✅ 後端＋demo 畫面（攻防與完整性分頁） |
 
 ## 技術棧
