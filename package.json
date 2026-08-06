@@ -10,7 +10,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
-    "demo:vlei": "tsx packages/vlei/demo/run.ts"
+    "demo:vlei": "tsx packages/vlei/demo/run.ts",
+    "build:circuit": "node circuits/build.mjs"
   },
   "devDependencies": {
     "@types/node": "^22.20.1",
@@ -22,6 +23,8 @@
     "node": ">=22"
   },
   "dependencies": {
-    "circomlibjs": "^0.1.7"
+    "circomlib": "^2.0.5",
+    "circomlibjs": "^0.1.7",
+    "snarkjs": "^0.7.6"
   }
 }

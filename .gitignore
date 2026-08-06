@@ -43,3 +43,16 @@ coverage/
 # Vite / React
 .vite/
 *.tsbuildinfo
+
+# Circuit build intermediates: large and fully reproducible from build.mjs.
+# The wasm, the final zkey and the verification key ARE committed, so the demo
+# and CI can prove and verify without a circom toolchain.
+# The repo-wide `build/` rule (above) would swallow these, so they are
+# un-ignored explicitly and the large intermediates re-ignored after.
+!circuits/build/
+circuits/build/*
+!circuits/build/verification_key.json
+!circuits/build/reconciliation.zkey
+!circuits/build/reconciliation_js/
+circuits/build/reconciliation_js/*
+!circuits/build/reconciliation_js/reconciliation.wasm
