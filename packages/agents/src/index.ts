@@ -7,7 +7,11 @@ export type {
 } from './policyGate.js';
 
 export { checkCredentialLayer } from './credentialLayer.js';
-export type { CredentialDecision, CredentialLayerInput } from './credentialLayer.js';
+export type {
+  CredentialDecision,
+  CredentialLayerInput,
+  IdentityBindingCheck,
+} from './credentialLayer.js';
 
 export {
   checkAgentDelegation,
@@ -114,6 +118,12 @@ export {
   createApplicationMonitor,
 } from './applicationMonitor.js';
 export type { ApplicationMonitor, ApplicationRisk } from './applicationMonitor.js';
+
+export {
+  DEFAULT_SHARED_DEVICE_THRESHOLD,
+  createProxyingMonitor,
+} from './proxyingMonitor.js';
+export type { ProxyingMonitor, ProxyingRisk } from './proxyingMonitor.js';
 
 export { RBA_ITEM_CLASSIFICATION, classifyRbaItem } from './rbaItems.js';
 export type { RbaItemClass } from './rbaItems.js';

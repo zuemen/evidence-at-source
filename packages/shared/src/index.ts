@@ -45,3 +45,18 @@ export {
   verifyPairing,
 } from './attestation.js';
 export type { AttestationInput, PairingResult } from './attestation.js';
+
+export {
+  createEnrollmentRegistry,
+  stubAssertionVerifier,
+  verifyDevicePresence,
+} from './identity.js';
+export type {
+  AssertionVerifier,
+  DeviceAssertion,
+  EnrollmentRegistry,
+  EnrollmentResult,
+  EnrollmentStatus,
+  PresenceResult,
+  ResidencyFacts,
+} from './identity.js';

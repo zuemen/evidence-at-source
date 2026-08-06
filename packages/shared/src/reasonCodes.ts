@@ -34,6 +34,14 @@ export const REASON_CODES = [
   'ISSUER_TIER_BELOW_THRESHOLD',
   // The credential is bound to a different facility than the one queried (GS1).
   'CREDENTIAL_FACILITY_MISMATCH',
+  // L1 — identity binding (題05 Q1/Q2). Dual signatures prove the holder of a
+  // key consented; these prove the key still belongs to the person, and that a
+  // person — not a borrowed device — was present when it signed.
+  'WORKER_IDENTITY_UNBOUND',
+  'IDENTITY_ALREADY_ENROLLED',
+  'RESIDENCY_PERMIT_EXPIRED',
+  'USER_PRESENCE_NOT_VERIFIED',
+  'DEVICE_CREDENTIAL_MISMATCH',
   // A required fact was disclosed and did not satisfy policy. Distinct from
   // CLAIM_NOT_DISCLOSED so a human reviewer can tell "missing" from "failing".
   'POLICY_CHECK_FAILED',

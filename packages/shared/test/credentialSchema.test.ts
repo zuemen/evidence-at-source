@@ -21,6 +21,7 @@ describe('credential schema', () => {
       'ContractConsentCredential',
       'WorkingHoursCredential',
       'SalaryDepositCredential',
+      'ResidencyCredential',
     ]);
   });
 

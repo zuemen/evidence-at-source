@@ -12,6 +12,7 @@ export const CREDENTIAL_TYPES = [
   'ContractConsentCredential',
   'WorkingHoursCredential',
   'SalaryDepositCredential',
+  'ResidencyCredential',
 ] as const;
 
 export type CredentialType = (typeof CREDENTIAL_TYPES)[number];
@@ -49,6 +50,13 @@ const SCHEMAS: Record<CredentialType, DisclosureSchema> = {
   SalaryDepositCredential: {
     public: ['periodStart', 'periodEnd', 'issuerType', 'valueCommitment'],
     hidden: ['depositedAmountTWD', 'depositCount', 'commitmentSalt'],
+  },
+  // The one credential that is about the wallet rather than about the work.
+  // identityAnchor is public because uniqueness has to be checkable by anyone
+  // enrolling a wallet; the salt that makes it un-reversible is not.
+  ResidencyCredential: {
+    public: ['identityAnchor', 'holderDid', 'deviceCredentialId', 'permitValidUntil'],
+    hidden: ['anchorSalt', 'arcReference'],
   },
 };
 

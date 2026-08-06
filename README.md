@@ -58,7 +58,7 @@ flowchart TD
         P2["國際成衣品牌<br/>did:web:brand.example"]
     end
 
-    W["<b>Worker Wallet 勞工錢包</b><br/>私鑰在瀏覽器產生、不離開裝置<br/>出示前先驗 Agent 授權<br/><i>生物辨識綁定：規劃中，未實作</i>"]
+    W["<b>Worker Wallet 勞工錢包</b><br/>私鑰在瀏覽器產生、不離開裝置<br/>綁定 identityAnchor：一人一錢包<br/>反簽附裝置在場證明（FIDO 形狀）<br/>出示前先驗 Agent 授權"]
     ATT["勞工反簽 Attestation<br/>subjectCredentialHash → 憑證雜湊"]
     PAIR["雙簽憑證組<br/>Issuer VC ＋ Worker Attestation"]
     DA["Agent A 授權<br/>DelegationCredential<br/>allowedQueryTypes・scope・24h・可撤銷"]
@@ -105,6 +105,8 @@ flowchart TD
 | `ContractConsentCredential` | 仲介公司 | 是 | `nativeLanguageVersionProvided`、`language`、`consentTimestamp` | `salaryAmount`、`contractDocumentHash` |
 | `WorkingHoursCredential` | 工廠打卡系統 | 是 | `withinRBALimit`、`periodStart`、`valueCommitment` | `totalHours`、`overtimeHours`、`commitmentSalt` |
 
+這四張講的是「關於這個人的事」。另有兩張講別的事，作用不同所以不併在上表：`SalaryDepositCredential`（銀行簽發，用途是引入一個工廠控制不了的資料源做交叉對帳）與 `ResidencyCredential`（移民署簽發，用途是證明**這個錢包就是這個人**——見下方機制 4）。
+
 完整欄位定義（含「不入憑證」的項目）見 [`docs/credentials.md`](docs/credentials.md)。
 
 ## 三個核心機制
@@ -131,7 +133,19 @@ flowchart TD
 
 同理，Agent A 代表銀行，但**它沒有核准、拒絕、凍結帳戶或轉帳的能力**——這些函式在程式碼中根本不存在，不是寫出來再用條件擋掉。詳見 [`CLAUDE.md`](CLAUDE.md) 原則一。
 
-### 4. 雙重授權：上限由機構給，下限由勞工給
+### 4. 一人一憑證、不可轉讓（題05 Q1／Q2）
+
+雙簽解決的是「**雇主**單方竄改紀錄」。但人頭帳戶的攻擊者是另一個人：**拿走證件、也拿走手機的仲介**。他持有私鑰，所以每一個簽章都是真的、每一次配對都成立——雙簽對他完全無效。這兩個攻擊者必須分開處理。
+
+**身分錨定（`ResidencyCredential`）**：移民署（T3 主管機關）簽發，帶一個 `identityAnchor`——居留證參考值加遮罩的雜湊。同一個人只會有一個錨，而錨本身反推不出證號。註冊表**拒絕把第二個 active 錢包綁到同一個錨**（`IDENTITY_ALREADY_ENROLLED`），仲介沒辦法安靜地替同一位勞工再開一個錢包。裝置遺失後的正當換綁必須**先撤銷再重綁**，於是換綁一定留下紀錄（`bindingCountFor` 數得出來）。
+
+**在場證明（`deviceAssertion`）**：每次反簽附一份裝置驗證器的 assertion，結構對齊 FIDO／WebAuthn——`userVerified` 為 false 一律拒絕，credentialId 與註冊的裝置不符一律拒絕。**私鑰可以在口袋裡簽名，指紋不行。** 驗證器是注入式的，且**沒有預設值**：沒有能力驗證裝置的呼叫端一律 fail-closed（`USER_PRESENCE_NOT_VERIFIED`），缺後端絕不能看起來像通過。
+
+**誠實界限——我們不宣稱能偵測脅迫。** 刀架在脖子上，指紋一樣按得下去，任何說自己能偵測脅迫的系統都在說謊。能做的是兩件事，兩件都已實作：把**代辦的痕跡**變成訊號（`createProxyingMonitor`：同一台裝置替多名勞工反簽就亮旗標，只回數量與布林、不回名單、只供人審），以及把**本人事後撤銷的成本降到趨近於零**（主體連動撤銷，一個動作讓關於他的全部憑證同時失效）。
+
+證據：[`packages/agents/test/identityBinding.test.ts`](packages/agents/test/identityBinding.test.ts)。
+
+### 5. 雙重授權：上限由機構給，下限由勞工給
 
 前三個機制回答「Agent 不能做壞事」。這一個回答另一個問題：**Agent 憑什麼可以做它正在做的事？**
 
@@ -146,11 +160,11 @@ flowchart TD
 
 **為什麼閘門順序是 L0 → L1 → L2**：先確認「查的人有沒有資格」，再檢查「被查的資料是否成立」，最後才看「這個問題能不能問」。順序不可顛倒——若先驗憑證再驗授權，未授權的 Agent 會在被拒絕之前就已經讀到了勞工資料。`runAuthorizedGate` 以結構保證這一點：L0 失敗時，讀取勞工憑證的函式從未被呼叫，並由測試 D7 以 spy 驗證（不是只寫在註解裡）。
 
-### 5. 誘因鏈：為什麼每一方都會簽
+### 6. 誘因鏈：為什麼每一方都會簽
 
 一個靠簽章運作的系統，只有在**每一方各自都有理由簽**的時候才會被採用。拱心石是：每一方之所以願意簽，是因為對方的簽章保護了自己——簽發方免於事後被單方指控，勞工換到一份自持、可攜、可選擇性揭露的通行證。勞工反簽時可附一個**自述的 `purpose`**（例「為在台開戶查驗而反簽」），由勞工本人簽發、不參與配對計算，讓「下限由勞工給」成為一個明示的動作而非預設同意。各方誘因、失衡點與對應機制的完整論述見 [`docs/incentive-chain.md`](docs/incentive-chain.md)。
 
-### 6. 三條撤銷路徑
+### 7. 三條撤銷路徑
 
 撤銷不是單一動作——它來自三個不同的觸發者，在兩個不同的閘門層生效。`createRevocationDirectory` 把三條路徑正名，並用兩個獨立的撤銷登記把它們隔開，因此撤銷 Agent 永遠不會動到勞工憑證，反之亦然。
 
@@ -191,16 +205,26 @@ flowchart TD
 
 > 主辦命題：「逾 87 萬移工面臨開戶障礙，也容易遭冒名利用；如何建立一套『能被信任、又不被冒用』的數位身分與憑證機制？」
 
+**逐題回答四個核心可信問題**：
+
+| 核心可信問題 | 本專案的回答 | 可執行證據 |
+|---|---|---|
+| **Q1 Principal／Authorization**：本人身份如何驗證，同時避免仲介或第三方冒用其名義開戶 | 三層疊起來：①雙簽配對讓雇主改不動紀錄；②`ResidencyCredential` 的 `identityAnchor` 讓**一個人只能有一個 active 錢包**，仲介再開一個直接 `IDENTITY_ALREADY_ENROLLED`；③裝置在場證明（FIDO 形狀）讓「拿走手機」不等於「成為這個人」。**這三者防的是三個不同的攻擊者，缺一不可** | [`packages/agents/test/identityBinding.test.ts`](packages/agents/test/identityBinding.test.ts)、[`poc/dual-signature.mjs`](poc/dual-signature.mjs) |
+| **Q2 Tool／Action**：能否即時驗證「本人意願、非受脅迫或代辦」 | **非代辦**：`userVerified` 為 false 一律拒；同一台裝置替多名勞工反簽會亮 `createProxyingMonitor` 旗標（只回數量與布林、不回名單）。**受脅迫：我們明確不宣稱能偵測**——刀架在脖子上指紋一樣按得下去。能做的是讓本人事後撤銷的成本趨近於零 | [`packages/agents/test/identityBinding.test.ts`](packages/agents/test/identityBinding.test.ts) |
+| **Q3 Policy Gate**：什麼異常模式該被自動攔截 | 命題舉的例子（同一身份短期多次申辦不同帳戶）即為實作：匿名化計數器只回「是否超閾」，**不回申辦去向**；旗標只供人類覆核、不決定任何事 | [`packages/agents/test/applicationMonitor.test.ts`](packages/agents/test/applicationMonitor.test.ts)；稽核台「風險旗標」面板 |
+| **Q4 Audit Log／Expiry**：被盜用或離境能否即時撤銷 | 三條撤銷路徑＋主體連動撤銷（離境即全部憑證同時失效，其他勞工不受影響）＋vLEI 上游撤銷級聯；憑證帶 `exp`，在留許可過期回 `RESIDENCY_PERMIT_EXPIRED`（與「從未綁定」是不同的原因碼） | [`packages/agents/test/revocationPaths.test.ts`](packages/agents/test/revocationPaths.test.ts)；稽核台 RevokeDemo |
+
+**方向提示對照**：命題建議「整合自然人憑證或行動身分識別（如 FIDO 生物辨識）與移工的入境身份資料，建立一人一憑證、不可轉讓的驗證機制」——`ResidencyCredential`（入境身份資料）＋`deviceAssertion`（FIDO 形狀）＋註冊表的一錨一錢包，正是這三件事。**誠實界限**：assertion 驗證器是注入式的，正式部署接真 WebAuthn；本 repo 的測試接合成驗證器，且**沒有預設值**——缺驗證器一律 fail-closed。
+
+其餘支撐機制：
+
 | 命題要素 | 本專案的回答 | 可執行證據 |
 |---|---|---|
-| **開戶障礙**：證明分散在仲介、雇主、移民署，反覆補件 | 四項事實由勞工自持、可攜、一次出示；銀行 Agent 走完 L0→L1→L2 即得布林結論與建議 | [`packages/agents/src/bankAgent.ts`](packages/agents/src/bankAgent.ts)；線上 demo 錢包授權檢視卡＋稽核台 SplitDemo |
-| **被冒名利用**：離境後帳戶仍可用，成為人頭帳戶 | 主體連動撤銷——離境即該勞工全部憑證同時失效，銀行端立刻 `CREDENTIAL_REVOKED`，其他勞工不受影響 | [`packages/agents/test/revocationPaths.test.ts`](packages/agents/test/revocationPaths.test.ts)；稽核台 RevokeDemo |
-| **被冒名利用**：同一身分短期在多機構申辦 | 匿名化申辦計數器只回報「是否超閾」，不回報申辦去向；風險旗標只供人類覆核，不做決定 | 稽核台銀行側「風險旗標」面板（線上 demo 可按）；[`packages/agents/test/applicationMonitor.test.ts`](packages/agents/test/applicationMonitor.test.ts) |
-| **「能被信任」**：憑證來源本身可不可信 | 簽發者分級 T1 自我聲明／T2 第三方／T3 主管機關＋`minimumIssuerTier` L1 閘門（`ISSUER_TIER_BELOW_THRESHOLD`） | [`packages/agents/test/issuerTierGate.test.ts`](packages/agents/test/issuerTierGate.test.ts) |
-| **「不被冒用」**：出示的人就是持有的人 | 雙簽配對＋私鑰在瀏覽器產生且從未離開裝置；雇主沒有勞工私鑰，偽造不出新的配對 | [`packages/shared/test/attestation.test.ts`](packages/shared/test/attestation.test.ts)、[`poc/dual-signature.mjs`](poc/dual-signature.mjs) |
-| **防詐但不傷隱私**：查得到風險，查不到人 | L2 只放行布林／k-匿名匯總；個體查詢一律 `INDIVIDUAL_QUERY_REJECTED`；相減可回推的連續查詢回 `DIFFERENCING_ATTACK_DETECTED` | [`packages/agents/test/differencing.test.ts`](packages/agents/test/differencing.test.ts) |
+| **開戶障礙**：證明分散在仲介、雇主、移民署 | 四項事實由勞工自持、可攜、一次出示；銀行 Agent 走完 L0→L1→L2 即得布林結論與建議 | [`packages/agents/src/bankAgent.ts`](packages/agents/src/bankAgent.ts)；稽核台 SplitDemo |
+| **「能被信任」**：憑證來源本身可不可信 | 簽發者分級 T1／T2／T3＋`minimumIssuerTier` L1 閘門（`ISSUER_TIER_BELOW_THRESHOLD`） | [`packages/agents/test/issuerTierGate.test.ts`](packages/agents/test/issuerTierGate.test.ts) |
+| **防詐但不傷隱私**：查得到風險，查不到人 | L2 只放行布林／k-匿名匯總；個體查詢 `INDIVIDUAL_QUERY_REJECTED`；相減可回推的連續查詢回 `DIFFERENCING_ATTACK_DETECTED` | [`packages/agents/test/differencing.test.ts`](packages/agents/test/differencing.test.ts) |
 | **機構身分可信**：Agent 代表誰不能靠自稱 | GLEIF vLEI 憑證鏈 Root→QVI→法人→ECR，L0 每次查詢重驗全鏈，上游撤銷下游即時失效 | `npm run demo:vlei`（14 步，exit code 0 即全數成立）；[`docs/vlei-defense.md`](docs/vlei-defense.md) |
-| **「能被信任」**：連簽發者的公鑰都不能靠設定檔 | 簽發者公鑰只能從已驗證的法人 vLEI 鏈取得，裸金鑰在 L1 直接回 `ISSUER_VLEI_MISSING`——與 L0 對稱，皆為結構保證而非慣例 | [`packages/agents/test/issuerKeyProvenance.test.ts`](packages/agents/test/issuerKeyProvenance.test.ts) |
+| **「能被信任」**：連簽發者的公鑰都不能靠設定檔 | 簽發者公鑰只能從已驗證的法人 vLEI 鏈取得，裸金鑰在 L1 直接回 `ISSUER_VLEI_MISSING` | [`packages/agents/test/issuerKeyProvenance.test.ts`](packages/agents/test/issuerKeyProvenance.test.ts) |
 
 ### Track 06（加分題）｜RBA 供應鏈合規的可驗證憑證機制
 
@@ -289,7 +313,7 @@ npx vite preview --port 4173          # 本機預覽靜態站
 
 ```bash
 npm install      # 於 repo 根目錄，安裝 workspace 依賴
-npm test         # vitest，目前 274 個測試全綠
+npm test         # vitest，目前 289 個測試全綠
 npm run typecheck
 ```
 
@@ -390,7 +414,7 @@ Agent A 的能力邊界也寫在型別裡：`BankAssessment.requiresHumanReview`
 | 交件 | 位置 |
 |---|---|
 | 挑戰命題 | **Track 05（主賽道）＋ Track 06（加分題）**——主辦載明命題 06 為 Track 01 延伸的加分題、可與其他命題同時挑戰，本作品同時交付兩軌，對照見上 |
-| 程式碼 | 本 repo（CI 每次 push 跑 274 tests + `demo:vlei` 閘門） |
+| 程式碼 | 本 repo（CI 每次 push 跑 289 tests + `demo:vlei` 閘門） |
 | 簡報 | <https://zuemen.github.io/evidence-at-source/slides.html>（←→ 翻頁） |
 | Demo | <https://zuemen.github.io/evidence-at-source/>（免安裝）＋[講稿](docs/demo-video-script.md) |
 | 治理／信任設計說明 | [`docs/governance-memo.md`](docs/governance-memo.md)（六信任點逐點＋證據） |
@@ -414,7 +438,7 @@ Agent A 的能力邊界也寫在型別裡：`BankAssessment.requiresHumanReview`
 
 | 邊界 | 現況 | 要補什麼 |
 |---|---|---|
-| **生物辨識綁定** | 架構敘事裡有，程式碼裡沒有。勞工金鑰是瀏覽器產生的 ES256 金鑰對，未綁裝置安全區 | WebAuthn／passkey 綁定，讓私鑰進入安全元件而非記憶體 |
+| **生物辨識綁定** | 驗證側已實作：assertion 結構、`userVerified` 檢查、裝置比對、fail-closed 預設全部在閘門裡跑。**產生側仍是合成的**——瀏覽器還沒接真的 WebAuthn API | 前端接 `navigator.credentials`，讓私鑰進安全元件；驗證側一行都不用改 |
 | **勞工端金鑰遺失與輪替** | 未實作。機構層已有 KERI pre-rotation，勞工層沒有 | 勞工層的輪替流程與既有憑證的重新反簽 |
 | **ZK 可信設定** | 單方 demo 等級儀式 | 多方儀式或改用 universal setup，見 [`docs/zk-reconciliation.md`](docs/zk-reconciliation.md) |
 | **與真實系統的介接** | 介接**邊界**已定型並有測試（[`packages/adapters`](packages/adapters)），但**沒有接上任何真實系統**——沒有聯徵、沒有移民署、沒有任何工廠打卡機 | P1 試點的第一件工程工作；憑證結構與閘門本身不需要改 |

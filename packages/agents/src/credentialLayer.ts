@@ -10,8 +10,11 @@ import {
   base64urlToUtf8,
   credentialHash,
   meetsMinimumTier,
+  verifyDevicePresence,
   verifyPairing,
   verifyPresentation,
+  type AssertionVerifier,
+  type EnrollmentRegistry,
   type IssuerTier,
   type PublicJwk,
   type ReasonCode,
@@ -33,6 +36,23 @@ export interface CredentialLayerInput {
   readonly minimumIssuerTier?: IssuerTier;
   /** If set, the credential must be bound to this facility (GS1 anti-reuse). */
   readonly expectedFacilityId?: string;
+  /**
+   * If set, the wallet must still be the one bound to this person's identity
+   * anchor, and a user must have been verified on its device (題05 Q1/Q2).
+   *
+   * Optional because an RBA compliance query does not need to know which
+   * wallet answered — only a query about a person does. Where it is set, the
+   * verifier must supply its own assertion verifier: there is no default, so
+   * a caller cannot get presence checks that silently pass.
+   */
+  readonly identity?: IdentityBindingCheck;
+}
+
+export interface IdentityBindingCheck {
+  readonly enrollments: EnrollmentRegistry;
+  /** The moment the verifier is asking about — permits expire. */
+  readonly at: Date;
+  readonly verifyAssertion: AssertionVerifier;
 }
 
 export type CredentialDecision =
@@ -106,6 +126,29 @@ export async function checkCredentialLayer(
   });
   if (revoked === true) {
     return { ok: false, reason: 'CREDENTIAL_REVOKED' };
+  }
+
+  // 題05 Q1/Q2. The pairing above proved the holder of a key consented. These
+  // two prove the key still belongs to this person, and that a person was
+  // present when it signed — the difference between an employer forging a
+  // record and a broker holding the worker's phone.
+  if (input.identity !== undefined) {
+    const holder = typeof subject === 'string' ? subject : '';
+    const status = input.identity.enrollments.statusOf(holder, input.identity.at);
+
+    if (status === 'PERMIT_EXPIRED') return { ok: false, reason: 'RESIDENCY_PERMIT_EXPIRED' };
+    if (status !== 'ACTIVE') return { ok: false, reason: 'WORKER_IDENTITY_UNBOUND' };
+
+    const enrolledDevice = input.identity.enrollments.deviceCredentialIdFor(holder);
+    if (enrolledDevice === undefined) return { ok: false, reason: 'WORKER_IDENTITY_UNBOUND' };
+
+    const presence = await verifyDevicePresence(
+      input.attestation,
+      input.workerPublicKey,
+      enrolledDevice,
+      input.identity.verifyAssertion,
+    );
+    if (!presence.ok) return { ok: false, reason: presence.reason };
   }
 
   // Belt and braces: do not rely on the library continuing to enforce this.

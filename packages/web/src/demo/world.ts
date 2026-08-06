@@ -66,11 +66,15 @@ const COHORT = 'factory-a-2026-08';
 const DEVICE = 'sha256:synthetic-device-001';
 
 /**
- * The four credentials the wallet narrative shows. SalaryDepositCredential
- * exists in the system for cross-validation but is not part of this story, so
- * it is deliberately excluded here rather than forced into the wallet view.
+ * The four credentials the wallet narrative shows. Two others exist and are
+ * deliberately not in this list rather than forced into the wallet view:
+ * SalaryDepositCredential is the cross-validation source, and
+ * ResidencyCredential is about the wallet itself rather than about the work.
  */
-type WalletCredentialType = Exclude<CredentialType, 'SalaryDepositCredential'>;
+type WalletCredentialType = Exclude<
+  CredentialType,
+  'SalaryDepositCredential' | 'ResidencyCredential'
+>;
 
 /** The single public claim each credential contributes to a verifier. */
 const HEADLINE_CLAIM: Record<WalletCredentialType, string> = {

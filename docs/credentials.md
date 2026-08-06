@@ -135,6 +135,30 @@
 
 ---
 
+## 6. `ResidencyCredential` — 在留身分錨定
+
+**簽發者**：移民署（`did:web:immigration.example`）——簽發者層級 **T3 主管機關認證**
+**需勞工反簽**：是
+**簽發時機**：入境許可核發或換發的當下
+
+這張憑證與前五張的作用不同：前五張證明「關於這個人的某件事」，這一張證明「**這個錢包就是這個人**」。沒有它，雙簽只能防雇主竄改紀錄，防不了仲介拿走裝置冒名開戶——那是兩個不同的攻擊者。
+
+| 欄位 | 型別 | 歸屬 | 說明 |
+|---|---|---|---|
+| `identityAnchor` | string | 公開 | 身分唯一性錨：`sha256(居留證參考 ‖ anchorSalt)`。**同一個人只會有一個錨**，但錨本身反推不出居留證號 |
+| `holderDid` | string | 公開 | 這個錨綁定的錢包 DID。一錨一 DID，這就是「一人一憑證」 |
+| `deviceCredentialId` | string | 公開 | 錢包註冊的裝置驗證器識別碼（FIDO／WebAuthn credential id）。簽章要通過這個裝置的生物辨識才產生得出來 |
+| `permitValidUntil` | string | 公開 | 在留許可到期日（ISO 8601 日期）。過期即身分綁定失效 |
+| `anchorSalt` | string | 隱藏 | 錨的遮罩。沒有它，居留證號的取值空間小到可被枚舉反推 |
+| `arcReference` | string | 隱藏 | 合成的居留證參考值。**永遠是合成資料** |
+| 居留證號原文 | — | 不入憑證 | 只進錨的雜湊，不寫號碼本身 |
+| 生物特徵模板 | — | 不入憑證 | 留在裝置安全元件內，系統只看得到「驗證通過與否」 |
+| 入出境時間軌跡 | — | 不入憑證 | 不收集。移動軌跡對移工是報復風險 |
+
+設計要點：`identityAnchor` 是**不可轉讓性**的支點。註冊表拒絕同一個錨綁定第二個 active 的 DID——仲介替同一位勞工再開一個錢包會直接被拒（`IDENTITY_ALREADY_ENROLLED`）。裝置遺失時的正當換綁必須**先撤銷舊綁定再重綁**，於是換綁一定留下紀錄，不會安靜地發生。
+
+---
+
 ## 為什麼這兩張憑證需要承諾欄位
 
 零知識證明可以證明「我知道一組算得出一致的數字」——但那**不等於**「那組數字就是這張憑證裡的數字」。少了這一段，證明對任意數字都成立，也就毫無意義。
@@ -159,8 +183,24 @@
 | `attestedAt` | string | 反簽時間（ISO 8601） |
 | `deviceFingerprint` | string | 裝置指紋雜湊，用於偵測異常簽署裝置 |
 | `purpose` | string（選填） | 勞工自述反簽理由，例「為在台開戶查驗而反簽」。由勞工本人簽發、不參與配對計算，見 [`incentive-chain.md`](incentive-chain.md) |
+| `deviceAssertion` | object（選填） | 裝置驗證器的在場證明，見下 |
 
 Header：`{ alg: 'ES256', typ: 'worker-attestation+jwt' }`
+
+### `deviceAssertion` — 本人在場，而不只是私鑰在場
+
+私鑰簽章證明的是「持有私鑰的人同意」。**拿走裝置的仲介也持有私鑰**，所以光靠簽章回答不了「這是本人意願嗎」。
+
+| 欄位 | 型別 | 說明 |
+|---|---|---|
+| `credentialId` | string | 裝置驗證器識別碼，必須與 `ResidencyCredential.deviceCredentialId` 相同 |
+| `challenge` | string | 驗證方給的一次性挑戰值，防重放 |
+| `userVerified` | boolean | 驗證器是否確實做過使用者驗證（生物辨識／PIN）。**false 一律拒絕** |
+| `signature` | string | 驗證器對挑戰值的簽章 |
+
+這個結構刻意對齊 FIDO／WebAuthn 的 assertion：正式部署時 `signature` 由裝置安全元件產生、私鑰不可匯出；本專案的驗證器是**注入式**的，瀏覽器接真的 WebAuthn，測試接合成的。
+
+**誠實界限**：這證明的是「有人通過了這台裝置的生物辨識」，**不是「這個人沒有被脅迫」**。沒有任何憑證系統能偵測脅迫——一把刀架在脖子上，指紋一樣按得下去。能做的是兩件事：把**代辦的痕跡**變成可觀測的訊號（同一台裝置替多名勞工反簽），以及把**本人事後撤銷的成本降到趨近於零**。兩者都已實作，但都不該被說成是脅迫偵測。
 
 驗證方的配對檢查邏輯：`attestation.subjectCredentialHash === sha256(presentedCredential)`。不成立則回 `ATTESTATION_HASH_MISMATCH`。實作參考 `poc/dual-signature.mjs`。
 

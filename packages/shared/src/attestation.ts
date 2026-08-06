@@ -11,6 +11,7 @@ import { SignJWT, jwtVerify, importJWK, type JWK } from 'jose';
 import { sha256Base64url } from './hash.js';
 import type { PrivateJwk, PublicJwk } from './sdjwt.js';
 import type { ReasonCode } from './reasonCodes.js';
+import type { DeviceAssertion } from './identity.js';
 
 export const ATTESTATION_TYP = 'worker-attestation+jwt';
 
@@ -41,6 +42,15 @@ export interface AttestationInput {
    * chain. It plays no part in pairing and carries no third party's claim.
    */
   readonly purpose?: string;
+  /**
+   * The device authenticator's proof that it verified a user just now.
+   *
+   * Optional here because the four work credentials are counter-signed long
+   * before anyone opens a bank account, and a verifier that does not require
+   * presence should not be forced to carry it. Where presence matters, the
+   * gate requires it — see identity.ts.
+   */
+  readonly deviceAssertion?: DeviceAssertion;
 }
 
 export type PairingResult = { readonly ok: true } | { readonly ok: false; readonly reason: ReasonCode };
@@ -57,6 +67,7 @@ export async function createWorkerAttestation(
     attestedAt: new Date().toISOString(),
     deviceFingerprint: input.deviceFingerprint,
     ...(input.purpose === undefined ? {} : { purpose: input.purpose }),
+    ...(input.deviceAssertion === undefined ? {} : { deviceAssertion: input.deviceAssertion }),
   })
     .setProtectedHeader({ alg: 'ES256', typ: ATTESTATION_TYP })
     .setIssuer(input.workerDID)
