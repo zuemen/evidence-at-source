@@ -35,6 +35,15 @@ export type VleiFailure =
 
 export const AI_AGENT_ROLE = 'ai-verification-agent';
 
+/**
+ * The ECR role a third-party audit body holds — 題06 Q1's middle tier.
+ *
+ * A T2 credential names the body that backed it. Without a chain behind that
+ * name, "third-party verified" is a string the issuer typed about itself, and
+ * naming a real auditor is indistinguishable from naming an invented one.
+ */
+export const AUDITOR_ROLE = 'third-party-auditor';
+
 export interface LegalEntityFacts {
   readonly aid: string;
   readonly lei: string;

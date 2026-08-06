@@ -23,7 +23,7 @@ export {
 export type { AttributeSpec, VleiSchema, VleiSchemaName } from './schemas.js';
 export { issueAcdc, verifyAcdc } from './acdc.js';
 export type { Acdc, AcdcEdge, AcdcFailure, AcdcTrust, IssueAcdcInput, SignedAcdc } from './acdc.js';
-export { AI_AGENT_ROLE, verifyEcrChain, verifyLeChain } from './chain.js';
+export { AI_AGENT_ROLE, AUDITOR_ROLE, verifyEcrChain, verifyLeChain } from './chain.js';
 export type {
   AgentAuthorityFacts,
   ChainResult,

@@ -86,6 +86,9 @@ export type {
   Recommendation,
 } from './bankAgent.js';
 
+export { createAuditorDirectory } from './auditorDirectory.js';
+export type { AuditorDirectory, AuditorEntry, AuditorStanding } from './auditorDirectory.js';
+
 export {
   chainTierOf,
   isChainVerifiedKey,

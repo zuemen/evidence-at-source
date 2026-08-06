@@ -21,6 +21,7 @@ import {
   type RevocationRegistry,
 } from '@eas/shared';
 import { chainTierOf, isChainVerifiedKey, type IssuerSigningKey } from './vleiBridge.js';
+import type { AuditorDirectory } from './auditorDirectory.js';
 
 export interface CredentialLayerInput {
   readonly presentation: string;
@@ -46,6 +47,15 @@ export interface CredentialLayerInput {
    * a caller cannot get presence checks that silently pass.
    */
   readonly identity?: IdentityBindingCheck;
+  /**
+   * If set, a credential naming a backer in `verifiedBy` must resolve it to a
+   * body that can be shown to be an auditor (題06 Q1).
+   *
+   * Optional because a verifier with no directory has no way to check, and
+   * pretending otherwise would be worse than declining to. Where it is set,
+   * an unresolvable endorsement is refused rather than ignored.
+   */
+  readonly auditors?: AuditorDirectory;
 }
 
 export interface IdentityBindingCheck {
@@ -167,6 +177,17 @@ export async function checkCredentialLayer(
     const granted = chainTierOf(input.issuerPublicKey) ?? 'SELF_DECLARED';
     if (!meetsMinimumTier(granted as IssuerTier, claimedTier as IssuerTier)) {
       return { ok: false, reason: 'ISSUER_TIER_MISMATCH' };
+    }
+  }
+
+  // 題06 Q1, the middle tier: "verified by X" means nothing until X can be
+  // shown to be an audit body. Resolution walks the same chain to the same
+  // root, so revoking the auditor invalidates every endorsement it gave on the
+  // next query rather than whenever a cache happened to expire.
+  const backer = payload['verifiedBy'];
+  if (input.auditors !== undefined && typeof backer === 'string') {
+    if (input.auditors.standing(backer) === undefined) {
+      return { ok: false, reason: 'AUDITOR_CHAIN_INVALID' };
     }
   }
 

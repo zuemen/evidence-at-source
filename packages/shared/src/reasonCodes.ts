@@ -35,6 +35,9 @@ export const REASON_CODES = [
   // The credential claims a higher tier than the vLEI chain grants its issuer.
   // Under-claiming is not an offence; over-claiming is the whole attack.
   'ISSUER_TIER_MISMATCH',
+  // The body a T2 credential names as its backer cannot be shown to be an
+  // audit body — struck off, never real, or on a chain that no longer holds.
+  'AUDITOR_CHAIN_INVALID',
   // The credential is bound to a different facility than the one queried (GS1).
   'CREDENTIAL_FACILITY_MISMATCH',
   // L1 — identity binding (題05 Q1/Q2). Dual signatures prove the holder of a
