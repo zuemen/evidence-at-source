@@ -1,7 +1,7 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "installCommand": "npm ci",
-  "buildCommand": "npm run build --workspace @eas/web",
+  "installCommand": "npm ci --include=dev",
+  "buildCommand": "npm run build --workspace @eas/web || (echo '===== BUILD DIAGNOSTICS (paste from here down) =====' && node -v && npm -v && echo '--- vite resolved? ---' && npm ls vite --workspace @eas/web && echo '--- plugin resolved? ---' && npm ls @vitejs/plugin-react --workspace @eas/web && echo '--- circuit artifacts ---' && ls -l packages/web/public/zk && exit 1)",
   "outputDirectory": "packages/web/dist",
   "framework": null
 }

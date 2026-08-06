@@ -16,7 +16,9 @@
     "@eas/shared": "*",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "@eas/vlei": "*"
+    "@eas/vlei": "*",
+    "circomlibjs": "^0.1.7",
+    "snarkjs": "^0.7.6"
   },
   "devDependencies": {
     "@types/react": "^18.3.12",
