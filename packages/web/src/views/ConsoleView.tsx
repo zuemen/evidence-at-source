@@ -15,6 +15,17 @@ interface Props {
   readonly vlei: VleiState;
   readonly audit: readonly AuditEntry[];
   readonly rbaItems: readonly { readonly item: string; readonly verdict: string }[];
+  readonly receipts: readonly {
+    readonly verifierDid: string;
+    readonly verifiedItems: readonly string[];
+    readonly result: 'PASS' | 'FAIL';
+    readonly verifiedAt: string;
+    readonly independentlyVerified: boolean;
+  }[];
+  readonly revocationNotices: readonly {
+    readonly verifierDid: string;
+    readonly subjectCredentialHash: string;
+  }[];
   readonly busy: boolean;
   readonly onRevoke: () => void;
   readonly onRevokeAgent: (role: AgentRole) => void;
@@ -99,6 +110,8 @@ export function ConsoleView({
   vlei,
   audit,
   rbaItems,
+  receipts,
+  revocationNotices,
   busy,
   onRevoke,
   onRevokeAgent,
@@ -348,6 +361,47 @@ export function ConsoleView({
           </ol>
         </details>
       )}
+
+      <div style={{ marginTop: '1.4rem' }}>
+        <h4 style={{ margin: '0 0 0.4rem' }}>查驗收據（被質疑時可出示）</h4>
+        {receipts.length === 0 ? (
+          <p className="note" style={{ margin: 0 }}>
+            尚未產生——先執行一次 SplitDemo。
+          </p>
+        ) : (
+          <ul style={{ margin: 0, paddingLeft: '1.2em', fontSize: '0.85rem' }}>
+            {receipts.map((r) => (
+              <li key={r.verifiedAt}>
+                {r.verifiedAt} · {r.verifierDid} 驗了{' '}
+                <code style={{ fontFamily: 'var(--mono)' }}>{r.verifiedItems.join('、')}</code> ·{' '}
+                {r.result}
+                {r.independentlyVerified ? ' · 簽章可獨立驗證 ✅' : ' · 簽章驗證失敗 ❌'}
+              </li>
+            ))}
+          </ul>
+        )}
+        <p className="note" style={{ margin: '0.4rem 0 0' }}>
+          收據只含項目名稱與憑證雜湊，不含任何原始數值；持有查驗方公鑰的人都能獨立驗簽。
+        </p>
+      </div>
+
+      <div style={{ marginTop: '1.4rem' }}>
+        <h4 style={{ margin: '0 0 0.4rem' }}>撤銷反向通知名單</h4>
+        {revocationNotices.length === 0 ? (
+          <p className="note" style={{ margin: 0 }}>
+            尚無曾驗證者。
+          </p>
+        ) : (
+          <ul style={{ margin: 0, paddingLeft: '1.2em', fontSize: '0.85rem' }}>
+            {revocationNotices.map((n) => (
+              <li key={n.verifierDid}>{n.verifierDid}</li>
+            ))}
+          </ul>
+        )}
+        <p className="note" style={{ margin: '0.4rem 0 0' }}>
+          這份憑證一旦被撤銷，上列每一個查驗方都會收到通知。名單由憑證雜湊反向索引產生，不含勞工識別碼。
+        </p>
+      </div>
 
       <p className="footnote">
         每個 Agent 各自持有機構簽發的授權憑證（<strong>L0</strong>）。閘門順序是

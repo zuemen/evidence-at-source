@@ -31,6 +31,17 @@ export interface DemoPayload {
   readonly attack: AttackDemoState;
   readonly integrity: IntegrityDemoState;
   readonly rbaItems: readonly { readonly item: string; readonly verdict: string }[];
+  readonly receipts: readonly {
+    readonly verifierDid: string;
+    readonly verifiedItems: readonly string[];
+    readonly result: 'PASS' | 'FAIL';
+    readonly verifiedAt: string;
+    readonly independentlyVerified: boolean;
+  }[];
+  readonly revocationNotices: readonly {
+    readonly verifierDid: string;
+    readonly subjectCredentialHash: string;
+  }[];
 }
 
 let worldPromise: Promise<DemoWorld> = createDemoWorld();
@@ -46,6 +57,8 @@ async function currentPayload(): Promise<DemoPayload> {
     attack: world.attackDemo(),
     integrity: world.integrityDemo(),
     rbaItems: world.rbaCoverage(),
+    receipts: await world.receipts(),
+    revocationNotices: world.revocationNotices(),
   };
 }
 
