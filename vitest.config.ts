@@ -21,5 +21,14 @@ export default defineConfig({
     // poc/ is standalone demo evidence and is deliberately excluded.
     include: ['packages/*/test/**/*.test.ts'],
     environment: 'node',
+    // circomlibjs takes roughly two seconds to import and build Poseidon, and
+    // vitest gives every test file its own module registry, so each file that
+    // issues a credential pays that cost again — charged to whichever test in
+    // it happens to run first. Against the 5 s default that lands on the wrong
+    // side of the line on a loaded machine, and the failure looks like a flaky
+    // test rather than the one-off module initialisation it is. Nothing here
+    // should legitimately take twenty seconds; this is headroom, not patience.
+    testTimeout: 20_000,
+    hookTimeout: 20_000,
   },
 });
