@@ -8,6 +8,15 @@ on:
 permissions:
   contents: read
 
+# Two pushes in quick succession used to collide: the second deployment is
+# rejected outright while the first is still in flight, turning a green test
+# run into a red workflow for a reason that has nothing to do with the code.
+# Queueing is right rather than cancelling — the newer commit should still be
+# published, just after the older one finishes.
+concurrency:
+  group: pages-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   test:
     runs-on: ubuntu-latest
