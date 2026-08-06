@@ -173,6 +173,7 @@ describe('the audit trail is evidence, not a list its holder can edit (é¡Œ05 Q4ï
       'decision',
       'reason',
       'basis',
+      'reviewerOorSaid',
       'seq',
       'at',
       'prev',

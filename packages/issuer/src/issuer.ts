@@ -209,6 +209,13 @@ export interface VleiIssuer extends Issuer {
   legalEntityPresentation(): VleiPresentation;
   grantAgentEcr(agentDid: string, role?: string): VleiPresentation;
   revokeAgentEcr(agentDid: string): void;
+  /** The person holding an office here — the human who signs off (題06 Q4). */
+  grantOfficialRole(
+    personDid: string,
+    personLegalName: string,
+    officialRole: string,
+  ): VleiPresentation;
+  revokeOfficialRole(personDid: string): void;
   /** QVI-side revocation of this institution's own LE credential. */
   revokeLegalEntityCredential(): void;
 }
@@ -233,6 +240,9 @@ export async function createVleiIssuer(input: VleiIssuerInput): Promise<VleiIssu
     legalEntityPresentation: () => entity.presentation(),
     grantAgentEcr: (agentDid, role) => entity.grantEcr(agentDid, role),
     revokeAgentEcr: (agentDid) => entity.revokeEcr(agentDid),
+    grantOfficialRole: (personDid, personLegalName, officialRole) =>
+      entity.grantOor(personDid, personLegalName, officialRole),
+    revokeOfficialRole: (personDid) => entity.revokeOor(personDid),
     revokeLegalEntityCredential: () => entity.revokeCredential(),
   };
 }

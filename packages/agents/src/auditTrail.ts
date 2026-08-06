@@ -49,6 +49,15 @@ export interface AuditEntry {
   readonly decision: 'ALLOW' | 'DENY';
   readonly reason: ReasonCode | null;
   readonly basis: AuditBasis;
+  /**
+   * The SAID of the office credential of the person who made this decision,
+   * where a person made it — 題06 Q4.
+   *
+   * Null for a gate decision, which no human took. An agent's recommendation
+   * and a reviewer's approval are different acts, and a record that could not
+   * tell them apart would be answering the wrong question.
+   */
+  readonly reviewerOorSaid: string | null;
   /** Digest of the previous entry's signed form. Genesis for the first. */
   readonly prev: string;
 }
@@ -60,7 +69,9 @@ export interface SealedAuditEntry {
 }
 
 export interface AuditTrail {
-  record(entry: Omit<AuditEntry, 'seq' | 'at' | 'prev'>): AuditEntry;
+  record(entry: Omit<AuditEntry, 'seq' | 'at' | 'prev' | 'reviewerOorSaid'> & {
+    readonly reviewerOorSaid?: string | null;
+  }): AuditEntry;
   entries(): readonly AuditEntry[];
   /** The trail in the form another party can check. */
   export(): Promise<readonly SealedAuditEntry[]>;
@@ -99,6 +110,7 @@ function digestOf(entry: AuditEntry): string {
       entry.reason ?? '',
       entry.basis.delegationHash ?? '',
       entry.basis.ecrSaid ?? '',
+      entry.reviewerOorSaid ?? '',
       entry.prev,
     ].join('|'),
   );
@@ -112,6 +124,7 @@ export function createAuditTrail(options: AuditTrailOptions = {}): AuditTrail {
       const previous = log[log.length - 1];
       const full: AuditEntry = {
         ...entry,
+        reviewerOorSaid: entry.reviewerOorSaid ?? null,
         seq: log.length + 1,
         at: new Date().toISOString(),
         prev: previous === undefined ? AUDIT_GENESIS : digestOf(previous),

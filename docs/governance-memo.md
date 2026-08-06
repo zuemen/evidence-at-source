@@ -30,7 +30,7 @@ Agent A 只能讀已揭露結論、產生「建議＋原因碼」交人類覆核
 三層閘門 L0→L1→L2：先驗「查的人有沒有資格」（授權＋vLEI 鏈），再驗「資料是否成立」
 （簽章／反簽配對／撤銷／層級／產線綁定；簽發者公鑰只能來自已驗證的法人 vLEI 鏈，裸金鑰回 `ISSUER_VLEI_MISSING`），最後驗「這個問題能不能問」（拒個體查詢、
 k-匿名、差分攻擊偵測、查詢預算）。L0 失敗時勞工資料零讀取——結構保證，測試可證。
-**證據**：`runAuthorizedGate` 回呼設計；`packages/agents/test/` 34 個測試檔。
+**證據**：`runAuthorizedGate` 回呼設計；`packages/agents/test/` 35 個測試檔。
 
 ## 5. Audit Log — 行動、決策與授權依據如何記錄？
 
@@ -51,6 +51,6 @@ Agent 授權、撤 vLEI 鏈上游（GLEIF 撤 QVI 即全生態失效，TEL 事�
 
 ---
 
-**總驗證**：GitHub Actions 每次 push 跑 327 個測試＋`npm run demo:vlei`（14 步主張，
+**總驗證**：GitHub Actions 每次 push 跑 333 個測試＋`npm run demo:vlei`（14 步主張，
 exit code 0 即全數成立）；線上 demo <https://zuemen.github.io/evidence-at-source/>，
 全部合成資料、無後端、私鑰不離開瀏覽器。

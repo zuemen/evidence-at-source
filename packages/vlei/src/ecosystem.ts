@@ -20,6 +20,9 @@ export interface LegalEntityHandle {
   presentation(): VleiPresentation;
   grantEcr(agentDid: string, role?: string): VleiPresentation;
   revokeEcr(agentDid: string): void;
+  /** The person holding an office here — the human who signs off (題06 Q4). */
+  grantOor(personDid: string, personLegalName: string, officialRole: string): VleiPresentation;
+  revokeOor(personDid: string): void;
   /** QVI-side revocation of this legal entity's credential. */
   revokeCredential(): void;
 }
@@ -99,6 +102,7 @@ export function bootstrapEcosystem(): Ecosystem {
       });
 
       const ecrByAgent = new Map<string, SignedAcdc>();
+      const oorByPerson = new Map<string, SignedAcdc>();
 
       const baseBundle = (): Record<string, SignedAcdc> => ({
         [credential.acdc.d]: credential,
@@ -131,6 +135,29 @@ export function bootstrapEcosystem(): Ecosystem {
             focus: ecr.acdc.d,
             credentials: { ...baseBundle(), [ecr.acdc.d]: ecr },
           };
+        },
+
+        grantOor(personDid, personLegalName, officialRole) {
+          const oor = issueAcdc({
+            issuer: entity,
+            registry: entityRegistry,
+            schema: 'oor',
+            subject: personDid,
+            claims: { LEI: lei, personLegalName, officialRole },
+            edges: { le: { n: credential.acdc.d, s: credential.acdc.s } },
+          });
+          oorByPerson.set(personDid, oor);
+
+          return {
+            focus: oor.acdc.d,
+            credentials: { ...baseBundle(), [oor.acdc.d]: oor },
+          };
+        },
+
+        revokeOor(personDid) {
+          const oor = oorByPerson.get(personDid);
+          if (oor === undefined) throw new Error('no OOR was granted to that person');
+          entityRegistry.revoke(oor.acdc.d);
         },
 
         revokeEcr(agentDid) {

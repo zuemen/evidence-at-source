@@ -134,6 +134,60 @@ export function verifyLeChain(
   };
 }
 
+export interface OfficialRoleFacts {
+  readonly personDid: string;
+  readonly personLegalName: string;
+  readonly officialRole: string;
+  readonly lei: string;
+  readonly legalEntity: LegalEntityFacts;
+}
+
+/**
+ * The chain behind a person holding an official role — 題06 Q4.
+ *
+ * An ECR says which agent may act for an organisation. An OOR says which
+ * *person* holds which office in it. The system already refuses to let an
+ * agent decide anything on its own ("建議核准，待人類覆核"), which makes the
+ * reviewer the one party whose authority actually settles a case — and until
+ * now the only one with no standing in the evidence chain at all.
+ *
+ * Revocation carries the same meaning it does everywhere else: a reviewer who
+ * has left keeps whatever they signed while in post, and can sign nothing new.
+ */
+export function verifyOorChain(
+  p: VleiPresentation,
+  trust: VleiTrustContext,
+  expectedRole: string,
+): ChainResult<OfficialRoleFacts> {
+  const oor = resolve(p, p.focus);
+  if (oor === undefined) return fail('EDGE_MISSING');
+
+  const oorFailure = checkAcdc(oor, trust, 'oor');
+  if (oorFailure !== null) return fail(oorFailure);
+
+  const edge = readEdge(oor, 'le');
+  if (edge === undefined) return fail('EDGE_MISSING');
+  if (edge.s !== schemaSaid('legalEntity')) return fail('SCHEMA_MISMATCH');
+
+  const leVerdict = verifyLeChain({ focus: edge.n, credentials: p.credentials }, trust);
+  if (!leVerdict.ok) return fail(leVerdict.failure);
+
+  if (oor.acdc.i !== leVerdict.facts.aid) return fail('CHAIN_ISSUER_MISMATCH');
+  if (oor.acdc.a['LEI'] !== leVerdict.facts.lei) return fail('LEI_MISMATCH');
+  if (oor.acdc.a['officialRole'] !== expectedRole) return fail('ROLE_MISMATCH');
+
+  return {
+    ok: true,
+    facts: {
+      personDid: String(oor.acdc.a['i']),
+      personLegalName: String(oor.acdc.a['personLegalName']),
+      officialRole: expectedRole,
+      lei: leVerdict.facts.lei,
+      legalEntity: leVerdict.facts,
+    },
+  };
+}
+
 export function verifyEcrChain(
   p: VleiPresentation,
   trust: VleiTrustContext,

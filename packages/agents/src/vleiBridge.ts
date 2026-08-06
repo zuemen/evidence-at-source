@@ -8,6 +8,7 @@ import {
   AI_AGENT_ROLE,
   verifyEcrChain,
   verifyLeChain,
+  verifyOorChain,
   type VleiFailure,
   type VleiPresentation,
   type VleiTrustContext,
@@ -77,6 +78,47 @@ export type AgentAuthorityResult =
 
 function agentReason(failure: VleiFailure): ReasonCode {
   return failure === 'REGISTRY_REVOKED' ? 'AGENT_VLEI_REVOKED' : 'AGENT_VLEI_CHAIN_INVALID';
+}
+
+export interface ReviewerAuthority {
+  readonly personDid: string;
+  readonly personLegalName: string;
+  readonly officialRole: string;
+  readonly lei: string;
+  /** The SAID an audit entry records, so the office can be re-checked later. */
+  readonly oorSaid: string;
+}
+
+export type ReviewerAuthorityResult =
+  | { readonly ok: true; readonly reviewer: ReviewerAuthority }
+  | { readonly ok: false; readonly reason: ReasonCode };
+
+/**
+ * The human who signs off — 題06 Q4.
+ *
+ * The agents in this system only ever recommend; a person decides. That makes
+ * the reviewer the only party whose authority settles anything, and the only
+ * one who had no standing in the evidence chain. Resolving them walks the same
+ * chain to the same root as everything else.
+ */
+export function resolveReviewerAuthority(
+  presentation: VleiPresentation,
+  trust: VleiTrustContext,
+  officialRole: string,
+): ReviewerAuthorityResult {
+  const verdict = verifyOorChain(presentation, trust, officialRole);
+  if (!verdict.ok) return { ok: false, reason: agentReason(verdict.failure) };
+
+  return {
+    ok: true,
+    reviewer: {
+      personDid: verdict.facts.personDid,
+      personLegalName: verdict.facts.personLegalName,
+      officialRole: verdict.facts.officialRole,
+      lei: verdict.facts.lei,
+      oorSaid: presentation.focus,
+    },
+  };
 }
 
 export function resolveAgentAuthority(

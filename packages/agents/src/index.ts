@@ -94,10 +94,13 @@ export {
   isChainVerifiedKey,
   requireIssuerSigningKey,
   resolveAgentAuthority,
+  resolveReviewerAuthority,
   resolveIssuerSigningKey,
 } from './vleiBridge.js';
 export type {
   AgentAuthority,
+  ReviewerAuthority,
+  ReviewerAuthorityResult,
   AgentAuthorityResult,
   IssuerIdentity,
   IssuerIdentityResult,
