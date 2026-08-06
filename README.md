@@ -13,7 +13,7 @@
 
 > **資料查證狀態**：受詐比例與移工總數已補上可引用來源（見下）；「反覆補件 40%」尚未查得獨立來源，仍標為待查證。系統本身的技術主張（雙簽、選擇性揭露、交叉驗證、省略偵測）不依賴這些數字，且全部有可執行測試佐證。查證進度與來源追蹤於 [`docs/research/outline.yaml`](docs/research/outline.yaml)。
 
-台灣的產業與社福移工約 **80 萬人**（勞動部統計，2024 年逾 79 萬、近 81 萬）。以下兩個場景看起來毫不相干，但根因是同一個。
+台灣的產業與社福移工**逾 87 萬人**（主辦方命題口徑；勞動部 2024 年統計為逾 79 萬、近 81 萬，本文採主辦口徑並註明統計年度差異）。以下兩個場景看起來毫不相干，但根因是同一個。
 
 ### 場景一：開不了戶，離境後帳戶變人頭
 
@@ -181,16 +181,37 @@ flowchart TD
 
 **誠實降級**：本機無 circom/Rust 工具鏈，真實電路尚未接上；證明數學置於注入的 `verifyProof` 之後，預設 stub 一律拒絕（缺後端不會被誤判為有效）。伺服器端 M7 照常運作、demo 不變，差別僅在尚不能宣稱「伺服器從未看過任何數字」。設計與接線步驟見 [`docs/zk-reconciliation.md`](docs/zk-reconciliation.md)。
 
-## 命題對照（題目 05／06）
+## 命題對照
 
-| 命題 | 要求 | 狀態 | 對應實作 |
-|---|---|---|---|
-| 題06 Q1 | 簽發者可信層級（自我聲明／第三方／主管機關）分級與門檻 | ✅ | `issuerTier` 憑證欄位＋`minimumIssuerTier` L1 閘門（`ISSUER_TIER_BELOW_THRESHOLD`）；稽核台顯示層級徽章 |
-| 題06 Q3 | 哪些 RBA 項目可憑證化、哪些須實地稽核 | ✅ | `RBA_ITEM_CLASSIFICATION`＋`classifyRbaItem`；不可憑證化項目回 `REQUIRES_ONSITE_AUDIT`，未列項目回 `UNKNOWN` 而非默默作答 |
-| 題06 Q4 | 被 NGO 質疑時可出示「何時驗了哪些項目」的盡職調查證明 | ✅ | 可獨立驗簽的查驗收據（`issueVerificationReceipt`／`verifyReceipt`）——只含項目名稱與憑證雜湊，不含原始值 |
-| 題06 Q5 | 撤銷要能通知所有曾經驗證過的人 | ✅ | 查驗日誌反向索引（憑證雜湊 → 驗證方），`createVerificationLog` 產生撤銷通知名單 |
-| 題06 GS1 | 憑證綁定產線，防止 A 廠憑證挪用到 B 廠 | ✅ | `facilityId` 憑證欄位＋`expectedFacilityId` 閘門（`CREDENTIAL_FACILITY_MISMATCH`） |
-| 題05 Q3 | 攔截同一身分短期在多機構申辦的異常模式 | ✅ | 匿名化申辦計數器（`createApplicationMonitor`）——只回報超閾與否，不回報申辦去向；風險旗標只供人類覆核參考，不做決定 |
+### Track 05（主賽道）｜移工數位信任：普惠金融與防詐的憑證機制
+
+> 主辦命題：「逾 87 萬移工面臨開戶障礙，也容易遭冒名利用；如何建立一套『能被信任、又不被冒用』的數位身分與憑證機制？」
+
+| 命題要素 | 本專案的回答 | 可執行證據 |
+|---|---|---|
+| **開戶障礙**：證明分散在仲介、雇主、移民署，反覆補件 | 四項事實由勞工自持、可攜、一次出示；銀行 Agent 走完 L0→L1→L2 即得布林結論與建議 | [`packages/agents/src/bankAgent.ts`](packages/agents/src/bankAgent.ts)；線上 demo 錢包授權檢視卡＋稽核台 SplitDemo |
+| **被冒名利用**：離境後帳戶仍可用，成為人頭帳戶 | 主體連動撤銷——離境即該勞工全部憑證同時失效，銀行端立刻 `CREDENTIAL_REVOKED`，其他勞工不受影響 | [`packages/agents/test/revocationPaths.test.ts`](packages/agents/test/revocationPaths.test.ts)；稽核台 RevokeDemo |
+| **被冒名利用**：同一身分短期在多機構申辦 | 匿名化申辦計數器只回報「是否超閾」，不回報申辦去向；風險旗標只供人類覆核，不做決定 | [`packages/agents/test/applicationMonitor.test.ts`](packages/agents/test/applicationMonitor.test.ts) |
+| **「能被信任」**：憑證來源本身可不可信 | 簽發者分級 T1 自我聲明／T2 第三方／T3 主管機關＋`minimumIssuerTier` L1 閘門（`ISSUER_TIER_BELOW_THRESHOLD`） | [`packages/agents/test/issuerTierGate.test.ts`](packages/agents/test/issuerTierGate.test.ts) |
+| **「不被冒用」**：出示的人就是持有的人 | 雙簽配對＋私鑰在瀏覽器產生且從未離開裝置；雇主沒有勞工私鑰，偽造不出新的配對 | [`packages/shared/test/attestation.test.ts`](packages/shared/test/attestation.test.ts)、[`poc/dual-signature.mjs`](poc/dual-signature.mjs) |
+| **防詐但不傷隱私**：查得到風險，查不到人 | L2 只放行布林／k-匿名匯總；個體查詢一律 `INDIVIDUAL_QUERY_REJECTED`；相減可回推的連續查詢回 `DIFFERENCING_ATTACK_DETECTED` | [`packages/agents/test/differencing.test.ts`](packages/agents/test/differencing.test.ts) |
+| **機構身分可信**：Agent 代表誰不能靠自稱 | GLEIF vLEI 憑證鏈 Root→QVI→法人→ECR，L0 每次查詢重驗全鏈，上游撤銷下游即時失效 | `npm run demo:vlei`（14 步，exit code 0 即全數成立）；[`docs/vlei-defense.md`](docs/vlei-defense.md) |
+
+### Track 06（加分題）｜RBA 供應鏈合規的可驗證憑證機制
+
+> 主辦命題：「RBA 稽核仍高度依賴人工與紙本；如何讓供應鏈合規證明持續可驗證，同時不必揭露工廠的完整內部資料？」
+
+| 命題要素 | 本專案的回答 | 可執行證據 |
+|---|---|---|
+| **持續可驗證**，不是一年一次紙本稽核 | 事件當下簽章封存＋每期 Merkle 承諾；稽核從「事後追查誰說謊」變成「當場驗簽章是否成立」 | [`packages/agents/test/scenarioT11.test.ts`](packages/agents/test/scenarioT11.test.ts) |
+| **不揭露工廠完整內部資料** | 品牌 Agent 只拿得到合規率與母體人數，拿不到任何一位勞工的工時 | [`packages/agents/test/brandAgent.test.ts`](packages/agents/test/brandAgent.test.ts) |
+| 哪些項目可憑證化、哪些須實地稽核 | `RBA_ITEM_CLASSIFICATION`＋`classifyRbaItem`；不可憑證化回 `REQUIRES_ONSITE_AUDIT`，未列項目回 `UNKNOWN` 而非默默作答 | [`packages/agents/test/rbaItems.test.ts`](packages/agents/test/rbaItems.test.ts) |
+| 被 NGO 質疑時的盡職調查證明 | 可獨立驗簽的查驗收據——只含項目名稱與憑證雜湊，不含原始值 | [`packages/agents/test/receipt.test.ts`](packages/agents/test/receipt.test.ts) |
+| 撤銷要能通知所有曾經驗證過的人 | 查驗日誌反向索引（憑證雜湊 → 驗證方），產生撤銷通知名單 | [`packages/agents/test/receipt.test.ts`](packages/agents/test/receipt.test.ts) |
+| 憑證綁定產線，防 A 廠憑證挪用到 B 廠 | `facilityId` 欄位＋`expectedFacilityId` 閘門（`CREDENTIAL_FACILITY_MISMATCH`） | [`packages/agents/test/credentialLayer.test.ts`](packages/agents/test/credentialLayer.test.ts) |
+| **防報復**（RBA 稽核最容易被忽略的一層） | 「哪幾位勞工申報超時」這個能力在架構上不存在，不是被擋掉 | [`packages/agents/test/policyGate.test.ts`](packages/agents/test/policyGate.test.ts) |
+
+> **命題細節註記**：主辦方載明 Track 05／06 的完整命題（背景、核心可信問題、方向提示）於入選後工作坊公布（8/15 線上、8/22 線下）。上表對照的是**目前已公開的命題文字**；取得完整命題後本表將重做。
 
 **紅線註記**：`RecruitmentFeeCredential` 的 `feeWithinLegalCap` 判準所依據的「法定上限」數字仍在查證清單（`docs/research/outline.yaml`），憑證結構不依賴該數字，但對外主張前應完成查證。
 
