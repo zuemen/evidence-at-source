@@ -104,7 +104,7 @@ live demo <https://zuemen.github.io/evidence-at-source/>。每段附口播詞、
 ## 4:35–5:00 收尾（簡報 12、14）
 
 > 最後一件事：不要相信我剛剛說的任何一句話。這個 repo 有 333 個測試，CI 每次
-> push 全跑；`npm run demo:vlei` 一條命令跑完 14 步主張，exit code 0 就是全數成立。
+> push 全跑；`npm run demo:vlei` 一條命令跑完 17 步主張，exit code 0 就是全數成立。
 > 網址在這裡（翻到第 14 張）——全部合成資料、沒有後端、私鑰從未離開瀏覽器。**請直接跑。**
 
 操作：第 12 張講可信度，翻到第 14 張（網址＋repo）停住直到 Q&A。

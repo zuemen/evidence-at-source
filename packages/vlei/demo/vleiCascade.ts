@@ -143,6 +143,53 @@ export function runVleiDemo(): DemoReport {
     step('ECR 撤銷不影響法人本身', 'true', String(verifyLeChain(bank.presentation(), eco.trust).ok)),
   );
 
+  // 6b — A source country's ministry joins the same root, and a Taiwanese
+  // verifier checks its chain without any direct connection to it.
+  //
+  // This is the export claim made executable: what travels between countries
+  // is a credential format and a trust chain, not software. The verifier pins
+  // one root AID out of band and rebuilds everything else from the wire, so a
+  // ministry in Jakarta issuing evidence before departure needs no integration
+  // with anything in Taipei.
+  const ministry = eco.createLegalEntity({
+    legalName: '印尼人力部（合成）',
+    didWeb: 'did:web:kemnaker.example',
+    leiTag: 'KEMNAKERID',
+    signingJwk: JWK,
+    issuerTier: 'AUTHORITY_CERTIFIED',
+  });
+  const ministryChain = ministry.grantEcr('did:key:zMinistryAgent');
+  const abroadWire = exportChainArtifacts(ministryChain, eco.trust);
+  const inTaiwan = importVerifierContext(abroadWire, eco.trust.trustedRoots);
+  steps.push(
+    step(
+      '來源國主管機關掛上同一信任根',
+      'ok',
+      outcome(verifyLeChain(ministry.presentation(), eco.trust)),
+    ),
+  );
+  steps.push(
+    step(
+      '台灣端只釘 root 即可驗來源國的鏈',
+      'ok',
+      outcome(verifyEcrChain(inTaiwan.presentation, inTaiwan.trust)),
+    ),
+  );
+  steps.push(
+    step(
+      '來源國法人的鏈上層級為主管機關',
+      'AUTHORITY_CERTIFIED',
+      String(
+        verifyLeChain(ministry.presentation(), eco.trust).ok
+          ? ((): string => {
+              const verdict = verifyLeChain(ministry.presentation(), eco.trust);
+              return verdict.ok ? String(verdict.facts.issuerTier) : 'unresolved';
+            })()
+          : 'unresolved',
+      ),
+    ),
+  );
+
   // 7 — GLEIF revokes the QVI: everything downstream collapses at once.
   eco.revokeQviCredential();
   steps.push(

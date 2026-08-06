@@ -49,6 +49,19 @@ DelegationCredential 之外還必須出示 ECR 鏈；機構簽發勞工憑證的
 的 Legal Entity vLEI 取得。任何上游憑證被撤銷，下游全部立即失效。完整規格與
 明文簡化清單見 [`docs/vlei.md`](docs/vlei.md)。
 
+**掛在這條鏈上的不只是「機構是誰」，還有四件本來各自散落的事**——這是本專案與一般
+「用了 vLEI」的作品最大的差別：
+
+| 掛上鏈的東西 | 沒掛之前是什麼 | 現在由誰決定 |
+|---|---|---|
+| **簽發者層級**（T1/T2/T3） | 簽發者自己寫在 payload 裡的欄位——工廠可以自稱主管機關 | QVI 在核發法人憑證時寫入；payload 敢報得比鏈高就 `ISSUER_TIER_MISMATCH` |
+| **第三方背書**（`verifiedBy`） | 一個沒人驗證的 DID 字串——寫真的稽核機構跟寫瞎編的一樣 | 稽核機構是持 `third-party-auditor` ECR 的法人；解析不到就 `AUDITOR_CHAIN_INVALID`，**撤銷它，它背書過的 T2 全部當場降級** |
+| **稽核軌跡的封緘金鑰** | demo 臨時產生的金鑰——全 repo 唯一「金鑰不必證明來歷」的例外 | 機構法人憑證公布的那把；非鏈上金鑰一律 `KEY_NOT_CHAIN_VERIFIED` |
+| **按下核准的那個人** | 沒有身分。系統只說「待人類覆核」，沒說待誰 | OOR 職務憑證；離職撤銷後不能再核准，且**覆核者記在封緘之內，無法事後補記** |
+
+一句話：**資格、背書、紀錄、決策者，全部錨定在同一條可撤銷的鏈上。**
+規劃與未完成項目見 [`docs/superpowers/plans/2026-08-06-vlei-deepening.md`](docs/superpowers/plans/2026-08-06-vlei-deepening.md)。
+
 ```mermaid
 flowchart TD
     subgraph ISS["Issuer 簽發方"]
@@ -233,7 +246,7 @@ flowchart TD
 | **開戶障礙**：證明分散在仲介、雇主、移民署 | 四項事實由勞工自持、可攜、一次出示；銀行 Agent 走完 L0→L1→L2 即得布林結論與建議 | [`packages/agents/src/bankAgent.ts`](packages/agents/src/bankAgent.ts)；稽核台 SplitDemo |
 | **「能被信任」**：憑證來源本身可不可信 | 簽發者分級 T1／T2／T3＋`minimumIssuerTier` L1 閘門（`ISSUER_TIER_BELOW_THRESHOLD`） | [`packages/agents/test/issuerTierGate.test.ts`](packages/agents/test/issuerTierGate.test.ts) |
 | **防詐但不傷隱私**：查得到風險，查不到人 | L2 只放行布林／k-匿名匯總；個體查詢 `INDIVIDUAL_QUERY_REJECTED`；相減可回推的連續查詢回 `DIFFERENCING_ATTACK_DETECTED` | [`packages/agents/test/differencing.test.ts`](packages/agents/test/differencing.test.ts) |
-| **機構身分可信**：Agent 代表誰不能靠自稱 | GLEIF vLEI 憑證鏈 Root→QVI→法人→ECR，L0 每次查詢重驗全鏈，上游撤銷下游即時失效 | `npm run demo:vlei`（14 步，exit code 0 即全數成立）；[`docs/vlei-defense.md`](docs/vlei-defense.md) |
+| **機構身分可信**：Agent 代表誰不能靠自稱 | GLEIF vLEI 憑證鏈 Root→QVI→法人→ECR，L0 每次查詢重驗全鏈，上游撤銷下游即時失效 | `npm run demo:vlei`（17 步，exit code 0 即全數成立）；[`docs/vlei-defense.md`](docs/vlei-defense.md) |
 | **「能被信任」**：連簽發者的公鑰都不能靠設定檔 | 簽發者公鑰只能從已驗證的法人 vLEI 鏈取得，裸金鑰在 L1 直接回 `ISSUER_VLEI_MISSING` | [`packages/agents/test/issuerKeyProvenance.test.ts`](packages/agents/test/issuerKeyProvenance.test.ts) |
 
 ### Track 06（加分題）｜RBA 供應鏈合規的可驗證憑證機制
