@@ -10,13 +10,14 @@
 
 import type { ReasonCode, PublicJwk, RevocationRegistry } from '@eas/shared';
 import { checkCredentialLayer } from './credentialLayer.js';
+import type { IssuerSigningKey } from './vleiBridge.js';
 import type { CohortEvidence } from './brandAgent.js';
 import type { AggregateMetric } from './policyGate.js';
 
 export interface Submission {
   readonly presentation: string;
   readonly attestation: string;
-  readonly issuerPublicKey: PublicJwk;
+  readonly issuerPublicKey: IssuerSigningKey;
   readonly workerPublicKey: PublicJwk;
 }
 

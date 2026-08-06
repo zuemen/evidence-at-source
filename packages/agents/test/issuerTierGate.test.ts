@@ -1,12 +1,14 @@
 import { describe, expect, test } from 'vitest';
 import { createWorkerAttestation, generateKeyPair, presentCredential } from '@eas/shared';
-import { createIssuer, type IssuerOptions } from '@eas/issuer';
+import type { IssuerOptions } from '@eas/issuer';
 import { checkCredentialLayer } from '@eas/agents';
+import { setupIssuerWorld } from './helpers/vleiWorld.js';
 
 const WORKER_DID = 'did:key:zWorker001';
 
 async function present(options: IssuerOptions) {
-  const issuer = await createIssuer('did:web:factory.example', options);
+  const world = await setupIssuerWorld(options);
+  const issuer = world.issuer;
   const worker = await generateKeyPair();
   const credential = await issuer.issue('WorkingHoursCredential', {
     workerDID: WORKER_DID,
@@ -22,7 +24,7 @@ async function present(options: IssuerOptions) {
   });
 
   return {
-    issuer,
+    issuerKey: world.issuerKey,
     worker,
     attestation,
     presentation: await presentCredential(credential, ['withinRBALimit', 'periodStart']),
@@ -33,7 +35,7 @@ const gate = (p: Awaited<ReturnType<typeof present>>, extra: Record<string, unkn
   checkCredentialLayer({
     presentation: p.presentation,
     attestation: p.attestation,
-    issuerPublicKey: p.issuer.publicKey,
+    issuerPublicKey: p.issuerKey,
     workerPublicKey: p.worker.publicKey,
     requiredClaims: ['withinRBALimit'],
     ...extra,

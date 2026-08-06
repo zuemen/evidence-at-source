@@ -20,6 +20,7 @@ export const REASON_CODES = [
   'AGENT_VLEI_BINDING_MISMATCH',
   // L1 — issuer identity. A worker-credential issuer's signing key is only
   // trusted when it arrives inside a valid Legal Entity vLEI chain.
+  'ISSUER_VLEI_MISSING',
   'ISSUER_VLEI_CHAIN_INVALID',
   'ISSUER_VLEI_REVOKED',
   // L1 — credential layer

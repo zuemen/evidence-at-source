@@ -14,6 +14,35 @@ import {
 } from '@eas/vlei';
 import type { PublicJwk, ReasonCode } from '@eas/shared';
 
+/**
+ * A signing key that is known to have arrived through a verified Legal Entity
+ * vLEI chain. The marker is a module-private symbol, so the only way to obtain
+ * a value of this type is to call resolveIssuerSigningKey and have the chain
+ * verify — a bare JWK cannot be cast into one at runtime, and layer 1 checks
+ * for the marker rather than trusting its caller.
+ *
+ * There is deliberately no test-only constructor: CLAUDE.md forbids gate
+ * backdoors, so tests build a real chain like everything else does.
+ */
+const CHAIN_VERIFIED = Symbol('vlei.chainVerified');
+
+export type IssuerSigningKey = PublicJwk & { readonly [CHAIN_VERIFIED]: true };
+
+function admitIssuerKey(jwk: PublicJwk): IssuerSigningKey {
+  // Non-enumerable on purpose: the marker is provenance, not key material. It
+  // must not survive a spread, appear in JSON, or make an admitted key compare
+  // unequal to the same key by value.
+  const admitted = { ...jwk };
+  Object.defineProperty(admitted, CHAIN_VERIFIED, { value: true, enumerable: false });
+
+  return Object.freeze(admitted) as IssuerSigningKey;
+}
+
+/** Layer 1 asks this before it will use a key at all. */
+export function isChainVerifiedKey(key: PublicJwk): key is IssuerSigningKey {
+  return (key as Partial<IssuerSigningKey>)[CHAIN_VERIFIED] === true;
+}
+
 export interface AgentAuthority {
   readonly agentDid: string;
   readonly role: string;
@@ -56,7 +85,7 @@ export interface IssuerIdentity {
   readonly didWeb: string;
   readonly legalName: string;
   readonly lei: string;
-  readonly jwk: PublicJwk;
+  readonly jwk: IssuerSigningKey;
 }
 
 export type IssuerIdentityResult =
@@ -81,7 +110,22 @@ export function resolveIssuerSigningKey(
       didWeb: facts.didWeb,
       legalName: facts.legalName,
       lei: facts.lei,
-      jwk: facts.credentialSigningJwk as PublicJwk,
+      jwk: admitIssuerKey(facts.credentialSigningJwk as PublicJwk),
     },
   };
+}
+
+/**
+ * The throwing form, for call sites that have no meaningful way to continue
+ * without the key (demo wiring, tests). Failing loudly is correct here: a
+ * caller that swallowed this would be back to trusting an unverified key.
+ */
+export function requireIssuerSigningKey(
+  presentation: VleiPresentation,
+  trust: VleiTrustContext,
+): IssuerSigningKey {
+  const resolved = resolveIssuerSigningKey(presentation, trust);
+  if (!resolved.ok) throw new Error(`issuer vLEI chain rejected: ${resolved.reason}`);
+
+  return resolved.issuer.jwk;
 }

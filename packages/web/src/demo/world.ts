@@ -39,7 +39,8 @@ import {
   createBankAgent,
   createBrandAgent,
   createQuerySession,
-  resolveIssuerSigningKey,
+  requireIssuerSigningKey,
+  type IssuerSigningKey,
   runAuthorizedGate,
   verifyDelegationValidity,
   type BankAssessment,
@@ -261,7 +262,7 @@ interface CohortMember {
 
 async function buildCohortMember(
   factory: Issuer,
-  factoryKey: PublicJwk,
+  factoryKey: IssuerSigningKey,
   index: number,
   withinRBALimit: boolean,
 ): Promise<CohortMember> {
@@ -316,11 +317,9 @@ export async function createDemoWorld(): Promise<DemoWorld> {
   });
   const issuers = { agency, factory } as const;
 
-  /** L1 only ever sees issuer keys that arrived through a verified LE chain. */
-  function requireIssuerKey(issuer: VleiIssuer): PublicJwk {
-    const resolved = resolveIssuerSigningKey(issuer.legalEntityPresentation(), eco.trust);
-    if (!resolved.ok) throw new Error(`issuer vLEI chain rejected: ${resolved.reason}`);
-    return resolved.issuer.jwk;
+  /** Layer 1 now refuses any other kind of key; this is just the ergonomics. */
+  function requireIssuerKey(issuer: VleiIssuer): IssuerSigningKey {
+    return requireIssuerSigningKey(issuer.legalEntityPresentation(), eco.trust);
   }
   const issuerNames = {
     agency: '仲介公司 did:web:agency.example',

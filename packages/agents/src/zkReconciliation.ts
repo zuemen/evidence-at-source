@@ -18,6 +18,7 @@
  */
 
 import { credentialHash, type PublicJwk, type ReasonCode, type RevocationRegistry } from '@eas/shared';
+import type { IssuerSigningKey } from './vleiBridge.js';
 import { checkCredentialLayer } from './credentialLayer.js';
 
 export interface ReconciliationProofPublicSignals {
@@ -33,7 +34,7 @@ export interface ReconciliationProofPublicSignals {
 export interface BoundCredential {
   readonly presentation: string;
   readonly attestation: string;
-  readonly issuerPublicKey: PublicJwk;
+  readonly issuerPublicKey: IssuerSigningKey;
   readonly workerPublicKey: PublicJwk;
 }
 

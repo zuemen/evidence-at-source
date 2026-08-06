@@ -5,14 +5,14 @@ import {
   presentCredential,
   type PublicJwk,
 } from '@eas/shared';
-import { createIssuer, type Issuer } from '@eas/issuer';
 import { buildCohortEvidence, createBrandAgent, type Submission } from '@eas/agents';
+import { setupIssuerWorld, type IssuerWorld } from './helpers/vleiWorld.js';
 
 const COHORT = 'factory-a-2026-08';
 const DISCLOSE = ['withinRBALimit', 'periodStart'] as const;
 
 async function submit(
-  factory: Issuer,
+  world: IssuerWorld,
   index: number,
   withinRBALimit: boolean,
   options: { tamper?: boolean } = {},
@@ -28,7 +28,7 @@ async function submit(
     overtimeHours: withinRBALimit ? 42 : 96,
   };
 
-  const credential = await factory.issue('WorkingHoursCredential', claims);
+  const credential = await world.issuer.issue('WorkingHoursCredential', claims);
   const attestation = await createWorkerAttestation(worker.privateKey, {
     workerDID,
     credential,
@@ -37,29 +37,29 @@ async function submit(
 
   // A tampering factory re-issues after the worker signed, lowering the hours.
   const effective = options.tamper
-    ? await factory.issue('WorkingHoursCredential', { ...claims, totalHours: 150, overtimeHours: 10 })
+    ? await world.issuer.issue('WorkingHoursCredential', { ...claims, totalHours: 150, overtimeHours: 10 })
     : credential;
 
   return {
     presentation: await presentCredential(effective, DISCLOSE),
     attestation,
-    issuerPublicKey: factory.publicKey,
+    issuerPublicKey: world.issuerKey,
     workerPublicKey: worker.publicKey,
   };
 }
 
 describe('end to end — presentation through both gate layers into an agent', () => {
   test('builds a cohort of conclusions, drops tampered evidence, and answers only aggregates', async () => {
-    const factory = await createIssuer('did:web:factory.example');
+    const world = await setupIssuerWorld();
 
     const submissions = [
-      await submit(factory, 1, true),
-      await submit(factory, 2, true),
-      await submit(factory, 3, true),
-      await submit(factory, 4, true),
-      await submit(factory, 5, false),
-      await submit(factory, 6, false),
-      await submit(factory, 7, true, { tamper: true }),
+      await submit(world, 1, true),
+      await submit(world, 2, true),
+      await submit(world, 3, true),
+      await submit(world, 4, true),
+      await submit(world, 5, false),
+      await submit(world, 6, false),
+      await submit(world, 7, true, { tamper: true }),
     ];
 
     const { evidence, rejected } = await buildCohortEvidence({
