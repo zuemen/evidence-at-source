@@ -1,13 +1,16 @@
 #!/bin/sh
 # Vercel's build step.
 #
-# The build itself is one line; everything else here exists because a failure
-# on someone else's machine is only useful if it says why. Vercel truncates
-# nothing, but the part a person copies out of a failed deploy is the end of
-# the log — so the diagnostics print *after* the failure, not before it.
+# Self-locating: the previous version assumed the working directory was the
+# repo root, and a Vercel project whose Root Directory points elsewhere made
+# that "No such file or directory". Everything below runs relative to where
+# this script actually lives, so the caller's cwd no longer matters.
 #
-# Kept in a file rather than inline in vercel.json because buildCommand is
-# capped at 256 characters.
+# The build itself is one line; everything else exists because a failure on
+# someone else's machine is only useful if it says why — printed *after* the
+# failure, because the end of the log is the part a person copies.
+
+cd "$(dirname "$0")/.." || exit 1
 
 if npm run build --workspace @eas/web; then
   exit 0
@@ -15,6 +18,7 @@ fi
 
 echo ""
 echo "===== BUILD DIAGNOSTICS (paste from here down) ====="
+echo "cwd: $(pwd)"
 echo "node: $(node -v)   npm: $(npm -v)"
 echo "--- vite resolved? ---"
 npm ls vite --workspace @eas/web || true
