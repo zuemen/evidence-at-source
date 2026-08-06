@@ -462,7 +462,13 @@ export async function createDemoWorld(): Promise<DemoWorld> {
   });
 
   // Audit trail: who asked, what the gate decided, and on whose authority.
-  const audit = createAuditTrail();
+  // Sealed with the verifier's own key so the exported trail is something a
+  // challenger can check, rather than a list this page could have written.
+  const auditor = await generateKeyPair();
+  const audit = createAuditTrail({
+    signingKey: auditor.privateKey,
+    verifierDid: 'did:web:bank.example',
+  });
   const bankBasis = {
     delegationHash: credentialHash(bankDelegation),
     ecrSaid: bankAgentVlei.credentials[bankAgentVlei.focus]?.acdc.d ?? null,
