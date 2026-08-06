@@ -30,6 +30,8 @@ interface Props {
   }[];
   readonly identity: IdentityState;
   readonly onAttemptBrokerWallet: () => void;
+  readonly presence: string | null;
+  readonly onVerifyDevice: () => void;
   readonly zk: ZkProofResult | null;
   readonly zkBusy: boolean;
   readonly onProveZk: () => void;
@@ -121,6 +123,8 @@ export function ConsoleView({
   revocationNotices,
   identity,
   onAttemptBrokerWallet,
+  presence,
+  onVerifyDevice,
   zk,
   zkBusy,
   onProveZk,
@@ -446,15 +450,19 @@ export function ConsoleView({
             </span>
           </div>
         </div>
-        <button
-          className="act"
-          data-danger="true"
-          onClick={onAttemptBrokerWallet}
-          disabled={busy}
-          style={{ marginTop: '0.6rem' }}
-        >
-          模擬仲介：替同一人再開一個錢包
-        </button>
+        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '0.6rem' }}>
+          <button className="act" data-danger="true" onClick={onAttemptBrokerWallet} disabled={busy}>
+            模擬仲介：替同一人再開一個錢包
+          </button>
+          <button className="act" onClick={onVerifyDevice} disabled={busy}>
+            用這台裝置的生物辨識驗證本人
+          </button>
+        </div>
+        {presence !== null && (
+          <p className="note" style={{ margin: '0.5rem 0 0' }}>
+            {presence}
+          </p>
+        )}
         {identity.brokerAttempt !== null && (
           <p className="note" style={{ margin: '0.5rem 0 0' }}>
             被拒絕：<code style={{ fontFamily: 'var(--mono)' }}>{identity.brokerAttempt}</code>

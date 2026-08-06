@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { api, type DemoPayload } from './api.js';
+import { assertPresence, registerDevice } from './wallet/webauthn.js';
 import type { ZkProofResult } from './demo/world.js';
 import { WalletView } from './views/WalletView.js';
 import { ConsoleView } from './views/ConsoleView.js';
@@ -16,6 +17,7 @@ export function App(): JSX.Element {
   const [beatIndex, setBeatIndex] = useState(0);
   const [zk, setZk] = useState<ZkProofResult | null>(null);
   const [zkBusy, setZkBusy] = useState(false);
+  const [presence, setPresence] = useState<string | null>(null);
 
   useEffect(() => {
     void api.state().then(setPayload);
@@ -173,6 +175,26 @@ export function App(): JSX.Element {
           revocationNotices={payload.revocationNotices}
           identity={payload.identity}
           onAttemptBrokerWallet={() => void run(api.attemptBrokerWallet)}
+          presence={presence}
+          onVerifyDevice={() => {
+            setPresence('正在向這台裝置的驗證器請求生物辨識…');
+            void (async () => {
+              const credentialId = await registerDevice(payload.identity.holderDid);
+              if (credentialId === null) {
+                setPresence(
+                  '這台裝置沒有可用的驗證器（或你取消了）。閘門因此拒絕——沒有在場證明就不算通過，' +
+                    '這正是 fail-closed 的意思。',
+                );
+                return;
+              }
+              const assertion = await assertPresence(credentialId);
+              setPresence(
+                assertion !== null && assertion.userVerified
+                  ? `驗證器回報已完成使用者驗證（userVerified: true），credentialId 前綴 ${credentialId.slice(0, 12)}…。私鑰留在安全元件裡，這個瀏覽器拿不到它。`
+                  : '驗證器沒有回報使用者驗證，閘門一律拒絕。',
+              );
+            })();
+          }}
           zk={zk}
           zkBusy={zkBusy}
           onProveZk={() => {
