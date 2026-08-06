@@ -210,6 +210,10 @@ export async function createVleiIssuer(input: VleiIssuerInput): Promise<VleiIssu
     didWeb: input.didWeb,
     leiTag: input.leiTag,
     signingJwk: base.publicKey as unknown as Record<string, unknown>,
+    // The tier goes onto the chain, where the entity cannot rewrite it. The
+    // same value also lands in each credential's payload, and layer 1 refuses
+    // any payload that claims more than the chain grants.
+    ...(input.options?.tier === undefined ? {} : { issuerTier: input.options.tier }),
   });
 
   return {

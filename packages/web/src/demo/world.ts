@@ -384,6 +384,9 @@ export async function createDemoWorld(): Promise<DemoWorld> {
     legalName: '工廠打卡系統',
     leiTag: 'FACTORYEXAMPLE',
     ecosystem: eco,
+    // Written onto the chain by the QVI, so the console's tier badge reports
+    // what the entity was vetted as rather than what it says about itself.
+    options: { tier: FACTORY_TIER },
   });
   const issuers = { agency, factory } as const;
 

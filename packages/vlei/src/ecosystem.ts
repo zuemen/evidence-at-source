@@ -29,6 +29,12 @@ export interface CreateLegalEntityInput {
   readonly didWeb: string;
   readonly leiTag: string;
   readonly signingJwk: Record<string, unknown>;
+  /**
+   * The vetting this QVI performed on the entity. Written by the QVI, never by
+   * the entity: an issuer that could set its own tier could claim to be a
+   * regulator, and the whole tier ladder would rest on its honesty.
+   */
+  readonly issuerTier?: string;
 }
 
 export interface Ecosystem {
@@ -87,6 +93,7 @@ export function bootstrapEcosystem(): Ecosystem {
           legalName: input.legalName,
           didWeb: input.didWeb,
           credentialSigningJwk: input.signingJwk,
+          ...(input.issuerTier === undefined ? {} : { issuerTier: input.issuerTier }),
         },
         edges: { qvi: { n: qviCredential.acdc.d, s: qviCredential.acdc.s } },
       });

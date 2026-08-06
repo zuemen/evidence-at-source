@@ -20,7 +20,7 @@ import {
   type ReasonCode,
   type RevocationRegistry,
 } from '@eas/shared';
-import { isChainVerifiedKey, type IssuerSigningKey } from './vleiBridge.js';
+import { chainTierOf, isChainVerifiedKey, type IssuerSigningKey } from './vleiBridge.js';
 
 export interface CredentialLayerInput {
   readonly presentation: string;
@@ -157,8 +157,21 @@ export async function checkCredentialLayer(
     return { ok: false, reason: 'CREDENTIAL_EXPIRED' };
   }
 
-  // 題06 Q1: a factory self-declaration must not pass where the verifier's
-  // policy demands third-party or authority backing.
+  // 題06 Q1, first half: the tier in the payload is written by the issuer
+  // about itself. Believing it would put the entire T1/T2/T3 ladder on the
+  // issuer's honesty — a factory could simply declare itself a regulator. The
+  // chain is what the QVI actually vetted, so a payload may report the chain's
+  // tier or less, never more. Under-claiming is modesty, not an attack.
+  const claimedTier = payload['issuerTier'];
+  if (typeof claimedTier === 'string') {
+    const granted = chainTierOf(input.issuerPublicKey) ?? 'SELF_DECLARED';
+    if (!meetsMinimumTier(granted as IssuerTier, claimedTier as IssuerTier)) {
+      return { ok: false, reason: 'ISSUER_TIER_MISMATCH' };
+    }
+  }
+
+  // 題06 Q1, second half: a factory self-declaration must not pass where the
+  // verifier's policy demands third-party or authority backing.
   if (input.minimumIssuerTier !== undefined) {
     const tier = payload['issuerTier'];
     const graded =

@@ -87,6 +87,7 @@ export type {
 } from './bankAgent.js';
 
 export {
+  chainTierOf,
   isChainVerifiedKey,
   requireIssuerSigningKey,
   resolveAgentAuthority,

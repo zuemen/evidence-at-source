@@ -32,6 +32,9 @@ export const REASON_CODES = [
   'CLAIM_NOT_DISCLOSED',
   // The issuer's trust tier is below what this verifier requires (題06 Q1).
   'ISSUER_TIER_BELOW_THRESHOLD',
+  // The credential claims a higher tier than the vLEI chain grants its issuer.
+  // Under-claiming is not an offence; over-claiming is the whole attack.
+  'ISSUER_TIER_MISMATCH',
   // The credential is bound to a different facility than the one queried (GS1).
   'CREDENTIAL_FACILITY_MISMATCH',
   // L1 — identity binding (題05 Q1/Q2). Dual signatures prove the holder of a

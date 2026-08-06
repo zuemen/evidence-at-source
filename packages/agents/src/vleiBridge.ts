@@ -28,14 +28,33 @@ const CHAIN_VERIFIED = Symbol('vlei.chainVerified');
 
 export type IssuerSigningKey = PublicJwk & { readonly [CHAIN_VERIFIED]: true };
 
-function admitIssuerKey(jwk: PublicJwk): IssuerSigningKey {
+/**
+ * The tier the chain grants this issuer, carried alongside the provenance
+ * marker so that layer 1 can compare it against what a credential claims
+ * without the gate's signature having to grow a parameter.
+ */
+const CHAIN_TIER = Symbol('eas.chainTier');
+
+function admitIssuerKey(jwk: PublicJwk, chainTier?: string): IssuerSigningKey {
   // Non-enumerable on purpose: the marker is provenance, not key material. It
   // must not survive a spread, appear in JSON, or make an admitted key compare
   // unequal to the same key by value.
   const admitted = { ...jwk };
   Object.defineProperty(admitted, CHAIN_VERIFIED, { value: true, enumerable: false });
+  Object.defineProperty(admitted, CHAIN_TIER, { value: chainTier, enumerable: false });
 
   return Object.freeze(admitted) as IssuerSigningKey;
+}
+
+/**
+ * What the chain says this issuer is worth — 題06 Q1.
+ *
+ * Undefined means the Legal Entity credential carries no tier, which is the
+ * QVI having vetted nothing beyond identity. That reads as the weakest tier,
+ * never as "unconstrained".
+ */
+export function chainTierOf(key: IssuerSigningKey): string | undefined {
+  return (key as unknown as Record<symbol, string | undefined>)[CHAIN_TIER];
 }
 
 /** Layer 1 asks this before it will use a key at all. */
@@ -110,7 +129,7 @@ export function resolveIssuerSigningKey(
       didWeb: facts.didWeb,
       legalName: facts.legalName,
       lei: facts.lei,
-      jwk: admitIssuerKey(facts.credentialSigningJwk as PublicJwk),
+      jwk: admitIssuerKey(facts.credentialSigningJwk as PublicJwk, facts.issuerTier),
     },
   };
 }

@@ -41,6 +41,8 @@ export interface LegalEntityFacts {
   readonly legalName: string;
   readonly didWeb: string;
   readonly credentialSigningJwk: Record<string, unknown>;
+  /** Absent means the QVI vetted nothing: the weakest tier, not an error. */
+  readonly issuerTier: string | undefined;
 }
 
 export interface AgentAuthorityFacts {
@@ -117,6 +119,8 @@ export function verifyLeChain(
       legalName: String(le.acdc.a['legalName']),
       didWeb: String(le.acdc.a['didWeb']),
       credentialSigningJwk: le.acdc.a['credentialSigningJwk'] as Record<string, unknown>,
+      issuerTier:
+        typeof le.acdc.a['issuerTier'] === 'string' ? le.acdc.a['issuerTier'] : undefined,
     },
   };
 }

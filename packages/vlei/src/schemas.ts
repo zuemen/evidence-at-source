@@ -46,15 +46,19 @@ export const VLEI_SCHEMAS: Record<VleiSchemaName, VleiSchema> = {
   legalEntity: makeSchema({
     title: 'Legal Entity vLEI Credential',
     description:
-      'Issued by a QVI to a Legal Entity. PoC profile; didWeb and credentialSigningJwk are extension fields binding the entity to its SD-JWT signing identity.',
+      'Issued by a QVI to a Legal Entity. PoC profile; didWeb and credentialSigningJwk are extension fields binding the entity to its SD-JWT signing identity, and issuerTier records the vetting the QVI actually performed.',
     credentialType: 'LegalEntityvLEICredential',
     attributes: {
+      // issuerTier is not required: a Legal Entity credential issued without
+      // one means the QVI vetted nothing beyond identity, and absence must
+      // read as the weakest tier rather than as an error.
       required: ['LEI', 'legalName', 'didWeb', 'credentialSigningJwk'],
       types: {
         LEI: 'string',
         legalName: 'string',
         didWeb: 'string',
         credentialSigningJwk: 'object',
+        issuerTier: 'string',
       },
     },
   }),
