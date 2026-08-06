@@ -1,0 +1,5 @@
+# Shell scripts must keep LF endings whatever the committer's platform does.
+# A CRLF shell script fails on Linux with an unreadable "\r: not found", and
+# the build host is Linux — this repository is developed on Windows, where
+# core.autocrlf would otherwise make that a one-commit-away accident.
+*.sh text eol=lf
