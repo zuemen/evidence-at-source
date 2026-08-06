@@ -16,6 +16,7 @@ import {
   credentialHash,
   generateKeyPair,
   presentCredential,
+  verifyPresentation,
   getCredentialSchema,
   type CredentialType,
   type IssuerTier,
@@ -55,6 +56,7 @@ import {
   type ReconciliationCohort,
   type Submission,
 } from '@eas/agents';
+import { DEFAULT_RECONCILIATION_PARAMS } from '@eas/reconciliation';
 import { reviewDelegationForWallet, type WalletDelegationView } from '../wallet/reviewDelegation.js';
 
 export type { AuditEntry } from '@eas/agents';
@@ -233,6 +235,16 @@ export interface IntegrityDemoState {
   readonly components: { readonly coverage: number; readonly consistency: number };
 }
 
+export type ZkProofResult =
+  | {
+      readonly available: true;
+      readonly verdict: string;
+      readonly publicSignals: readonly string[];
+      readonly verified: boolean;
+      readonly elapsedMs: number;
+    }
+  | { readonly available: false; readonly reason: string };
+
 export interface DemoWorld {
   snapshot(): DemoSnapshot;
   attest(type: CredentialType): Promise<void>;
@@ -250,6 +262,12 @@ export interface DemoWorld {
   split(): Promise<SplitView>;
   /** 題06 Q3 shown as a list rather than buried in a test. */
   rbaCoverage(): readonly { readonly item: string; readonly verdict: string }[];
+  /**
+   * Generates a real Groth16 proof in the browser from the worker's own
+   * figures, then verifies it. Refuses rather than pretends when the proving
+   * artifacts are unreachable.
+   */
+  proveReconciliation(): Promise<ZkProofResult>;
   /** 題06 Q4: independently checkable proof of what was verified, and when. */
   receipts(): Promise<
     readonly {
@@ -509,6 +527,18 @@ export async function createDemoWorld(): Promise<DemoWorld> {
       attestation: null,
     });
   }
+
+  // The bank's side of the cross-check. Issued here rather than in the wallet
+  // list because the wallet narrative is about the four facts an employer
+  // controls; this one exists to be a source the factory cannot touch.
+  const salaryCredential = await bank.issue('SalaryDepositCredential', {
+    workerDID: WORKER_DID,
+    periodStart: '2026-08-01',
+    periodEnd: '2026-08-31',
+    issuerType: 'BANK',
+    depositedAmountTWD: 38000,
+    depositCount: 1,
+  });
 
   // Five more workers, one of them over the limit, so the cohort clears k=5.
   const others: CohortMember[] = [];
@@ -894,6 +924,74 @@ export async function createDemoWorld(): Promise<DemoWorld> {
 
     revocationNotices() {
       return lastVerifiedHash === null ? [] : verificationLog.notifyRevocation(lastVerifiedHash);
+    },
+
+    async proveReconciliation() {
+      const started = Date.now();
+      try {
+        // The worker's own device may of course read the worker's own figures.
+        // Opening the credential here is not a leak — it is the whole point:
+        // these values go into the proof and nowhere else.
+        const hoursEntry = held.find((e) => e.type === 'WorkingHoursCredential');
+        if (hoursEntry === undefined) return { available: false as const, reason: 'NO_CREDENTIAL' };
+
+        const hoursOpen = await verifyPresentation(
+          await presentCredential(hoursEntry.credential, [
+            'totalHours',
+            'overtimeHours',
+            'commitmentSalt',
+          ]),
+          requireIssuerKey(hoursEntry.issuer),
+        );
+        const salaryOpen = await verifyPresentation(
+          await presentCredential(salaryCredential, ['depositedAmountTWD', 'commitmentSalt']),
+          requireIssuerKey(bank),
+        );
+
+        const input = {
+          totalHours: Number(hoursOpen.payload['totalHours']),
+          overtimeHours: Number(hoursOpen.payload['overtimeHours']),
+          hoursSalt: String(hoursOpen.payload['commitmentSalt']),
+          deposit: Number(salaryOpen.payload['depositedAmountTWD']),
+          salarySalt: String(salaryOpen.payload['commitmentSalt']),
+          hoursCommitment: String(hoursOpen.payload['valueCommitment']),
+          salaryCommitment: String(salaryOpen.payload['valueCommitment']),
+          legalWageRate: DEFAULT_RECONCILIATION_PARAMS.legalWageRate,
+          overtimeMultiplierBps: Math.round(
+            DEFAULT_RECONCILIATION_PARAMS.overtimeMultiplier * 10000,
+          ),
+          toleranceBps: DEFAULT_RECONCILIATION_PARAMS.toleranceBps,
+        };
+
+        // Loaded on click, not at page load: snarkjs and the proving key are
+        // 2.6 MB that most visitors never need.
+        // `import.meta.env` is Vite's; read defensively so the type does not
+        // depend on Vite client types being present in this tsconfig.
+        const base =
+          (import.meta as unknown as { env?: { BASE_URL?: string } }).env?.BASE_URL ?? '/';
+        const { groth16 } = await import('snarkjs');
+        const { proof, publicSignals } = await groth16.fullProve(
+          input,
+          `${base}zk/reconciliation.wasm`,
+          `${base}zk/reconciliation.zkey`,
+        );
+        const vkey: unknown = await (await fetch(`${base}zk/verification_key.json`)).json();
+        const verified = await groth16.verify(vkey, publicSignals, proof);
+
+        const VERDICTS = ['CONSISTENT', 'DISCREPANCY_UNDERPAID', 'DISCREPANCY_OVERPAID'] as const;
+
+        return {
+          available: true as const,
+          verdict: VERDICTS[Number(publicSignals[0])] ?? 'UNKNOWN',
+          publicSignals,
+          verified,
+          elapsedMs: Date.now() - started,
+        };
+      } catch {
+        // A missing artifact or an unsupported browser must look like "no
+        // proof", never like a passing one.
+        return { available: false as const, reason: 'PROVER_UNAVAILABLE' };
+      }
     },
 
     rbaCoverage() {

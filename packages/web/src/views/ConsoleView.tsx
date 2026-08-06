@@ -5,6 +5,7 @@ import type {
   DemoSnapshot,
   SplitView,
   VleiState,
+  ZkProofResult,
 } from '../demo/world.js';
 import { TrustChainPanel } from './TrustChainPanel.js';
 
@@ -26,6 +27,9 @@ interface Props {
     readonly verifierDid: string;
     readonly subjectCredentialHash: string;
   }[];
+  readonly zk: ZkProofResult | null;
+  readonly zkBusy: boolean;
+  readonly onProveZk: () => void;
   readonly busy: boolean;
   readonly onRevoke: () => void;
   readonly onRevokeAgent: (role: AgentRole) => void;
@@ -112,6 +116,9 @@ export function ConsoleView({
   rbaItems,
   receipts,
   revocationNotices,
+  zk,
+  zkBusy,
+  onProveZk,
   busy,
   onRevoke,
   onRevokeAgent,
@@ -401,6 +408,51 @@ export function ConsoleView({
         <p className="note" style={{ margin: '0.4rem 0 0' }}>
           這份憑證一旦被撤銷，上列每一個查驗方都會收到通知。名單由憑證雜湊反向索引產生，不含勞工識別碼。
         </p>
+      </div>
+
+      <div style={{ marginTop: '1.4rem' }}>
+        <h3 style={{ margin: '0 0 0.4rem', fontSize: '1rem' }}>
+          零知識對帳：證明一致，但不交出任何數字
+        </h3>
+        <p className="note" style={{ margin: '0 0 0.6rem' }}>
+          交叉對帳原本需要一個同時看得到工時與入帳明文的元件——那本身就是個可信第三方。
+          按下按鈕，證明會<strong>在你這台瀏覽器裡產生</strong>：工時、加班、入帳金額都不離開這台裝置，
+          品牌只收到下面那組公開訊號。
+        </p>
+        <button className="act" onClick={onProveZk} disabled={zkBusy}>
+          {zkBusy ? '產生證明中…' : '在本機產生零知識證明'}
+        </button>
+        {zk !== null && zk.available && (
+          <div style={{ marginTop: '0.7rem', fontSize: '0.85rem' }}>
+            <div>
+              結論：<strong>{zk.verdict}</strong> · 驗證{' '}
+              {zk.verified ? '通過 ✅' : '失敗 ❌'} · 耗時 {zk.elapsedMs} ms
+            </div>
+            <div style={{ marginTop: '0.4rem' }}>品牌收到的全部內容（6 個公開訊號）：</div>
+            <ol
+              style={{
+                margin: '0.3rem 0 0',
+                paddingLeft: '1.4em',
+                fontFamily: 'var(--mono)',
+                fontSize: '0.72rem',
+                wordBreak: 'break-all',
+              }}
+            >
+              {zk.publicSignals.map((sig, i) => (
+                <li key={`${sig}-${i}`}>{sig}</li>
+              ))}
+            </ol>
+            <p className="note" style={{ margin: '0.5rem 0 0' }}>
+              第 1 個是結論，第 2、3 個是憑證裡的承諾，其餘是公開參數。
+              186、42、38000 這三個數字不在其中——它們從未離開這台裝置。
+            </p>
+          </div>
+        )}
+        {zk !== null && !zk.available && (
+          <p className="note" style={{ marginTop: '0.6rem' }}>
+            證明後端不可用（{zk.reason}）。缺少後端一律視為未證明，絕不當作通過。
+          </p>
+        )}
       </div>
 
       <p className="footnote">

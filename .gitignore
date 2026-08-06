@@ -56,3 +56,8 @@ circuits/build/*
 !circuits/build/reconciliation_js/
 circuits/build/reconciliation_js/*
 !circuits/build/reconciliation_js/reconciliation.wasm
+
+# Circuit artifacts are copied into the web app's public/ by its prebuild step.
+# The source of truth is circuits/build/ — keeping a second copy in version
+# control would let the deployed prover drift from the committed circuit.
+packages/web/public/zk/

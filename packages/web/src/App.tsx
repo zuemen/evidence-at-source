@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { api, type DemoPayload } from './api.js';
+import type { ZkProofResult } from './demo/world.js';
 import { WalletView } from './views/WalletView.js';
 import { ConsoleView } from './views/ConsoleView.js';
 import { AttackIntegrityView } from './views/AttackIntegrityView.js';
@@ -13,6 +14,8 @@ export function App(): JSX.Element {
   const [busy, setBusy] = useState(false);
   const [directorOn, setDirectorOn] = useState(false);
   const [beatIndex, setBeatIndex] = useState(0);
+  const [zk, setZk] = useState<ZkProofResult | null>(null);
+  const [zkBusy, setZkBusy] = useState(false);
 
   useEffect(() => {
     void api.state().then(setPayload);
@@ -168,6 +171,15 @@ export function App(): JSX.Element {
           rbaItems={payload.rbaItems}
           receipts={payload.receipts}
           revocationNotices={payload.revocationNotices}
+          zk={zk}
+          zkBusy={zkBusy}
+          onProveZk={() => {
+            setZkBusy(true);
+            void api
+              .proveZk()
+              .then(setZk)
+              .finally(() => setZkBusy(false));
+          }}
           busy={busy}
           onRevoke={() => void run(api.revoke)}
           onRevokeAgent={(role) => void run(() => api.revokeAgent(role))}

@@ -3,7 +3,8 @@ import { readFileSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { join } from 'node:path';
 import { groth16 } from 'snarkjs';
-import { poseidonCommit } from '@eas/shared';
+import { poseidonCommit, presentCredential, verifyPresentation } from '@eas/shared';
+import { createIssuer } from '@eas/issuer';
 import { DEFAULT_RECONCILIATION_PARAMS, reconcile } from '@eas/reconciliation';
 
 const BUILD = fileURLToPath(new URL('../../../circuits/build/', import.meta.url));
@@ -150,6 +151,66 @@ describe.skipIf(!built)('the circuit agrees with reconcile() and cannot be faked
       // elements are 77-digit numbers, so "186" appears inside them by chance
       // and such a test would fail at random. The guarantee is that no private
       // figure is a public output, which is what is asserted above.
+    },
+    60_000,
+  );
+
+  test(
+    'a credential issued by the real issuer proves against the real circuit',
+    async () => {
+      // The path the browser takes: issue, open the worker's own credential to
+      // read the figures and the salt, prove. If the issuer's commitment and
+      // the circuit's Poseidon ever disagree, this is where it shows.
+      const factory = await createIssuer('did:web:factory.example');
+      const bank = await createIssuer('did:web:bank.example');
+
+      const hoursCred = await factory.issue('WorkingHoursCredential', {
+        workerDID: 'did:key:zWorker001',
+        withinRBALimit: true,
+        periodStart: '2026-08-01',
+        totalHours: 186,
+        overtimeHours: 42,
+      });
+      const salaryCred = await bank.issue('SalaryDepositCredential', {
+        workerDID: 'did:key:zWorker001',
+        periodStart: '2026-08-01',
+        periodEnd: '2026-08-31',
+        issuerType: 'BANK',
+        depositedAmountTWD: 38000,
+        depositCount: 1,
+      });
+
+      const hoursOpen = await verifyPresentation(
+        await presentCredential(hoursCred, ['totalHours', 'overtimeHours', 'commitmentSalt']),
+        factory.publicKey,
+      );
+      const salaryOpen = await verifyPresentation(
+        await presentCredential(salaryCred, ['depositedAmountTWD', 'commitmentSalt']),
+        bank.publicKey,
+      );
+
+      const { proof, publicSignals } = await groth16.fullProve(
+        {
+          totalHours: Number(hoursOpen.payload['totalHours']),
+          overtimeHours: Number(hoursOpen.payload['overtimeHours']),
+          hoursSalt: String(hoursOpen.payload['commitmentSalt']),
+          deposit: Number(salaryOpen.payload['depositedAmountTWD']),
+          salarySalt: String(salaryOpen.payload['commitmentSalt']),
+          hoursCommitment: String(hoursOpen.payload['valueCommitment']),
+          salaryCommitment: String(salaryOpen.payload['valueCommitment']),
+          legalWageRate: DEFAULT_RECONCILIATION_PARAMS.legalWageRate,
+          overtimeMultiplierBps: Math.round(
+            DEFAULT_RECONCILIATION_PARAMS.overtimeMultiplier * 10000,
+          ),
+          toleranceBps: DEFAULT_RECONCILIATION_PARAMS.toleranceBps,
+        },
+        wasm,
+        zkey,
+      );
+      const vkey: unknown = JSON.parse(readFileSync(join(BUILD, 'verification_key.json'), 'utf8'));
+
+      expect(VERDICT[Number(publicSignals[0])]).toBe('CONSISTENT');
+      expect(await groth16.verify(vkey, publicSignals, proof)).toBe(true);
     },
     60_000,
   );

@@ -8,7 +8,7 @@
  * commitment.test.ts is what catches divergence.
  */
 
-import { buildPoseidon } from 'circomlibjs';
+import type { buildPoseidon } from 'circomlibjs';
 
 type Poseidon = Awaited<ReturnType<typeof buildPoseidon>>;
 
@@ -19,7 +19,10 @@ function poseidon(): Promise<Poseidon> {
   const existing = poseidonPromise;
   if (existing !== null) return existing;
 
-  const built = buildPoseidon();
+  // Imported dynamically so the bundler splits it out. circomlibjs carries the
+  // whole circomlib runtime — statically importing it from @eas/shared pulled
+  // 2.7 MB into the main chunk of a site whose app shell is under a megabyte.
+  const built = import('circomlibjs').then((m) => m.buildPoseidon());
   poseidonPromise = built;
 
   return built;

@@ -19,6 +19,7 @@ import {
   type DemoWorld,
   type IntegrityDemoState,
   type SplitView,
+  type ZkProofResult,
   type VleiState,
 } from './demo/world.js';
 
@@ -85,6 +86,11 @@ export const api = {
     return currentPayload();
   },
   exportBundle: async (role: AgentRole) => (await worldPromise).exportAgentBundle(role),
+  /**
+   * Not part of DemoPayload: proving downloads 2.6 MB and takes a moment, so it
+   * happens when a visitor asks for it rather than on every state refresh.
+   */
+  proveZk: async (): Promise<ZkProofResult> => (await worldPromise).proveReconciliation(),
   reset: async () => {
     worldPromise = createDemoWorld();
     return currentPayload();
