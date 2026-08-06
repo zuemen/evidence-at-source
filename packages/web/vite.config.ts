@@ -100,12 +100,18 @@ export default defineConfig({
   base: './',
   plugins: [react(), demoApi()],
   resolve: {
+    // Every workspace package this app imports needs an entry here. Without
+    // one, resolution falls through to the symlink npm puts in node_modules,
+    // which exists on a developer's machine and in CI but not necessarily on a
+    // deployment host that installs from a different root — and the failure
+    // arrives as an unresolved import during `vite build`, far from its cause.
     alias: {
       '@eas/shared': r('../shared/src/index.ts'),
       '@eas/issuer': r('../issuer/src/index.ts'),
       '@eas/agents': r('../agents/src/index.ts'),
       '@eas/integrity': r('../integrity/src/index.ts'),
       '@eas/reconciliation': r('../reconciliation/src/index.ts'),
+      '@eas/vlei': r('../vlei/src/index.ts'),
     },
   },
   server: {
