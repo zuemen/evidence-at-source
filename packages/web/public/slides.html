@@ -56,10 +56,23 @@
   <p class="kicker">問題</p>
   <h2>兩個場景，同一個根因</h2>
   <ul>
-    <li><strong>80 萬移工</strong>：近三成曾受詐、估逾 17 億；離境後帳戶沒人知道，成為現成人頭帳戶。</li>
+    <li><strong>87 萬移工</strong>：近三成曾受詐、估逾 17 億；離境後帳戶沒人知道，成為現成人頭帳戶。</li>
     <li><strong>RBA 供應鏈稽核</strong>：稽核員永遠只看到工廠<strong>願意給的那一批</strong>紙本。</li>
   </ul>
   <p class="huge bar">出示權在雇主手上——<strong>勞工在自己的證據鏈裡沒有位置</strong>。</p>
+</section>
+
+<section>
+  <p class="kicker">主賽道 · Track 05</p>
+  <h2>「能被信任、又不被冒用」——逐項拆開</h2>
+  <table>
+    <tr><th>開戶障礙</th><td>四項事實勞工自持、可攜、<strong>一次出示</strong>，不必回頭跟三個單位要</td></tr>
+    <tr><th>離境變人頭</th><td>主體連動撤銷：離境＝全部憑證同時失效，<strong>其他勞工不受影響</strong></td></tr>
+    <tr><th>跨機構冒名</th><td>匿名申辦計數器只回「是否超閾」，<strong>不回申辦去向</strong>；旗標只供人審</td></tr>
+    <tr><th>能被信任</th><td>簽發者分級 T1/T2/T3＋最低層級閘門——<strong>來源本身也要被驗</strong></td></tr>
+    <tr><th>不被冒用</th><td>雙簽配對＋私鑰從未離開裝置——<strong>雇主偽造不出新的配對</strong></td></tr>
+    <tr><th>防詐不傷隱私</th><td>查得到風險、<strong>查不到人</strong>：布林／k-匿名／差分攻擊偵測</td></tr>
+  </table>
 </section>
 
 <section>
@@ -128,13 +141,36 @@
 </section>
 
 <section>
+  <p class="kicker">落地</p>
+  <h2>不需要改法規、不需要全產業同時上車</h2>
+  <ul>
+    <li><strong>先 B2B 後 B2C</strong>：先做品牌 RBA（付費方明確、已在罰），同一批勞工手上就有憑證，銀行端才有存量。</li>
+    <li><strong>掛在既有流程上</strong>：憑證是現行 KYC 的<strong>補充證據</strong>，不取代——第一階段零法規變更。</li>
+    <li><strong>第一步只有一個動作</strong>：一條產線的打卡系統多簽一個章。</li>
+  </ul>
+  <p class="bar">P1 單一產線（1–3 月）→ P2 四張憑證全開（4–6 月）→ P3 銀行分行試點（7–9 月）→ P4 跨機構可攜（10–12 月）</p>
+  <p>完整路徑、誰付錢、已知風險：<code>docs/adoption-path.md</code></p>
+</section>
+
+<section>
   <p class="kicker">可信度</p>
   <h2>不要相信我們說的任何一句話</h2>
   <ul>
-    <li><strong>237 個測試</strong>，GitHub Actions 每次 push 全跑。</li>
+    <li><strong>243 個測試</strong>，GitHub Actions 每次 push 全跑。</li>
     <li><code>npm run demo:vlei</code>——一條命令、14 步主張、<strong>exit code 0 即全數成立</strong>。</li>
     <li>全部合成資料；私鑰在瀏覽器產生、<strong>從未離開裝置</strong>；靜態站無後端。</li>
   </ul>
+</section>
+
+<section>
+  <p class="kicker">團隊</p>
+  <h2>三種能力缺一不可，我們各補一塊</h2>
+  <table>
+    <tr><th>汪　蕾</th><td><strong>團隊代表 · 介面與敘事 · 簡報統籌</strong>——廣告學系設計組；米蘭廣告戰鬥營第二名、SDGs 坎城未來獅銅牌</td></tr>
+    <tr><th>朱廷翊</th><td><strong>系統架構 · 憑證與授權設計</strong>——資管系＋AI 跨域微學程；數位發展部數位憑證競賽佳作（SSI／VC／DID × FHIR）</td></tr>
+    <tr><th>柯穎文</th><td><strong>後端工程 · 對帳與稽核邏輯</strong>——資管系；營運中商用系統的帳本恆等與每日自動對帳、AMCIS 2026 論文錄取</td></tr>
+  </table>
+  <p class="bar">這題不是臨時挑的——<strong>我們做過它的前一版</strong>：同一套 SSI／VC 路線用在醫療資料跨機構互通，本專案推進到更難的地方：<strong>憑證持有人與查驗委託人不是同一個人</strong>。</p>
 </section>
 
 <section>
