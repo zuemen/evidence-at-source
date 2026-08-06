@@ -28,6 +28,7 @@
 import { credentialHash, type ReasonCode } from '@eas/shared';
 import { SignJWT, jwtVerify, importJWK, type JWK } from 'jose';
 import type { PrivateJwk, PublicJwk } from '@eas/shared';
+import { isChainVerifiedKey, type IssuerSigningKey } from './vleiBridge.js';
 
 export const AUDIT_ENTRY_TYP = 'audit-entry+jwt';
 
@@ -76,6 +77,8 @@ export interface AuditTrailOptions {
   readonly signingKey?: PrivateJwk;
   readonly verifierDid?: string;
 }
+
+export type AuditVerifierKey = IssuerSigningKey;
 
 /**
  * Digest over the entry's content, in a fixed field order.
@@ -143,7 +146,11 @@ export type AuditVerification =
   | { readonly ok: true; readonly verifiedEntries: number; readonly sealed: boolean }
   | { readonly ok: false; readonly reason: AuditFailure; readonly atSeq: number };
 
-export type AuditFailure = 'CHAIN_BROKEN' | 'SEQUENCE_BROKEN' | 'SEAL_INVALID';
+export type AuditFailure =
+  | 'CHAIN_BROKEN'
+  | 'SEQUENCE_BROKEN'
+  | 'SEAL_INVALID'
+  | 'KEY_NOT_CHAIN_VERIFIED';
 
 /**
  * Re-derives the chain and checks every seal.
@@ -157,6 +164,16 @@ export async function verifyAuditTrail(
   exported: readonly SealedAuditEntry[],
   verifierPublicKey?: PublicJwk,
 ): Promise<AuditVerification> {
+  // Layer 1 refuses any signing key that did not arrive through a verified
+  // Legal Entity chain, and an audit trail is the one place that rule used to
+  // have an exception: a key handed in by the party being audited. Where the
+  // caller supplies a chain-verified key the provenance is checked here too,
+  // so "this record was sealed by that bank" is a claim about the chain rather
+  // than about whoever passed the argument.
+  if (verifierPublicKey !== undefined && !isChainVerifiedKey(verifierPublicKey)) {
+    return { ok: false, reason: 'KEY_NOT_CHAIN_VERIFIED', atSeq: 0 };
+  }
+
   let expectedPrev = AUDIT_GENESIS;
   let sealed = true;
 

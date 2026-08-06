@@ -1,7 +1,35 @@
 import { describe, expect, test } from 'vitest';
-import { generateKeyPair } from '@eas/shared';
-import { CREDENTIAL_LIFETIME_SECONDS } from '@eas/issuer';
-import { AUDIT_GENESIS, createAuditTrail, verifyAuditTrail } from '@eas/agents';
+import { generateKeyPair, type PublicJwk } from '@eas/shared';
+import { bootstrapEcosystem } from '@eas/vlei';
+import { CREDENTIAL_LIFETIME_SECONDS, createVleiIssuer } from '@eas/issuer';
+import {
+  AUDIT_GENESIS,
+  createAuditTrail,
+  requireIssuerSigningKey,
+  verifyAuditTrail,
+} from '@eas/agents';
+
+/**
+ * An institution whose sealing key is the one its Legal Entity credential
+ * publishes. A challenger checking these seals is checking a key that came off
+ * the chain rather than one handed over by the party being audited.
+ */
+async function sealingInstitution() {
+  const eco = bootstrapEcosystem();
+  const keyPair = await generateKeyPair();
+  const bank = await createVleiIssuer({
+    didWeb: 'did:web:bank.example',
+    legalName: '國泰世華銀行',
+    leiTag: 'BANKEXAMPLE',
+    ecosystem: eco,
+    options: { keyPair },
+  });
+
+  return {
+    privateKey: keyPair.privateKey,
+    chainKey: requireIssuerSigningKey(bank.legalEntityPresentation(), eco.trust) as PublicJwk,
+  };
+}
 
 const DECISION = {
   agentRole: 'bank',
@@ -69,52 +97,65 @@ describe('the audit trail is evidence, not a list its holder can edit (題05 Q4�
     expect(verdict).toEqual({ ok: false, reason: 'SEQUENCE_BROKEN', atSeq: 3 });
   });
 
-  test('a sealed trail verifies against the verifier public key', async () => {
-    const verifier = await generateKeyPair();
+  test('a sealed trail verifies against the key the chain publishes', async () => {
+    const institution = await sealingInstitution();
     const trail = createAuditTrail({
-      signingKey: verifier.privateKey,
+      signingKey: institution.privateKey,
       verifierDid: 'did:web:bank.example',
     });
     trail.record(DECISION);
     trail.record(DENIAL);
 
-    const verdict = await verifyAuditTrail(await trail.export(), verifier.publicKey);
+    const verdict = await verifyAuditTrail(await trail.export(), institution.chainKey);
 
     expect(verdict).toEqual({ ok: true, verifiedEntries: 2, sealed: true });
   });
 
+  test('a key that did not come off the chain is refused before anything is read', async () => {
+    // The exception this closes: everywhere else a signing key must arrive
+    // through a verified Legal Entity chain, and an audit trail was the one
+    // place a bare key handed over by the audited party would do.
+    const bare = await generateKeyPair();
+    const trail = createAuditTrail({ signingKey: bare.privateKey });
+    trail.record(DECISION);
+
+    const verdict = await verifyAuditTrail(await trail.export(), bare.publicKey);
+
+    expect(verdict).toEqual({ ok: false, reason: 'KEY_NOT_CHAIN_VERIFIED', atSeq: 0 });
+  });
+
   test('a seal from the wrong key is refused', async () => {
-    const verifier = await generateKeyPair();
+    const institution = await sealingInstitution();
     const impostor = await generateKeyPair();
     const trail = createAuditTrail({ signingKey: impostor.privateKey });
     trail.record(DECISION);
 
-    const verdict = await verifyAuditTrail(await trail.export(), verifier.publicKey);
+    const verdict = await verifyAuditTrail(await trail.export(), institution.chainKey);
 
     expect(verdict).toEqual({ ok: false, reason: 'SEAL_INVALID', atSeq: 1 });
   });
 
   test('editing a sealed entry is caught even when the chain is rebuilt around it', async () => {
     // A determined holder can recompute the chain. They cannot re-sign it.
-    const verifier = await generateKeyPair();
-    const trail = createAuditTrail({ signingKey: verifier.privateKey });
+    const institution = await sealingInstitution();
+    const trail = createAuditTrail({ signingKey: institution.privateKey });
     trail.record(DENIAL);
     const exported = [...(await trail.export())];
     const only = exported[0];
     if (only === undefined) throw new Error('expected one entry');
 
     exported[0] = { ...only, entry: { ...only.entry, decision: 'ALLOW' } };
-    const verdict = await verifyAuditTrail(exported, verifier.publicKey);
+    const verdict = await verifyAuditTrail(exported, institution.chainKey);
 
     expect(verdict).toEqual({ ok: false, reason: 'SEAL_INVALID', atSeq: 1 });
   });
 
   test('an unsealed trail reports itself as unsealed rather than passing quietly', async () => {
-    const verifier = await generateKeyPair();
+    const institution = await sealingInstitution();
     const trail = createAuditTrail();
     trail.record(DECISION);
 
-    const verdict = await verifyAuditTrail(await trail.export(), verifier.publicKey);
+    const verdict = await verifyAuditTrail(await trail.export(), institution.chainKey);
 
     expect(verdict).toEqual({ ok: true, verifiedEntries: 1, sealed: false });
   });

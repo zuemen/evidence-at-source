@@ -47,6 +47,8 @@ import {
   createBrandAgent,
   createGroth16Verifier,
   createQuerySession,
+  verifyAuditTrail,
+  type AuditVerification,
   requireIssuerSigningKey,
   verifyReconciliationProof,
   type IssuerSigningKey,
@@ -282,6 +284,12 @@ export interface DemoWorld {
   exportAgentBundle(role: AgentRole): string;
   /** Every gate decision so far: layer, verdict, reason, authorization basis. */
   auditLog(): readonly AuditEntry[];
+  /**
+   * 題06 Q4: the trail as a challenger receives it, re-checked the way a
+   * challenger would — hash chain re-derived, every seal verified against the
+   * bank's key as published on the vLEI chain.
+   */
+  auditIntegrity(): Promise<AuditVerification>;
   delegationState(): Promise<DelegationState>;
   split(): Promise<SplitView>;
   /** 題06 Q3 shown as a list rather than buried in a test. */
@@ -420,11 +428,18 @@ export async function createDemoWorld(): Promise<DemoWorld> {
 
   // Institutions that empower the two verifying agents, and the delegations they
   // grant. Agent authority is separate from worker-credential revocation.
+  // One key pair, published on the chain inside the bank's Legal Entity
+  // credential and used to seal its audit trail. A challenger checking those
+  // seals then checks a key that came off the chain, not one handed over by
+  // the institution being audited — the last place in the system where a
+  // signing key did not have to prove where it came from.
+  const bankKeys = await generateKeyPair();
   const bank = await createVleiIssuer({
     didWeb: 'did:web:bank.example',
     legalName: '國泰世華銀行',
     leiTag: 'BANKEXAMPLE',
     ecosystem: eco,
+    options: { keyPair: bankKeys },
   });
   const brand = await createVleiIssuer({
     didWeb: 'did:web:brand.example',
@@ -520,9 +535,8 @@ export async function createDemoWorld(): Promise<DemoWorld> {
   // Audit trail: who asked, what the gate decided, and on whose authority.
   // Sealed with the verifier's own key so the exported trail is something a
   // challenger can check, rather than a list this page could have written.
-  const auditor = await generateKeyPair();
   const audit = createAuditTrail({
-    signingKey: auditor.privateKey,
+    signingKey: bankKeys.privateKey,
     verifierDid: 'did:web:bank.example',
   });
   const bankBasis = {
@@ -787,6 +801,13 @@ export async function createDemoWorld(): Promise<DemoWorld> {
 
     exportAgentBundle(role) {
       return exportChainArtifacts(role === 'bank' ? bankAgentVlei : brandAgentVlei, eco.trust);
+    },
+
+    async auditIntegrity() {
+      return verifyAuditTrail(
+        await audit.export(),
+        requireIssuerKey(bank) as unknown as PublicJwk,
+      );
     },
 
     auditLog() {

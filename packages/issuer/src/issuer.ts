@@ -15,6 +15,7 @@ import {
   type AllowedQueryType,
   type CredentialType,
   type IssuerTier,
+  type PrivateJwk,
   type PublicJwk,
 } from '@eas/shared';
 import type { Ecosystem, LegalEntityHandle, VleiPresentation } from '@eas/vlei';
@@ -66,6 +67,15 @@ export interface IssuerOptions {
   readonly verifiedBy?: string;
   /** GS1 or equivalent facility identifier this issuer's records belong to. */
   readonly facilityId?: string;
+  /**
+   * Use this key pair instead of generating one.
+   *
+   * The point is not convenience: it lets an institution seal its audit trail
+   * with the same key its Legal Entity credential publishes, so a challenger
+   * checking those seals is checking a key that came off the chain rather than
+   * one handed to them by the party being audited.
+   */
+  readonly keyPair?: { readonly privateKey: PrivateJwk; readonly publicKey: PublicJwk };
 }
 
 export interface DelegationGrant {
@@ -124,7 +134,7 @@ async function commitmentFieldsFor(
 }
 
 export async function createIssuer(did: string, options: IssuerOptions = {}): Promise<Issuer> {
-  const { privateKey, publicKey } = await generateKeyPair();
+  const { privateKey, publicKey } = options.keyPair ?? (await generateKeyPair());
   const overrideLifetime = options.credentialLifetimeSeconds;
   const tier: IssuerTier = options.tier ?? 'SELF_DECLARED';
   const { verifiedBy, facilityId } = options;

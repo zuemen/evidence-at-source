@@ -36,3 +36,17 @@ describe('demo world — identity binding panel', () => {
     expect(JSON.stringify(identity)).not.toContain('anchor-salt');
   });
 });
+
+describe('demo world — the audit trail verifies against the chain (題06 Q4)', () => {
+  test('a challenger can re-derive the whole trail using only the chain key', async () => {
+    const world = await createDemoWorld();
+    await world.attestAll();
+    await world.split();
+
+    const verdict = await world.auditIntegrity();
+
+    expect(verdict.ok).toBe(true);
+    expect(verdict.ok === true && verdict.sealed).toBe(true);
+    expect(verdict.ok === true && verdict.verifiedEntries).toBeGreaterThan(0);
+  });
+});
