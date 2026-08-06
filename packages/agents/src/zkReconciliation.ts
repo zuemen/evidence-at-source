@@ -1,18 +1,29 @@
 /**
  * ZK reconciliation binding (Phase 4).
  *
- * The circuit itself is DOWNGRADED: this environment has no circom/Rust
- * toolchain, so the zero-knowledge proof is not wired to a real circuit. What is
- * real, and what the spec calls the security-critical part ("省略此步驟，整個證明
- * 失去意義"), is the *binding* between a proof and the credentials it claims to be
- * about. A proof over arbitrary numbers is worthless unless it is tied to
- * specific, valid, unrevoked credentials for one worker — that binding is
- * implemented and tested here in full.
+ * The circuit is real (circom + Groth16, see `circuits/`). What this module
+ * adds is the part that makes a proof mean anything: the **binding** between a
+ * proof and the credentials it claims to be about. A proof that some numbers
+ * reconcile is worthless on its own — it has to be tied to specific, valid,
+ * unrevoked credentials belonging to one worker, and to the numbers those
+ * credentials actually committed to.
  *
- * The proof math is behind an injected `verifyProof`. Wiring a real circuit means
- * supplying a `verifyProof` backed by a verifier (e.g. snarkjs) — nothing else in
- * this function changes. The default stub refuses, so a missing backend can never
- * be mistaken for a valid proof.
+ * Six checks, each of which alone would leave a hole:
+ *
+ *   1. The proof verifies against the circuit's verification key.
+ *   2. The hours credential is genuine, unrevoked, and is the one whose hash
+ *      the prover named.
+ *   3. The same for the salary credential.
+ *   4. Both credentials name the same worker — otherwise two people's numbers
+ *      could be reconciled against each other.
+ *   5. The commitments the circuit proved preimages of are the commitments
+ *      inside those two credentials. Without this the prover could open any
+ *      pair of commitments while presenting an unrelated pair of credentials.
+ *   6. The verdict the caller reports is the verdict the circuit emitted.
+ *
+ * The proof math sits behind an injected `verifyProof`, and the default stub
+ * refuses: a caller with no verification key has proved nothing, and nothing
+ * must never look like success.
  *
  * Circuit design and the M7 role change are documented in docs/zk-reconciliation.md.
  */
@@ -100,7 +111,9 @@ async function checkBinding(
   credential: BoundCredential,
   expectedHash: string,
   revocations: RevocationRegistry | undefined,
-): Promise<{ ok: true; workerDID: unknown } | { ok: false; reason: ReasonCode }> {
+): Promise<
+  { ok: true; workerDID: unknown; valueCommitment: unknown } | { ok: false; reason: ReasonCode }
+> {
   const decision = await checkCredentialLayer({
     presentation: credential.presentation,
     attestation: credential.attestation,
@@ -117,7 +130,11 @@ async function checkBinding(
     return { ok: false, reason: 'PROOF_BINDING_MISMATCH' };
   }
 
-  return { ok: true, workerDID: decision.payload['workerDID'] };
+  return {
+    ok: true,
+    workerDID: decision.payload['workerDID'],
+    valueCommitment: decision.payload['valueCommitment'],
+  };
 }
 
 export async function verifyReconciliationProof(
@@ -148,6 +165,28 @@ export async function verifyReconciliationProof(
   // Check 4 — both credentials name the same worker.
   if (hoursBinding.workerDID !== salaryBinding.workerDID) {
     return { ok: false, reason: 'PROOF_SUBJECT_MISMATCH' };
+  }
+
+  // Checks 5 & 6 — the circuit's own public signals, read in circuit order:
+  // [verdict, hoursCommitment, salaryCommitment, rate, overtimeBps, tolerance].
+  //
+  // Without check 5 the prover could open any pair of commitments while
+  // presenting an unrelated pair of credentials, and checks 2–4 would all
+  // still pass: they establish that the credentials are real, not that they
+  // are the ones the proof is about. Without check 6 a caller could report
+  // CONSISTENT over a proof whose verdict said the opposite.
+  const signals = input.publicSignals.circuitSignals;
+  if (signals !== undefined) {
+    if (
+      signals[1] !== String(hoursBinding.valueCommitment) ||
+      signals[2] !== String(salaryBinding.valueCommitment)
+    ) {
+      return { ok: false, reason: 'PROOF_COMMITMENT_MISMATCH' };
+    }
+
+    if ((signals[0] === '0') !== input.publicSignals.consistent) {
+      return { ok: false, reason: 'PROOF_VERDICT_MISMATCH' };
+    }
   }
 
   return { ok: true, consistent: input.publicSignals.consistent };

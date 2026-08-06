@@ -51,6 +51,6 @@ Agent 授權、撤 vLEI 鏈上游（GLEIF 撤 QVI 即全生態失效，TEL 事�
 
 ---
 
-**總驗證**：GitHub Actions 每次 push 跑 301 個測試＋`npm run demo:vlei`（14 步主張，
+**總驗證**：GitHub Actions 每次 push 跑 304 個測試＋`npm run demo:vlei`（14 步主張，
 exit code 0 即全數成立）；線上 demo <https://zuemen.github.io/evidence-at-source/>，
 全部合成資料、無後端、私鑰不離開瀏覽器。

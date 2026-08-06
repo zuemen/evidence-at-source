@@ -191,7 +191,13 @@ flowchart TD
 
 ## 錢包端 ZK 對帳（Phase 4）
 
-交叉驗證的 M7 有一個弱點：它是唯一同時看得到兩張憑證明文的元件，等於可信第三方。ZK 版本讓**勞工在自己裝置上**證明「工時與入帳一致」，驗證方只收到布林結論，看不到任何數字。其中最關鍵、最容易漏掉的是**憑證綁定**——一個對任意數字的證明毫無意義，必須綁定到特定、有效、未撤銷、同一勞工的兩張憑證。這**四項綁定檢查已完整實作並各有測試**（[`packages/agents/src/zkReconciliation.ts`](packages/agents/src/zkReconciliation.ts)），M7 的新角色從不接觸明文。
+交叉驗證的 M7 有一個弱點：它是唯一同時看得到兩張憑證明文的元件，等於可信第三方。ZK 版本讓**勞工在自己裝置上**證明「工時與入帳一致」，驗證方只收到布林結論，看不到任何數字。
+
+其中最關鍵、最容易漏掉的是**憑證綁定**——一個對任意數字的證明毫無意義。**六項檢查，每一項單獨拿掉都留下一個洞**：①證明本身對驗證金鑰成立；②工時憑證真實、未撤銷、且就是宣告的那張；③薪資憑證同上；④兩張屬於同一位勞工；⑤**電路打開的承諾就是這兩張憑證裡的承諾**；⑥回報的結論就是電路輸出的結論。
+
+第 ⑤ 項補的是最隱蔽的洞：②③④只證明「這兩張憑證是真的」，不證明「證明是關於它們的」——少了它，任何人都能用自己知道原像的一組承諾，配上兩張真實但無關的憑證蒙混過關。實作與測試見 [`packages/agents/src/zkReconciliation.ts`](packages/agents/src/zkReconciliation.ts)、[`packages/agents/test/zkReconciliation.test.ts`](packages/agents/test/zkReconciliation.test.ts)。
+
+**線上 demo 的按鈕走的就是這條路徑**（`verifyReconciliationProof` ＋ `createGroth16Verifier`），不是只呼叫 `groth16.verify`——畫面上那個勾代表六項全過，任一項失敗會直接把原因碼顯示出來。
 
 **電路已接上**（circom 2.2.3 ＋ Groth16）。承諾綁定讓數值層級的主張第一次成立：簽發方在簽發當下把數值雜湊進憑證的 `valueCommitment`，電路必須證明它知道符合該承諾的原像——「證明的是**這張憑證裡**的數字」不再是要求別人相信的事。
 
@@ -323,7 +329,7 @@ npx vite preview --port 4173          # 本機預覽靜態站
 
 ```bash
 npm install      # 於 repo 根目錄，安裝 workspace 依賴
-npm test         # vitest，目前 301 個測試全綠
+npm test         # vitest，目前 304 個測試全綠
 npm run typecheck
 ```
 
@@ -424,7 +430,7 @@ Agent A 的能力邊界也寫在型別裡：`BankAssessment.requiresHumanReview`
 | 交件 | 位置 |
 |---|---|
 | 挑戰命題 | **Track 05（主賽道）＋ Track 06（加分題）**——主辦載明命題 06 為 Track 01 延伸的加分題、可與其他命題同時挑戰，本作品同時交付兩軌，對照見上 |
-| 程式碼 | 本 repo（CI 每次 push 跑 301 tests + `demo:vlei` 閘門） |
+| 程式碼 | 本 repo（CI 每次 push 跑 304 tests + `demo:vlei` 閘門） |
 | 簡報 | <https://zuemen.github.io/evidence-at-source/slides.html>（←→ 翻頁） |
 | Demo | <https://zuemen.github.io/evidence-at-source/>（免安裝）＋[講稿](docs/demo-video-script.md) |
 | 治理／信任設計說明 | [`docs/governance-memo.md`](docs/governance-memo.md)（六信任點逐點＋證據） |

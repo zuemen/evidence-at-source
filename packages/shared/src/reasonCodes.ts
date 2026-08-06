@@ -60,6 +60,10 @@ export const REASON_CODES = [
   'PROOF_INVALID',
   'PROOF_BINDING_MISMATCH',
   'PROOF_SUBJECT_MISMATCH',
+  // The circuit opened commitments that are not the ones inside the presented
+  // credentials, or reported a verdict the caller then contradicted.
+  'PROOF_COMMITMENT_MISMATCH',
+  'PROOF_VERDICT_MISMATCH',
 ] as const;
 
 export type ReasonCode = (typeof REASON_CODES)[number];

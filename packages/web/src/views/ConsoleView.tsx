@@ -428,6 +428,19 @@ export function ConsoleView({
               結論：<strong>{zk.verdict}</strong> · 驗證{' '}
               {zk.verified ? '通過 ✅' : '失敗 ❌'} · 耗時 {zk.elapsedMs} ms
             </div>
+            <p className="note" style={{ margin: '0.35rem 0 0' }}>
+              這個勾不是「數學算對了」而已。通過的是<strong>六項綁定檢查</strong>：證明本身有效、
+              兩張憑證各自真實且未撤銷、雜湊與宣告相符、兩張屬於同一位勞工、
+              <strong>電路打開的承諾就是這兩張憑證裡的承諾</strong>、以及回報的結論與電路輸出一致。
+              少了倒數第二項，任何人都能用「別人的數字」配上「真的憑證」蒙混過關。
+              {zk.bindingReason !== null && (
+                <>
+                  {' '}
+                  本次未通過的是：
+                  <code style={{ fontFamily: 'var(--mono)' }}>{zk.bindingReason}</code>。
+                </>
+              )}
+            </p>
             <div style={{ marginTop: '0.4rem' }}>品牌收到的全部內容（6 個公開訊號）：</div>
             <ol
               style={{

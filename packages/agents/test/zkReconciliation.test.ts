@@ -5,6 +5,7 @@ import {
   credentialHash,
   generateKeyPair,
   presentCredential,
+  verifyPresentation,
 } from '@eas/shared';
 import {
   verifyReconciliationProof,
@@ -67,7 +68,28 @@ async function scenario(workerDIDs: { hours: string; salary: string } = { hours:
 
 const acceptProof = () => true;
 
-describe('ZK reconciliation binding (Phase 4, circuit downgraded)', () => {
+/** The circuit's public signals, in circuit order, for a given pair. */
+async function circuitSignalsFor(
+  hours: Awaited<ReturnType<typeof boundCredential>>,
+  salary: Awaited<ReturnType<typeof boundCredential>>,
+  verdict: '0' | '1' | '2' = '0',
+): Promise<readonly string[]> {
+  const hoursPayload = (await verifyPresentation(hours.presentation, hours.issuerPublicKey))
+    .payload;
+  const salaryPayload = (await verifyPresentation(salary.presentation, salary.issuerPublicKey))
+    .payload;
+
+  return [
+    verdict,
+    String(hoursPayload['valueCommitment']),
+    String(salaryPayload['valueCommitment']),
+    '190',
+    '13400',
+    '1500',
+  ];
+}
+
+describe('ZK reconciliation binding (Phase 4)', () => {
   test('binding check 1: an invalid proof is rejected', async () => {
     const { hours, salary, publicSignals } = await scenario();
 
@@ -147,5 +169,61 @@ describe('ZK reconciliation binding (Phase 4, circuit downgraded)', () => {
 
     expect(result.ok).toBe(true);
     expect(result.ok === true && result.consistent).toBe(true);
+  });
+
+  test('binding check 5: the circuit must have opened these credentials commitments', async () => {
+    // The hole this closes: checks 2–4 establish that the credentials are real,
+    // not that the proof is about them. Without this, a prover opens any pair
+    // of commitments they know the preimages of while presenting a genuine,
+    // unrelated pair of credentials — and everything else still passes.
+    const { hours, salary, publicSignals } = await scenario();
+
+    const result = await verifyReconciliationProof({
+      proof: {},
+      publicSignals: {
+        ...publicSignals,
+        circuitSignals: ['0', '111111', '222222', '190', '13400', '1500'],
+      },
+      hours,
+      salary,
+      verifyProof: acceptProof,
+    });
+
+    expect(result.ok === false && result.reason).toBe('PROOF_COMMITMENT_MISMATCH');
+  });
+
+  test('binding check 6: a caller cannot report CONSISTENT over a discrepant proof', async () => {
+    const { hours, salary, publicSignals } = await scenario();
+
+    const result = await verifyReconciliationProof({
+      // Verdict 2 is DISCREPANCY_OVERPAID; the caller claims consistent: true.
+      publicSignals: {
+        ...publicSignals,
+        circuitSignals: await circuitSignalsFor(hours, salary, '2'),
+      },
+      proof: {},
+      hours,
+      salary,
+      verifyProof: acceptProof,
+    });
+
+    expect(result.ok === false && result.reason).toBe('PROOF_VERDICT_MISMATCH');
+  });
+
+  test('matching commitments and a matching verdict pass all six checks', async () => {
+    const { hours, salary, publicSignals } = await scenario();
+
+    const result = await verifyReconciliationProof({
+      proof: {},
+      publicSignals: {
+        ...publicSignals,
+        circuitSignals: await circuitSignalsFor(hours, salary),
+      },
+      hours,
+      salary,
+      verifyProof: acceptProof,
+    });
+
+    expect(result.ok).toBe(true);
   });
 });

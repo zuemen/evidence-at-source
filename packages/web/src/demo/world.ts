@@ -43,8 +43,10 @@ import {
   createApplicationMonitor,
   createBankAgent,
   createBrandAgent,
+  createGroth16Verifier,
   createQuerySession,
   requireIssuerSigningKey,
+  verifyReconciliationProof,
   type IssuerSigningKey,
   runAuthorizedGate,
   verifyDelegationValidity,
@@ -244,7 +246,10 @@ export type ZkProofResult =
       readonly available: true;
       readonly verdict: string;
       readonly publicSignals: readonly string[];
+      /** True only when all six binding checks passed, not merely the maths. */
       readonly verified: boolean;
+      /** Which binding check refused, when one did. */
+      readonly bindingReason: ReasonCode | null;
       readonly elapsedMs: number;
     }
   | { readonly available: false; readonly reason: string };
@@ -548,6 +553,15 @@ export async function createDemoWorld(): Promise<DemoWorld> {
     issuerType: 'BANK',
     depositedAmountTWD: 38000,
     depositCount: 1,
+  });
+  // Counter-signed like every other credential: the reconciliation proof binds
+  // to credentials that passed the whole of layer 1, and an un-attested one
+  // does not — which is exactly why the proof panel refuses before the worker
+  // has signed anything.
+  const salaryAttestation = await createWorkerAttestation(workerKeys.privateKey, {
+    workerDID: WORKER_DID,
+    credential: salaryCredential,
+    deviceFingerprint: DEVICE,
   });
 
   // Five more workers, one of them over the limit, so the cohort clears k=5.
@@ -986,15 +1000,53 @@ export async function createDemoWorld(): Promise<DemoWorld> {
           `${base}zk/reconciliation.zkey`,
         );
         const vkey: unknown = await (await fetch(`${base}zk/verification_key.json`)).json();
-        const verified = await groth16.verify(vkey, publicSignals, proof);
 
+        // Not groth16.verify directly. Verifying the maths alone establishes
+        // that *some* numbers reconcile — the claim this project actually
+        // makes is that they are the numbers inside these two credentials,
+        // belonging to this one worker, neither of them revoked. That is what
+        // verifyReconciliationProof checks, and routing the demo through it is
+        // the difference between a button that shows a proof and a button that
+        // shows the guarantee.
         const VERDICTS = ['CONSISTENT', 'DISCREPANCY_UNDERPAID', 'DISCREPANCY_OVERPAID'] as const;
+        const verdict = VERDICTS[Number(publicSignals[0])] ?? 'UNKNOWN';
+        const hoursPresentation = await presentCredential(hoursEntry.credential, [
+          'withinRBALimit',
+        ]);
+        const salaryPresentation = await presentCredential(salaryCredential, ['periodStart']);
+        const bound = await verifyReconciliationProof({
+          proof,
+          publicSignals: {
+            hoursCredentialHash: credentialHash(hoursPresentation),
+            salaryCredentialHash: credentialHash(salaryPresentation),
+            legalWageRate: DEFAULT_RECONCILIATION_PARAMS.legalWageRate,
+            overtimeMultiplier: DEFAULT_RECONCILIATION_PARAMS.overtimeMultiplier,
+            toleranceBps: DEFAULT_RECONCILIATION_PARAMS.toleranceBps,
+            consistent: verdict === 'CONSISTENT',
+            circuitSignals: publicSignals,
+          },
+          hours: {
+            presentation: hoursPresentation,
+            attestation: hoursEntry.attestation ?? '',
+            issuerPublicKey: requireIssuerKey(hoursEntry.issuer),
+            workerPublicKey: workerKeys.publicKey,
+          },
+          salary: {
+            presentation: salaryPresentation,
+            attestation: salaryAttestation,
+            issuerPublicKey: requireIssuerKey(bank),
+            workerPublicKey: workerKeys.publicKey,
+          },
+          revocations,
+          verifyProof: createGroth16Verifier(vkey),
+        });
 
         return {
           available: true as const,
-          verdict: VERDICTS[Number(publicSignals[0])] ?? 'UNKNOWN',
+          verdict,
           publicSignals,
-          verified,
+          verified: bound.ok,
+          bindingReason: bound.ok ? null : bound.reason,
           elapsedMs: Date.now() - started,
         };
       } catch {
