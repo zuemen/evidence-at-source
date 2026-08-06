@@ -131,6 +131,50 @@ describe('public documents state only true things about this repository', () => 
     expect(claims).toEqual([]);
   });
 
+  test('the demo script never runs past five minutes', async () => {
+    // A five-minute pitch is a hard wall. The script's own timings are the only
+    // place that constraint is written down, so they are asserted rather than
+    // trusted — a section added without adjusting the clock would otherwise be
+    // discovered on stage.
+    const script = await readFile(join(REPO_ROOT, 'docs/demo-video-script.md'), 'utf8');
+    const spans = [...script.matchAll(/^## (\d):(\d{2})[–-](\d):(\d{2})/gm)].map((m) => ({
+      from: Number(m[1]) * 60 + Number(m[2]),
+      to: Number(m[3]) * 60 + Number(m[4]),
+    }));
+
+    expect(spans.length, 'the script has no timed sections').toBeGreaterThan(5);
+    expect(spans[spans.length - 1]?.to).toBeLessThanOrEqual(300);
+
+    const gaps: string[] = [];
+    for (const [index, span] of spans.entries()) {
+      const previous = spans[index - 1];
+      if (previous !== undefined && previous.to !== span.from) {
+        gaps.push(`${previous.to}s → ${span.from}s`);
+      }
+    }
+
+    expect(gaps, 'the script has gaps or overlaps in its timeline').toEqual([]);
+  });
+
+  test('every director beat the script sends a presenter to actually exists', async () => {
+    const script = await readFile(join(REPO_ROOT, 'docs/demo-video-script.md'), 'utf8');
+    const source = await readFile(
+      join(REPO_ROOT, 'packages/web/src/demo/directorScript.ts'),
+      'utf8',
+    );
+    const beatCount = (source.match(/^    id: '/gm) ?? []).length;
+
+    const referenced = [...script.matchAll(/一鍵導覽第 ([\d、]+) 幕/g)].flatMap((match) =>
+      (match[1] ?? '').split('、').map(Number),
+    );
+
+    expect(beatCount, 'no beats found in the director script').toBeGreaterThan(0);
+    expect(
+      referenced.filter((beat) => beat < 1 || beat > beatCount),
+      'the script points at beats that do not exist',
+    ).toEqual([]);
+  });
+
   test('every repository path the README points at resolves to a real file', async () => {
     const markdown = await readFile(join(REPO_ROOT, 'README.md'), 'utf8');
     const unresolved = referencedPaths(markdown).filter(

@@ -1,5 +1,10 @@
 import { describe, expect, test } from 'vitest';
-import { DIRECTOR_BEATS, type DirectorBeat } from '../src/demo/directorScript.js';
+import {
+  DIRECTOR_BEATS,
+  type DirectorAction,
+  type DirectorBeat,
+} from '../src/demo/directorScript.js';
+import { createDemoWorld } from '@eas/web';
 
 describe('director script', () => {
   test('has an ordered set of beats covering all three tabs', () => {
@@ -25,12 +30,52 @@ describe('director script', () => {
     }
   });
 
-  test('actions are drawn only from the known action set', () => {
-    const known = new Set(['reset', 'attestAll', 'revoke', 'revokeAgentBank', 'revokeQvi']);
+  test('every action a beat declares is one the world can actually perform', async () => {
+    // Stronger than checking the strings against a list: the list and the world
+    // could drift apart, and the failure would only show up in front of judges.
+    const world = await createDemoWorld();
+    const runnable: Record<DirectorAction, () => unknown> = {
+      reset: () => undefined,
+      attestAll: () => world.attestAll(),
+      revoke: () => world.revokeSubject(),
+      revokeAgentBank: () => world.revokeAgentDelegation('bank'),
+      revokeQvi: () => world.revokeQvi(),
+      attemptBrokerWallet: () => world.attemptBrokerWallet(),
+      revokeAuditor: () => world.revokeAuditor(),
+      revokeReviewer: () => world.revokeReviewer(),
+    };
+
     for (const beat of DIRECTOR_BEATS) {
       for (const action of beat.actions) {
-        expect(known.has(action)).toBe(true);
+        expect(typeof runnable[action], `beat ${beat.id} declares ${action}`).toBe('function');
+        await runnable[action]();
       }
+    }
+  });
+
+  test('this weeks capabilities each appear in the arc', () => {
+    // Named individually rather than counted: a count still passes if one is
+    // dropped and another duplicated.
+    const ids = new Set(DIRECTOR_BEATS.map((beat) => beat.id));
+
+    for (const id of ['one-wallet', 'zk-proof', 'governance', 'auditor-struck-off', 'reviewer-left']) {
+      expect(ids.has(id), `the arc has no beat for ${id}`).toBe(true);
+    }
+  });
+
+  test('the narration names the worker and the system never does', async () => {
+    // The story needs a person; the credentials must not carry one. Stating
+    // either half without the other would be the usual lie.
+    const world = await createDemoWorld();
+    const narration = DIRECTOR_BEATS.map((beat) => beat.narration).join('');
+
+    expect(narration).toContain('Andi');
+    expect(JSON.stringify(world.snapshot())).not.toContain('Andi');
+  });
+
+  test('every beat carries narration a presenter can read aloud', () => {
+    for (const beat of DIRECTOR_BEATS) {
+      expect(beat.narration.length, `beat ${beat.id} is too thin to narrate`).toBeGreaterThan(60);
     }
   });
 

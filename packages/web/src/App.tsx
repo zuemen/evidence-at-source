@@ -40,6 +40,9 @@ export function App(): JSX.Element {
       else if (action === 'revoke') latest = await api.revoke();
       else if (action === 'revokeAgentBank') latest = await api.revokeAgent('bank');
       else if (action === 'revokeQvi') latest = await api.revokeQvi();
+      else if (action === 'attemptBrokerWallet') latest = await api.attemptBrokerWallet();
+      else if (action === 'revokeAuditor') latest = await api.revokeAuditor();
+      else if (action === 'revokeReviewer') latest = await api.revokeReviewer();
     }
     return latest ?? (await api.state());
   }, []);
