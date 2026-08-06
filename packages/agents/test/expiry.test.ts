@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'vitest';
 import { createWorkerAttestation, generateKeyPair, presentCredential } from '@eas/shared';
-import { createIssuer } from '@eas/issuer';
 import { checkCredentialLayer } from '@eas/agents';
+import { setupIssuerWorld } from './helpers/vleiWorld.js';
 
 const WORKER_DID = 'did:key:zWorker001';
 
@@ -14,10 +14,10 @@ const CLAIMS = {
 } as const;
 
 async function present(lifetimeSeconds?: number) {
-  const factory = await createIssuer(
-    'did:web:factory.example',
+  const world = await setupIssuerWorld(
     lifetimeSeconds === undefined ? undefined : { credentialLifetimeSeconds: lifetimeSeconds },
   );
+  const factory = world.issuer;
   const worker = await generateKeyPair();
 
   const credential = await factory.issue('WorkingHoursCredential', { ...CLAIMS });
@@ -28,7 +28,7 @@ async function present(lifetimeSeconds?: number) {
   });
 
   return {
-    factory,
+    issuerKey: world.issuerKey,
     worker,
     attestation,
     presentation: await presentCredential(credential, ['withinRBALimit', 'periodStart']),
@@ -37,12 +37,12 @@ async function present(lifetimeSeconds?: number) {
 
 describe('credential expiry', () => {
   test('issued credentials carry an expiry a year out by default', async () => {
-    const { factory, worker, attestation, presentation } = await present();
+    const { issuerKey, worker, attestation, presentation } = await present();
 
     const decision = await checkCredentialLayer({
       presentation,
       attestation,
-      issuerPublicKey: factory.publicKey,
+      issuerPublicKey: issuerKey,
       workerPublicKey: worker.publicKey,
       requiredClaims: ['withinRBALimit'],
     });
@@ -55,12 +55,12 @@ describe('credential expiry', () => {
   });
 
   test('the credential layer refuses a credential that has already expired', async () => {
-    const { factory, worker, attestation, presentation } = await present(-10);
+    const { issuerKey, worker, attestation, presentation } = await present(-10);
 
     const decision = await checkCredentialLayer({
       presentation,
       attestation,
-      issuerPublicKey: factory.publicKey,
+      issuerPublicKey: issuerKey,
       workerPublicKey: worker.publicKey,
       requiredClaims: ['withinRBALimit'],
     });

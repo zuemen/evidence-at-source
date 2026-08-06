@@ -6,7 +6,7 @@ import {
   generateKeyPair,
   presentCredential,
 } from '@eas/shared';
-import { createIssuer } from '@eas/issuer';
+import { setupIssuerWorld } from './helpers/vleiWorld.js';
 import { checkCredentialLayer } from '@eas/agents';
 
 const WORKER_DID = 'did:key:zWorker001';
@@ -20,7 +20,8 @@ const CLAIMS = {
 } as const;
 
 async function present(workerDID: string = WORKER_DID) {
-  const factory = await createIssuer('did:web:factory.example');
+  const world = await setupIssuerWorld();
+  const factory = world.issuer;
   const worker = await generateKeyPair();
 
   const credential = await factory.issue('WorkingHoursCredential', { ...CLAIMS, workerDID });
@@ -31,7 +32,7 @@ async function present(workerDID: string = WORKER_DID) {
   });
 
   return {
-    factory,
+    issuerKey: world.issuerKey,
     worker,
     attestation,
     presentation: await presentCredential(credential, ['withinRBALimit', 'periodStart']),
@@ -40,7 +41,7 @@ async function present(workerDID: string = WORKER_DID) {
 
 describe('revocation', () => {
   test('a revoked credential is refused by the credential layer', async () => {
-    const { factory, worker, attestation, presentation } = await present();
+    const { issuerKey, worker, attestation, presentation } = await present();
     const revocations = createRevocationRegistry();
 
     revocations.revokeCredential(credentialHash(presentation));
@@ -48,7 +49,7 @@ describe('revocation', () => {
     const decision = await checkCredentialLayer({
       presentation,
       attestation,
-      issuerPublicKey: factory.publicKey,
+      issuerPublicKey: issuerKey,
       workerPublicKey: worker.publicKey,
       requiredClaims: ['withinRBALimit'],
       revocations,
@@ -69,7 +70,7 @@ describe('revocation', () => {
     const decision = await checkCredentialLayer({
       presentation: hours.presentation,
       attestation: hours.attestation,
-      issuerPublicKey: hours.factory.publicKey,
+      issuerPublicKey: hours.issuerKey,
       workerPublicKey: hours.worker.publicKey,
       requiredClaims: ['withinRBALimit'],
       revocations,
@@ -88,7 +89,7 @@ describe('revocation', () => {
     const decision = await checkCredentialLayer({
       presentation: other.presentation,
       attestation: other.attestation,
-      issuerPublicKey: other.factory.publicKey,
+      issuerPublicKey: other.issuerKey,
       workerPublicKey: other.worker.publicKey,
       requiredClaims: ['withinRBALimit'],
       revocations,
@@ -98,12 +99,12 @@ describe('revocation', () => {
   });
 
   test('without a registry nothing is treated as revoked', async () => {
-    const { factory, worker, attestation, presentation } = await present();
+    const { issuerKey, worker, attestation, presentation } = await present();
 
     const decision = await checkCredentialLayer({
       presentation,
       attestation,
-      issuerPublicKey: factory.publicKey,
+      issuerPublicKey: issuerKey,
       workerPublicKey: worker.publicKey,
       requiredClaims: ['withinRBALimit'],
     });

@@ -17,11 +17,13 @@ import {
   type ReasonCode,
   type RevocationRegistry,
 } from '@eas/shared';
+import { isChainVerifiedKey, type IssuerSigningKey } from './vleiBridge.js';
 
 export interface CredentialLayerInput {
   readonly presentation: string;
   readonly attestation: string;
-  readonly issuerPublicKey: PublicJwk;
+  /** Only obtainable from resolveIssuerSigningKey — see vleiBridge.ts. */
+  readonly issuerPublicKey: IssuerSigningKey;
   readonly workerPublicKey: PublicJwk;
   /** Claims the verifier's policy needs in order to reach a conclusion. */
   readonly requiredClaims: readonly string[];
@@ -65,6 +67,13 @@ function hasExpired(exp: number | undefined): boolean {
 export async function checkCredentialLayer(
   input: CredentialLayerInput,
 ): Promise<CredentialDecision> {
+  // On whose authority: the key must have come through a verified Legal Entity
+  // chain. Checked at runtime, not just in the types, so that a cast cannot
+  // reintroduce a configuration-trusted key.
+  if (!isChainVerifiedKey(input.issuerPublicKey as PublicJwk)) {
+    return { ok: false, reason: 'ISSUER_VLEI_MISSING' };
+  }
+
   let payload: Record<string, unknown>;
 
   try {

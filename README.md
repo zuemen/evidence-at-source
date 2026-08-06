@@ -191,11 +191,12 @@ flowchart TD
 |---|---|---|
 | **開戶障礙**：證明分散在仲介、雇主、移民署，反覆補件 | 四項事實由勞工自持、可攜、一次出示；銀行 Agent 走完 L0→L1→L2 即得布林結論與建議 | [`packages/agents/src/bankAgent.ts`](packages/agents/src/bankAgent.ts)；線上 demo 錢包授權檢視卡＋稽核台 SplitDemo |
 | **被冒名利用**：離境後帳戶仍可用，成為人頭帳戶 | 主體連動撤銷——離境即該勞工全部憑證同時失效，銀行端立刻 `CREDENTIAL_REVOKED`，其他勞工不受影響 | [`packages/agents/test/revocationPaths.test.ts`](packages/agents/test/revocationPaths.test.ts)；稽核台 RevokeDemo |
-| **被冒名利用**：同一身分短期在多機構申辦 | 匿名化申辦計數器只回報「是否超閾」，不回報申辦去向；風險旗標只供人類覆核，不做決定 | [`packages/agents/test/applicationMonitor.test.ts`](packages/agents/test/applicationMonitor.test.ts) |
+| **被冒名利用**：同一身分短期在多機構申辦 | 匿名化申辦計數器只回報「是否超閾」，不回報申辦去向；風險旗標只供人類覆核，不做決定 | 稽核台銀行側「風險旗標」面板（線上 demo 可按）；[`packages/agents/test/applicationMonitor.test.ts`](packages/agents/test/applicationMonitor.test.ts) |
 | **「能被信任」**：憑證來源本身可不可信 | 簽發者分級 T1 自我聲明／T2 第三方／T3 主管機關＋`minimumIssuerTier` L1 閘門（`ISSUER_TIER_BELOW_THRESHOLD`） | [`packages/agents/test/issuerTierGate.test.ts`](packages/agents/test/issuerTierGate.test.ts) |
 | **「不被冒用」**：出示的人就是持有的人 | 雙簽配對＋私鑰在瀏覽器產生且從未離開裝置；雇主沒有勞工私鑰，偽造不出新的配對 | [`packages/shared/test/attestation.test.ts`](packages/shared/test/attestation.test.ts)、[`poc/dual-signature.mjs`](poc/dual-signature.mjs) |
 | **防詐但不傷隱私**：查得到風險，查不到人 | L2 只放行布林／k-匿名匯總；個體查詢一律 `INDIVIDUAL_QUERY_REJECTED`；相減可回推的連續查詢回 `DIFFERENCING_ATTACK_DETECTED` | [`packages/agents/test/differencing.test.ts`](packages/agents/test/differencing.test.ts) |
 | **機構身分可信**：Agent 代表誰不能靠自稱 | GLEIF vLEI 憑證鏈 Root→QVI→法人→ECR，L0 每次查詢重驗全鏈，上游撤銷下游即時失效 | `npm run demo:vlei`（14 步，exit code 0 即全數成立）；[`docs/vlei-defense.md`](docs/vlei-defense.md) |
+| **「能被信任」**：連簽發者的公鑰都不能靠設定檔 | 簽發者公鑰只能從已驗證的法人 vLEI 鏈取得，裸金鑰在 L1 直接回 `ISSUER_VLEI_MISSING`——與 L0 對稱，皆為結構保證而非慣例 | [`packages/agents/test/issuerKeyProvenance.test.ts`](packages/agents/test/issuerKeyProvenance.test.ts) |
 
 ### Track 06（加分題）｜RBA 供應鏈合規的可驗證憑證機制
 
@@ -205,9 +206,9 @@ flowchart TD
 |---|---|---|
 | **持續可驗證**，不是一年一次紙本稽核 | 事件當下簽章封存＋每期 Merkle 承諾；稽核從「事後追查誰說謊」變成「當場驗簽章是否成立」 | [`packages/agents/test/scenarioT11.test.ts`](packages/agents/test/scenarioT11.test.ts) |
 | **不揭露工廠完整內部資料** | 品牌 Agent 只拿得到合規率與母體人數，拿不到任何一位勞工的工時 | [`packages/agents/test/brandAgent.test.ts`](packages/agents/test/brandAgent.test.ts) |
-| 哪些項目可憑證化、哪些須實地稽核 | `RBA_ITEM_CLASSIFICATION`＋`classifyRbaItem`；不可憑證化回 `REQUIRES_ONSITE_AUDIT`，未列項目回 `UNKNOWN` 而非默默作答 | [`packages/agents/test/rbaItems.test.ts`](packages/agents/test/rbaItems.test.ts) |
-| 被 NGO 質疑時的盡職調查證明 | 可獨立驗簽的查驗收據——只含項目名稱與憑證雜湊，不含原始值 | [`packages/agents/test/receipt.test.ts`](packages/agents/test/receipt.test.ts) |
-| 撤銷要能通知所有曾經驗證過的人 | 查驗日誌反向索引（憑證雜湊 → 驗證方），產生撤銷通知名單 | [`packages/agents/test/receipt.test.ts`](packages/agents/test/receipt.test.ts) |
+| 哪些項目可憑證化、哪些須實地稽核 | `RBA_ITEM_CLASSIFICATION`＋`classifyRbaItem`；不可憑證化回 `REQUIRES_ONSITE_AUDIT`，未列項目回 `UNKNOWN` 而非默默作答 | 稽核台「RBA 項目：憑證能答的與不能答的」面板；[`packages/agents/test/rbaItemQuery.test.ts`](packages/agents/test/rbaItemQuery.test.ts) |
+| 被 NGO 質疑時的盡職調查證明 | 可獨立驗簽的查驗收據——只含項目名稱與憑證雜湊，不含原始值 | 稽核台「查驗收據」面板（含獨立驗簽結果）；[`packages/agents/test/receiptFlow.test.ts`](packages/agents/test/receiptFlow.test.ts) |
+| 撤銷要能通知所有曾經驗證過的人 | 查驗日誌反向索引（憑證雜湊 → 驗證方），產生撤銷通知名單 | 稽核台「撤銷反向通知名單」面板；[`packages/agents/test/receiptFlow.test.ts`](packages/agents/test/receiptFlow.test.ts) |
 | 憑證綁定產線，防 A 廠憑證挪用到 B 廠 | `facilityId` 欄位＋`expectedFacilityId` 閘門（`CREDENTIAL_FACILITY_MISMATCH`） | [`packages/agents/test/credentialLayer.test.ts`](packages/agents/test/credentialLayer.test.ts) |
 | **防報復**（RBA 稽核最容易被忽略的一層） | 「哪幾位勞工申報超時」這個能力在架構上不存在，不是被擋掉 | [`packages/agents/test/policyGate.test.ts`](packages/agents/test/policyGate.test.ts) |
 
@@ -284,7 +285,7 @@ npx vite preview --port 4173          # 本機預覽靜態站
 
 ```bash
 npm install      # 於 repo 根目錄，安裝 workspace 依賴
-npm test         # vitest，目前 243 個測試全綠
+npm test         # vitest，目前 252 個測試全綠
 npm run typecheck
 ```
 
@@ -366,7 +367,7 @@ Agent A 的能力邊界也寫在型別裡：`BankAssessment.requiresHumanReview`
 
 | 交件 | 位置 |
 |---|---|
-| 程式碼 | 本 repo（CI 每次 push 跑 243 tests + `demo:vlei` 閘門） |
+| 程式碼 | 本 repo（CI 每次 push 跑 252 tests + `demo:vlei` 閘門） |
 | 簡報 | <https://zuemen.github.io/evidence-at-source/slides.html>（←→ 翻頁） |
 | Demo | <https://zuemen.github.io/evidence-at-source/>（免安裝）＋[講稿](docs/demo-video-script.md) |
 | 治理／信任設計說明 | [`docs/governance-memo.md`](docs/governance-memo.md)（六信任點逐點＋證據） |

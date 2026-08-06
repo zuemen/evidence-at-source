@@ -6,16 +6,20 @@ import {
   generateKeyPair,
   presentCredential,
 } from '@eas/shared';
-import { createIssuer } from '@eas/issuer';
 import {
   verifyReconciliationProof,
   type ReconciliationProofPublicSignals,
 } from '@eas/agents';
 
+import type { VleiIssuer } from '@eas/issuer';
+import type { IssuerSigningKey } from '@eas/agents';
+import { setupIssuerPairWorld } from './helpers/vleiWorld.js';
+
 const WORKER_DID = 'did:key:zWorker001';
 
 async function boundCredential(
-  issuer: Awaited<ReturnType<typeof createIssuer>>,
+  issuer: VleiIssuer,
+  issuerKey: IssuerSigningKey,
   type: 'WorkingHoursCredential' | 'SalaryDepositCredential',
   workerDID: string,
 ) {
@@ -39,16 +43,15 @@ async function boundCredential(
   return {
     presentation,
     attestation,
-    issuerPublicKey: issuer.publicKey,
+    issuerPublicKey: issuerKey,
     workerPublicKey: worker.publicKey,
   };
 }
 
 async function scenario(workerDIDs: { hours: string; salary: string } = { hours: WORKER_DID, salary: WORKER_DID }) {
-  const factory = await createIssuer('did:web:factory.example');
-  const bank = await createIssuer('did:web:bank.example');
-  const hours = await boundCredential(factory, 'WorkingHoursCredential', workerDIDs.hours);
-  const salary = await boundCredential(bank, 'SalaryDepositCredential', workerDIDs.salary);
+  const { factory, factoryKey, bank, bankKey } = await setupIssuerPairWorld();
+  const hours = await boundCredential(factory, factoryKey, 'WorkingHoursCredential', workerDIDs.hours);
+  const salary = await boundCredential(bank, bankKey, 'SalaryDepositCredential', workerDIDs.salary);
 
   const publicSignals: ReconciliationProofPublicSignals = {
     hoursCredentialHash: credentialHash(hours.presentation),

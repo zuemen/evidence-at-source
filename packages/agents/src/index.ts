@@ -44,6 +44,7 @@ export type {
   OmissionCountAnswer,
   PayrollConsistencyAnswer,
   PayrollRateAnswer,
+  RbaItemAnswer,
   ReconciliationCohort,
 } from './brandAgent.js';
 
@@ -78,6 +79,8 @@ export type {
 } from './bankAgent.js';
 
 export {
+  isChainVerifiedKey,
+  requireIssuerSigningKey,
   resolveAgentAuthority,
   resolveIssuerSigningKey,
 } from './vleiBridge.js';
@@ -86,6 +89,7 @@ export type {
   AgentAuthorityResult,
   IssuerIdentity,
   IssuerIdentityResult,
+  IssuerSigningKey,
 } from './vleiBridge.js';
 
 export {

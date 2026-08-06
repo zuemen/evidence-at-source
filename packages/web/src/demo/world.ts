@@ -35,11 +35,16 @@ import {
   buildCohortEvidence,
   checkCredentialLayer,
   createAuditTrail,
+  createVerificationLog,
+  issueVerificationReceipt,
+  verifyReceipt,
   type AuditEntry,
+  createApplicationMonitor,
   createBankAgent,
   createBrandAgent,
   createQuerySession,
-  resolveIssuerSigningKey,
+  requireIssuerSigningKey,
+  type IssuerSigningKey,
   runAuthorizedGate,
   verifyDelegationValidity,
   type BankAssessment,
@@ -243,6 +248,23 @@ export interface DemoWorld {
   auditLog(): readonly AuditEntry[];
   delegationState(): Promise<DelegationState>;
   split(): Promise<SplitView>;
+  /** 題06 Q3 shown as a list rather than buried in a test. */
+  rbaCoverage(): readonly { readonly item: string; readonly verdict: string }[];
+  /** 題06 Q4: independently checkable proof of what was verified, and when. */
+  receipts(): Promise<
+    readonly {
+      readonly verifierDid: string;
+      readonly verifiedItems: readonly string[];
+      readonly result: 'PASS' | 'FAIL';
+      readonly verifiedAt: string;
+      readonly independentlyVerified: boolean;
+    }[]
+  >;
+  /** 題06 Q5: everyone a revocation of that credential must reach. */
+  revocationNotices(): readonly {
+    readonly verifierDid: string;
+    readonly subjectCredentialHash: string;
+  }[];
   attackDemo(): AttackDemoState;
   integrityDemo(): IntegrityDemoState;
 }
@@ -261,7 +283,7 @@ interface CohortMember {
 
 async function buildCohortMember(
   factory: Issuer,
-  factoryKey: PublicJwk,
+  factoryKey: IssuerSigningKey,
   index: number,
   withinRBALimit: boolean,
 ): Promise<CohortMember> {
@@ -316,11 +338,9 @@ export async function createDemoWorld(): Promise<DemoWorld> {
   });
   const issuers = { agency, factory } as const;
 
-  /** L1 only ever sees issuer keys that arrived through a verified LE chain. */
-  function requireIssuerKey(issuer: VleiIssuer): PublicJwk {
-    const resolved = resolveIssuerSigningKey(issuer.legalEntityPresentation(), eco.trust);
-    if (!resolved.ok) throw new Error(`issuer vLEI chain rejected: ${resolved.reason}`);
-    return resolved.issuer.jwk;
+  /** Layer 1 now refuses any other kind of key; this is just the ergonomics. */
+  function requireIssuerKey(issuer: VleiIssuer): IssuerSigningKey {
+    return requireIssuerSigningKey(issuer.legalEntityPresentation(), eco.trust);
   }
   const issuerNames = {
     agency: '仲介公司 did:web:agency.example',
@@ -329,6 +349,22 @@ export async function createDemoWorld(): Promise<DemoWorld> {
 
   const workerKeys: { privateKey: PrivateJwk; publicKey: PublicJwk } = await generateKeyPair();
   const revocations: RevocationRegistry = createRevocationRegistry();
+
+  // 題05 Q3: the mule-account fingerprint is one identity applying at several
+  // institutions in a short window. The monitor only ever answers "over the
+  // threshold or not" — never where the applications went.
+  const applications = createApplicationMonitor();
+  // Synthetic history: this worker has already applied at four institutions.
+  for (let i = 0; i < 4; i += 1) applications.record(WORKER_DID);
+
+  // 題06 Q4/Q5: a receipt is the only form of proof a challenger can check
+  // without being given access to anything. The log is the reverse index that
+  // lets a revocation reach everyone who ever verified.
+  const verificationLog = createVerificationLog();
+  const brandVerifierKeys = await generateKeyPair();
+  const issuedReceipts: { jwt: string; verifiedAt: string }[] = [];
+  /** Hash of the most recently verified credential — the revocation index key. */
+  let lastVerifiedHash: string | null = null;
 
   // Institutions that empower the two verifying agents, and the delegations they
   // grant. Agent authority is separate from worker-credential revocation.
@@ -718,13 +754,16 @@ export async function createDemoWorld(): Promise<DemoWorld> {
 
         const assessment =
           refusedWith === null
-            ? createBankAgent().assess({
-                feeWithinLegalCap: disclosed['feeWithinLegalCap'] as boolean | undefined,
-                passportHeldByWorker: disclosed['passportHeldByWorker'] as boolean | undefined,
-                nativeLanguageVersionProvided: disclosed['nativeLanguageVersionProvided'] as
-                  | boolean
-                  | undefined,
-              })
+            ? createBankAgent().assess(
+                {
+                  feeWithinLegalCap: disclosed['feeWithinLegalCap'] as boolean | undefined,
+                  passportHeldByWorker: disclosed['passportHeldByWorker'] as boolean | undefined,
+                  nativeLanguageVersionProvided: disclosed['nativeLanguageVersionProvided'] as
+                    | boolean
+                    | undefined,
+                },
+                { flagged: applications.risk(WORKER_DID).flagged },
+              )
             : null;
 
         return { disclosed, assessment, refusedWith };
@@ -765,6 +804,25 @@ export async function createDemoWorld(): Promise<DemoWorld> {
         });
 
         const brandAgent = createBrandAgent([evidence]);
+
+        // 題06 Q4/Q5: the verification leaves something a challenger can check
+        // without being handed any access — item names and a hash, no values.
+        const hoursHash = hours === undefined ? null : credentialHash(await presentationFor(hours));
+        if (hoursHash !== null) {
+          const record = {
+            verifierDid: 'did:web:brand.example',
+            subjectCredentialHash: hoursHash,
+            verifiedItems: ['workingHoursWithinLimit'] as const,
+            result: (rejected.length === 0 ? 'PASS' : 'FAIL') as 'PASS' | 'FAIL',
+            verifiedAt: new Date().toISOString(),
+          };
+          verificationLog.record(record);
+          lastVerifiedHash = hoursHash;
+          issuedReceipts.push({
+            jwt: await issueVerificationReceipt(brandVerifierKeys.privateKey, record),
+            verifiedAt: record.verifiedAt,
+          });
+        }
 
         return {
           answer: brandAgent.answer({
@@ -811,6 +869,44 @@ export async function createDemoWorld(): Promise<DemoWorld> {
       }
 
       return { bank, brand };
+    },
+
+    async receipts() {
+      return Promise.all(
+        issuedReceipts.map(async (entry) => {
+          const checked = await verifyReceipt(entry.jwt, brandVerifierKeys.publicKey);
+          return {
+            verifierDid: checked?.verifierDid ?? '',
+            verifiedItems: checked?.verifiedItems ?? [],
+            result: checked?.result ?? ('FAIL' as const),
+            verifiedAt: entry.verifiedAt,
+            // Re-verified here rather than asserted, so the panel shows a
+            // checked fact and not a claim.
+            independentlyVerified: checked !== null,
+          };
+        }),
+      );
+    },
+
+    revocationNotices() {
+      return lastVerifiedHash === null ? [] : verificationLog.notifyRevocation(lastVerifiedHash);
+    },
+
+    rbaCoverage() {
+      const probe = createBrandAgent([]);
+      const items = [
+        'workingHoursWithinLimit',
+        'recruitmentFeeWithinLegalCap',
+        'passportHeldByWorker',
+        'dormitoryLivingConditions',
+        'fireSafetyConditions',
+        'grievanceMechanismEffectiveness',
+      ] as const;
+
+      return items.map((item) => {
+        const answer = probe.answerRbaItem(item);
+        return { item, verdict: answer.ok ? 'CREDENTIAL_ANSWERABLE' : answer.reason };
+      });
     },
   };
 }

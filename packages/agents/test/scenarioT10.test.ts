@@ -1,8 +1,8 @@
 import { describe, expect, test } from 'vitest';
 import { createWorkerAttestation, generateKeyPair, presentCredential } from '@eas/shared';
-import { createIssuer } from '@eas/issuer';
 import { DEFAULT_RECONCILIATION_PARAMS, reconcile } from '@eas/reconciliation';
 import { checkCredentialLayer } from '@eas/agents';
+import { setupIssuerPairWorld } from './helpers/vleiWorld.js';
 
 const WORKER_DID = 'did:key:zWorker001';
 
@@ -16,8 +16,7 @@ const WORKER_DID = 'did:key:zWorker001';
  */
 describe('T10 — reconciliation across two independent issuers', () => {
   test('a deposit larger than the reported hours yields DISCREPANCY_OVERPAID', async () => {
-    const factory = await createIssuer('did:web:factory.example');
-    const bank = await createIssuer('did:web:bank.example');
+    const { factory, factoryKey, bank, bankKey } = await setupIssuerPairWorld();
     const worker = await generateKeyPair();
 
     // Two different issuer identities: neither controls the other.
@@ -68,14 +67,14 @@ describe('T10 — reconciliation across two independent issuers', () => {
     const hoursCheck = await checkCredentialLayer({
       presentation: hoursPresentation,
       attestation: hoursAttestation,
-      issuerPublicKey: factory.publicKey,
+      issuerPublicKey: factoryKey,
       workerPublicKey: worker.publicKey,
       requiredClaims: ['totalHours', 'overtimeHours'],
     });
     const salaryCheck = await checkCredentialLayer({
       presentation: salaryPresentation,
       attestation: salaryAttestation,
-      issuerPublicKey: bank.publicKey,
+      issuerPublicKey: bankKey,
       workerPublicKey: worker.publicKey,
       requiredClaims: ['depositedAmountTWD'],
     });

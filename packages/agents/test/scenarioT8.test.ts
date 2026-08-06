@@ -3,13 +3,14 @@ import { readdir, readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { join } from 'node:path';
 import { createWorkerAttestation, generateKeyPair, presentCredential } from '@eas/shared';
-import { createIssuer } from '@eas/issuer';
 import { checkCredentialLayer } from '@eas/agents';
+import { setupIssuerWorld } from './helpers/vleiWorld.js';
 
 const WORKER_DID = 'did:key:zWorker001';
 
 async function presentWithRemark(remark: string) {
-  const factory = await createIssuer('did:web:factory.example');
+  const world = await setupIssuerWorld();
+  const factory = world.issuer;
   const worker = await generateKeyPair();
 
   // withinRBALimit is deliberately false: a non-compliant record.
@@ -28,7 +29,7 @@ async function presentWithRemark(remark: string) {
   });
 
   return {
-    factory,
+    issuerKey: world.issuerKey,
     worker,
     attestation,
     presentation: await presentCredential(credential, ['withinRBALimit', 'periodStart', 'remark']),
@@ -44,7 +45,7 @@ describe('T8 — prompt injection has no effect on the policy gate', () => {
     const decision = await checkCredentialLayer({
       presentation: injected.presentation,
       attestation: injected.attestation,
-      issuerPublicKey: injected.factory.publicKey,
+      issuerPublicKey: injected.issuerKey,
       workerPublicKey: injected.worker.publicKey,
       requiredClaims: ['withinRBALimit'],
     });

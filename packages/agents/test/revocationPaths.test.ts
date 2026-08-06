@@ -6,11 +6,11 @@ import {
   generateKeyPair,
   presentCredential,
 } from '@eas/shared';
-import { createIssuer } from '@eas/issuer';
 import { checkAgentDelegation, checkCredentialLayer } from '@eas/agents';
-import { AGENT_DID, setupVleiWorld } from './helpers/vleiWorld.js';
+import type { VleiIssuer } from '@eas/issuer';
+import { AGENT_DID, setupIssuerWorld, setupVleiWorld } from './helpers/vleiWorld.js';
 
-async function workerCredential(factory: Awaited<ReturnType<typeof createIssuer>>, workerDID: string) {
+async function workerCredential(factory: VleiIssuer, workerDID: string) {
   const worker = await generateKeyPair();
   const credential = await factory.issue('WorkingHoursCredential', {
     workerDID,
@@ -31,7 +31,8 @@ async function workerCredential(factory: Awaited<ReturnType<typeof createIssuer>
 
 describe('P3 — three revocation paths', () => {
   test('Path A: an issuer withdraws one credential; it is refused at L1', async () => {
-    const factory = await createIssuer('did:web:factory.example');
+    const world = await setupIssuerWorld();
+    const factory = world.issuer;
     const dir = createRevocationDirectory();
     const w = await workerCredential(factory, 'did:key:zWorker001');
 
@@ -40,7 +41,7 @@ describe('P3 — three revocation paths', () => {
     const decision = await checkCredentialLayer({
       presentation: w.presentation,
       attestation: w.attestation,
-      issuerPublicKey: factory.publicKey,
+      issuerPublicKey: world.issuerKey,
       workerPublicKey: w.worker.publicKey,
       requiredClaims: ['withinRBALimit'],
       revocations: dir.credentialRevocations,
@@ -50,7 +51,8 @@ describe('P3 — three revocation paths', () => {
   });
 
   test('Path B: revoking the worker cascades to their credentials but not others', async () => {
-    const factory = await createIssuer('did:web:factory.example');
+    const world = await setupIssuerWorld();
+    const factory = world.issuer;
     const dir = createRevocationDirectory();
     const mine = await workerCredential(factory, 'did:key:zWorker001');
     const other = await workerCredential(factory, 'did:key:zWorker002');
@@ -60,7 +62,7 @@ describe('P3 — three revocation paths', () => {
     const mineDecision = await checkCredentialLayer({
       presentation: mine.presentation,
       attestation: mine.attestation,
-      issuerPublicKey: factory.publicKey,
+      issuerPublicKey: world.issuerKey,
       workerPublicKey: mine.worker.publicKey,
       requiredClaims: ['withinRBALimit'],
       revocations: dir.credentialRevocations,
@@ -68,7 +70,7 @@ describe('P3 — three revocation paths', () => {
     const otherDecision = await checkCredentialLayer({
       presentation: other.presentation,
       attestation: other.attestation,
-      issuerPublicKey: factory.publicKey,
+      issuerPublicKey: world.issuerKey,
       workerPublicKey: other.worker.publicKey,
       requiredClaims: ['withinRBALimit'],
       revocations: dir.credentialRevocations,
@@ -104,7 +106,8 @@ describe('P3 — three revocation paths', () => {
   });
 
   test('the three paths are independent: revoking an agent leaves worker credentials valid', async () => {
-    const factory = await createIssuer('did:web:factory.example');
+    const world = await setupIssuerWorld();
+    const factory = world.issuer;
     const dir = createRevocationDirectory();
     const w = await workerCredential(factory, 'did:key:zWorker001');
 
@@ -113,7 +116,7 @@ describe('P3 — three revocation paths', () => {
     const decision = await checkCredentialLayer({
       presentation: w.presentation,
       attestation: w.attestation,
-      issuerPublicKey: factory.publicKey,
+      issuerPublicKey: world.issuerKey,
       workerPublicKey: w.worker.publicKey,
       requiredClaims: ['withinRBALimit'],
       revocations: dir.credentialRevocations,
