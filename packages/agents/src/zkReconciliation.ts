@@ -29,6 +29,16 @@ export interface ReconciliationProofPublicSignals {
   readonly toleranceBps: number;
   /** The circuit's public output: do the private numbers reconcile within tolerance. */
   readonly consistent: boolean;
+  /**
+   * The circuit's own public signals, in circuit order:
+   * `[verdict, hoursCommitment, salaryCommitment, rate, overtimeBps, toleranceBps]`.
+   *
+   * The fields above describe the reconciliation in this repo's terms; this one
+   * is what Groth16 actually checks against. It is optional because the binding
+   * checks are meaningful on their own, but a verifier given no signals refuses
+   * rather than assuming — an absent proof is not a passing one.
+   */
+  readonly circuitSignals?: readonly string[];
 }
 
 export interface BoundCredential {
@@ -59,6 +69,31 @@ export type ReconciliationProofResult =
 
 /** Default proof verifier: refuses, so an absent ZK backend never passes. */
 export const stubProofVerifier: ProofVerifier = () => false;
+
+/**
+ * The real verifier, backed by the circuit in `circuits/`.
+ *
+ * Deliberately not the default: a caller that has no verification key must
+ * still fail closed. A missing backend must never be indistinguishable from a
+ * valid proof, which is exactly what silently defaulting to "verified" would
+ * make it.
+ */
+export function createGroth16Verifier(verificationKey: unknown): ProofVerifier {
+  return async (proof, publicSignals) => {
+    const signals = publicSignals.circuitSignals;
+    // No signals means nothing was proved. Refusing here is the whole point.
+    if (signals === undefined) return false;
+
+    try {
+      const { groth16 } = await import('snarkjs');
+      return await groth16.verify(verificationKey, signals, proof);
+    } catch {
+      // A malformed proof, a mismatched key or a missing backend all mean the
+      // same thing here: this proof has not been shown to hold.
+      return false;
+    }
+  };
+}
 
 /** Validates a credential and confirms its hash is the one the proof was bound to. */
 async function checkBinding(

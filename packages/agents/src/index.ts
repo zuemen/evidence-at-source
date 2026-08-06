@@ -58,7 +58,11 @@ export type {
   IntegrityGrade,
 } from './evidenceIntegrity.js';
 
-export { stubProofVerifier, verifyReconciliationProof } from './zkReconciliation.js';
+export {
+  createGroth16Verifier,
+  stubProofVerifier,
+  verifyReconciliationProof,
+} from './zkReconciliation.js';
 export type {
   BoundCredential,
   ProofVerifier,
