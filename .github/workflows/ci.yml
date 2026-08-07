@@ -33,6 +33,11 @@ jobs:
       - run: npm run demo:vlei
       - name: Build static demo
         run: npm run build --workspace @eas/web
+      # Every other check here runs in Node, which is how a browser-only crash
+      # shipped and stayed live. This one loads the built site for real.
+      - name: Install Chromium for the browser gate
+        run: npx playwright install --with-deps chromium
+      - run: npm run smoke:web
       - uses: actions/upload-pages-artifact@v3
         if: github.ref == 'refs/heads/main'
         with:

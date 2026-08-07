@@ -12,10 +12,12 @@
     "typecheck": "tsc --noEmit",
     "demo:vlei": "tsx packages/vlei/demo/run.ts",
     "bench": "tsx scripts/benchmark.ts",
-    "build:circuit": "node circuits/build.mjs"
+    "build:circuit": "node circuits/build.mjs",
+    "smoke:web": "node scripts/smoke-browser.mjs"
   },
   "devDependencies": {
     "@types/node": "^22.20.1",
+    "playwright": "^1.62.1",
     "tsx": "^4.19.0",
     "typescript": "^5.9.3",
     "vitest": "^4.1.10"

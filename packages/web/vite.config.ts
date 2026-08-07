@@ -112,6 +112,18 @@ export default defineConfig({
       '@eas/integrity': r('../integrity/src/index.ts'),
       '@eas/reconciliation': r('../reconciliation/src/index.ts'),
       '@eas/vlei': r('../vlei/src/index.ts'),
+      // circomlibjs declares no browser export condition, so a bundler resolves
+      // its Node entry — a barrel that also pulls in eddsa, pedersen and evmasm.
+      // Those reference Buffer, which does not exist in a browser, and the
+      // failure is total rather than partial: the demo world is built at module
+      // load, so the rejected import left the whole page on its loading state.
+      //
+      // Poseidon is the only thing this project uses from that package. Pointing
+      // at the one module that provides it fixes the crash and drops ~0.9 MB of
+      // unrelated cryptography from the bundle. Node keeps importing the package
+      // normally — its exports map blocks this subpath, which is why the alias
+      // lives here and not in the shared source.
+      circomlibjs: r('../../node_modules/circomlibjs/src/poseidon_wasm.js'),
     },
   },
   server: {

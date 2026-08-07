@@ -426,29 +426,27 @@ export function ConsoleView({
         </p>
       </div>
 
-      <div style={{ marginTop: '1.4rem' }}>
-        <h3 style={{ margin: '0 0 0.4rem', fontSize: '1rem' }}>
-          治理鏈：資格、背書、紀錄、決策者，全部掛在同一條鏈上
-        </h3>
+      <div className="panel">
+        <h3>治理鏈：資格、背書、紀錄、決策者，全部掛在同一條鏈上</h3>
         <p className="note" style={{ margin: '0 0 0.6rem' }}>
           機構身分可驗證只是第一步。下面四件事本來各自散落——有的是簽發者自己寫的欄位、
           有的是沒人驗的字串、有的根本沒有身分——現在<strong>全部由鏈決定，而且都可以被撤銷</strong>。
         </p>
-        <div style={{ fontSize: '0.85rem' }}>
-          <div className="claim-row">
+        <div className="panel-rows">
+          <div className="claim-row is-wide">
             <span className="name">工時簽發者的鏈上層級</span>
             <span className="value">
               {governance.workingHoursChainTier}
-              <span className="note">（憑證敢報得比這高就 ISSUER_TIER_MISMATCH）</span>
+              <span className="qualifier">憑證敢報得比這高就 ISSUER_TIER_MISMATCH</span>
             </span>
           </div>
-          <div className="claim-row">
+          <div className="claim-row is-wide">
             <span className="name">第三方稽核背書</span>
             <span className="value">
               {governance.auditor.legalName ?? '解析不到 → AUDITOR_CHAIN_INVALID'}
             </span>
           </div>
-          <div className="claim-row">
+          <div className="claim-row is-wide">
             <span className="name">覆核者（按下核准的人）</span>
             <span className="value">
               {governance.reviewer.personLegalName === null
@@ -456,7 +454,7 @@ export function ConsoleView({
                 : `${governance.reviewer.personLegalName}／${governance.reviewer.officialRole}`}
             </span>
           </div>
-          <div className="claim-row">
+          <div className="claim-row is-wide">
             <span className="name">稽核軌跡獨立重驗</span>
             <span className="value">
               {governance.auditIntegrity.ok
@@ -471,7 +469,7 @@ export function ConsoleView({
           最後一列不是「我們自己說有記」：它是拿<strong>銀行法人憑證公布的公鑰</strong>重新驗過每一筆
           封緘、並重算整條雜湊鏈的結果。改掉任何一筆舊決策、或抽掉中間一筆，這裡就會變紅。
         </p>
-        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '0.6rem' }}>
+        <div className="panel-actions">
           <button
             className="act"
             data-danger="true"
@@ -496,38 +494,34 @@ export function ConsoleView({
         </p>
       </div>
 
-      <div style={{ marginTop: '1.4rem' }}>
-        <h3 style={{ margin: '0 0 0.4rem', fontSize: '1rem' }}>
-          一人一憑證：仲介開不了第二個錢包
-        </h3>
+      <div className="panel">
+        <h3>一人一憑證：仲介開不了第二個錢包</h3>
         <p className="note" style={{ margin: '0 0 0.6rem' }}>
           雙簽擋得住<strong>竄改紀錄的雇主</strong>，擋不住<strong>拿走手機的仲介</strong>——他手上有私鑰，
           每個簽章都是真的。所以身分要另外錨定：移民署簽發的在留憑證帶一個唯一性錨，
           同一個錨<strong>只能有一個 active 錢包</strong>。
         </p>
-        <div style={{ fontSize: '0.85rem' }}>
-          <div className="claim-row">
+        <div className="panel-rows">
+          <div className="claim-row is-wide">
             <span className="name">identityAnchor</span>
-            <span className="value" style={{ fontFamily: 'var(--mono)', fontSize: '0.72rem' }}>
-              {identity.identityAnchor}
-            </span>
+            <span className="value">{identity.identityAnchor}</span>
           </div>
-          <div className="claim-row">
+          <div className="claim-row is-wide">
             <span className="name">綁定狀態</span>
             <span className="value">{identity.status}</span>
           </div>
-          <div className="claim-row">
+          <div className="claim-row is-wide">
             <span className="name">此人歷來錢包數</span>
             <span className="value">{identity.bindingCount}</span>
           </div>
-          <div className="claim-row">
+          <div className="claim-row is-wide">
             <span className="name">裝置在場驗證（FIDO）</span>
             <span className="value">
               {identity.webauthnAvailable ? '此瀏覽器支援 ✅' : '此瀏覽器不支援——閘門一律拒絕'}
             </span>
           </div>
         </div>
-        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '0.6rem' }}>
+        <div className="panel-actions">
           <button className="act" data-danger="true" onClick={onAttemptBrokerWallet} disabled={busy}>
             模擬仲介：替同一人再開一個錢包
           </button>
@@ -542,7 +536,7 @@ export function ConsoleView({
         )}
         {identity.brokerAttempt !== null && (
           <p className="note" style={{ margin: '0.5rem 0 0' }}>
-            被拒絕：<code style={{ fontFamily: 'var(--mono)' }}>{identity.brokerAttempt}</code>
+            被拒絕：<code>{identity.brokerAttempt}</code>
             ——註冊表沒有被改動，原本那個錢包仍然是唯一有效的那一個。
             裝置遺失後的正當換綁必須<strong>先撤銷再重綁</strong>，所以換綁一定留下計數，不會安靜地發生。
           </p>
@@ -567,7 +561,7 @@ export function ConsoleView({
               結論：<strong>{zk.verdict}</strong> · 驗證{' '}
               {zk.verified ? '通過 ✅' : '失敗 ❌'} · 耗時 {zk.elapsedMs} ms
             </div>
-            <p className="note" style={{ margin: '0.35rem 0 0' }}>
+            <p className="note is-tight">
               這個勾不是「數學算對了」而已。通過的是<strong>六項綁定檢查</strong>：證明本身有效、
               兩張憑證各自真實且未撤銷、雜湊與宣告相符、兩張屬於同一位勞工、
               <strong>電路打開的承諾就是這兩張憑證裡的承諾</strong>、以及回報的結論與電路輸出一致。
@@ -576,20 +570,12 @@ export function ConsoleView({
                 <>
                   {' '}
                   本次未通過的是：
-                  <code style={{ fontFamily: 'var(--mono)' }}>{zk.bindingReason}</code>。
+                  <code>{zk.bindingReason}</code>。
                 </>
               )}
             </p>
             <div style={{ marginTop: '0.4rem' }}>品牌收到的全部內容（6 個公開訊號）：</div>
-            <ol
-              style={{
-                margin: '0.3rem 0 0',
-                paddingLeft: '1.4em',
-                fontFamily: 'var(--mono)',
-                fontSize: '0.72rem',
-                wordBreak: 'break-all',
-              }}
-            >
+            <ol className="signal-list">
               {zk.publicSignals.map((sig, i) => (
                 <li key={`${sig}-${i}`}>{sig}</li>
               ))}

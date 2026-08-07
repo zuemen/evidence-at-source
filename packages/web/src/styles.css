@@ -501,6 +501,13 @@ button {
   .tabs button {
     min-height: 44px;
   }
+
+  /* The dot stays 11px; only the reachable area grows to the 44px minimum.
+     With fifteen beats these sit close together, and a 31px target between
+     neighbours is how a presenter jumps to the wrong scene on stage. */
+  .director-dot::after {
+    inset: -16.5px;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -511,6 +518,86 @@ button {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+/* ── console panels ───────────────────────────────────────
+   One shape for every panel below the split view, so a reader
+   learns the layout once. Replaces per-panel inline styles that
+   drifted apart as panels were added. */
+
+.panel {
+  margin-top: 1.4rem;
+}
+
+.panel > h3 {
+  margin: 0 0 0.4rem;
+  font-size: 1rem;
+}
+
+.panel > .note:first-of-type {
+  margin-top: 0;
+}
+
+.panel-rows {
+  font-size: 0.85rem;
+}
+
+/* Actions sit on one row on desktop and stack on narrow screens rather
+   than squeezing two destructive buttons side by side. */
+.panel-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-top: 0.6rem;
+}
+
+@media (max-width: 480px) {
+  .panel-actions > button {
+    flex: 1 1 100%;
+  }
+}
+
+/* A claim row whose value is prose rather than a short token: the pair
+   wraps instead of crushing the label column, and the qualifier below it
+   is a block so its spacing actually applies. */
+.claim-row.is-wide {
+  flex-wrap: wrap;
+  align-items: flex-start;
+}
+
+.claim-row.is-wide .value {
+  text-align: right;
+  flex: 1 1 14rem;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.claim-row .qualifier {
+  display: block;
+  margin-top: 0.15rem;
+  color: var(--text-faint);
+  font-size: 0.72rem;
+  line-height: 1.5;
+}
+
+/* A note that continues the line above rather than starting a new thought. */
+.note.is-tight {
+  margin-top: 0.35rem;
+}
+
+/* Reason codes read as code wherever they appear. */
+code {
+  font-family: var(--mono);
+  overflow-wrap: anywhere;
+}
+
+/* Field elements (77-digit values, hashes) must never widen the page. */
+.signal-list {
+  margin: 0.3rem 0 0;
+  padding-left: 1.4em;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  overflow-wrap: anywhere;
 }
 
 /* ── plain-language view intros ───────────────────────── */
