@@ -250,6 +250,11 @@ button.act:disabled {
 
 .split-pane { padding: 1.6rem; }
 
+/* Both agents answer the same query, so their panes are one object rather
+   than two columns of unrelated height. Without this the shorter answer —
+   usually a refusal, which is the interesting one — sits above a void. */
+.split { align-items: stretch; }
+
 .split-divider {
   width: 1px;
   background: linear-gradient(var(--line), var(--line-bright), var(--line));
@@ -344,10 +349,14 @@ button.act:disabled {
 /* ── audit trail panel ────────────────────────────────── */
 
 .audit-panel {
-  margin-top: 2rem;
+  /* Same card as .panel, including the accent rule, so the collapsed audit
+     trail belongs to the row of capabilities below it rather than floating
+     between the split view and the first card. */
+  margin-top: 1.1rem;
   border: 1px solid var(--line);
+  border-left: 2px solid var(--jade);
   background: var(--paper);
-  padding: 0.9rem 1.2rem;
+  padding: 1.05rem 1.4rem;
 }
 
 .audit-panel summary {
@@ -470,6 +479,33 @@ button.act:disabled {
   .split { grid-template-columns: 1fr; }
   .split-divider { width: auto; height: 1px; }
   .split-divider span { transform: translate(-50%, -50%); }
+
+  /* Four Chinese labels in 375px were wrapping to three lines each, which
+     made the primary navigation the least legible thing on the page. They
+     scroll sideways instead — the row keeps its shape and every label stays
+     on one line. */
+  .tabs {
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .tabs button {
+    padding: 0.8rem 1rem;
+    letter-spacing: 0.08em;
+    white-space: nowrap;
+    flex: 0 0 auto;
+  }
+
+  /* Cards lose their generous inset when the screen is this narrow; the
+     content needs the width more than the padding does. */
+  .panel,
+  .audit-panel {
+    padding: 1rem 0.95rem;
+  }
 }
 
 /* ── accessibility ────────────────────────────────────── */
@@ -526,15 +562,34 @@ button {
    drifted apart as panels were added. */
 
 .panel {
-  margin-top: 1.4rem;
+  border: 1px solid var(--line);
+  border-left: 2px solid var(--jade);
+  background: var(--paper);
+  padding: 1.2rem 1.4rem;
+  margin-top: 1.1rem;
+}
+
+/* An eyebrow above the title, in the same voice as the split panes' .who:
+   it says what kind of thing this panel is before the title says what it
+   claims. Without it the panels below the split read as one long appendix. */
+.panel > .kind {
+  font-family: var(--mono);
+  font-size: 0.66rem;
+  color: var(--text-faint);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  margin: 0 0 0.35rem;
 }
 
 .panel > h3 {
-  margin: 0 0 0.4rem;
-  font-size: 1rem;
+  margin: 0 0 0.5rem;
+  font-size: 1.02rem;
+  font-weight: 600;
+  line-height: 1.45;
 }
 
-.panel > .note:first-of-type {
+.panel > .note:first-of-type,
+.panel > .kind + h3 + .note {
   margin-top: 0;
 }
 

@@ -349,7 +349,7 @@ export function ConsoleView({
           )}
 
           <div style={{ marginTop: '1.4rem' }}>
-            <h3 style={{ margin: '0 0 0.4rem', fontSize: '1rem' }}>RBA 項目：憑證能答的與不能答的</h3>
+            <h3>RBA 項目：憑證能答的與不能答的</h3>
             <p className="note" style={{ margin: '0 0 0.5rem' }}>
               系統明說自己不能取代什麼。未列在分類表上的項目回 CLAIM_NOT_DISCLOSED，而不是默默作答。
             </p>
@@ -385,8 +385,9 @@ export function ConsoleView({
         </details>
       )}
 
-      <div style={{ marginTop: '1.4rem' }}>
-        <h3 style={{ margin: '0 0 0.4rem', fontSize: '1rem' }}>查驗收據（被質疑時可出示）</h3>
+      <div className="panel">
+        <p className="kind">Audit · 盡職調查</p>
+        <h3>查驗收據（被質疑時可出示）</h3>
         {receipts.length === 0 ? (
           <p className="note" style={{ margin: 0 }}>
             尚未產生——先執行一次 SplitDemo。
@@ -408,8 +409,9 @@ export function ConsoleView({
         </p>
       </div>
 
-      <div style={{ marginTop: '1.4rem' }}>
-        <h3 style={{ margin: '0 0 0.4rem', fontSize: '1rem' }}>撤銷反向通知名單</h3>
+      <div className="panel">
+        <p className="kind">Revocation · 反向索引</p>
+        <h3>撤銷反向通知名單</h3>
         {revocationNotices.length === 0 ? (
           <p className="note" style={{ margin: 0 }}>
             尚無曾驗證者。
@@ -427,6 +429,7 @@ export function ConsoleView({
       </div>
 
       <div className="panel">
+        <p className="kind">Trust Chain · Agent 憑什麼可信</p>
         <h3>治理鏈：資格、背書、紀錄、決策者，全部掛在同一條鏈上</h3>
         <p className="note" style={{ margin: '0 0 0.6rem' }}>
           機構身分可驗證只是第一步。下面四件事本來各自散落——有的是簽發者自己寫的欄位、
@@ -495,6 +498,7 @@ export function ConsoleView({
       </div>
 
       <div className="panel">
+        <p className="kind">Identity · 不可轉讓</p>
         <h3>一人一憑證：仲介開不了第二個錢包</h3>
         <p className="note" style={{ margin: '0 0 0.6rem' }}>
           雙簽擋得住<strong>竄改紀錄的雇主</strong>，擋不住<strong>拿走手機的仲介</strong>——他手上有私鑰，
@@ -543,10 +547,9 @@ export function ConsoleView({
         )}
       </div>
 
-      <div style={{ marginTop: '1.4rem' }}>
-        <h3 style={{ margin: '0 0 0.4rem', fontSize: '1rem' }}>
-          零知識對帳：證明一致，但不交出任何數字
-        </h3>
+      <div className="panel">
+        <p className="kind">Zero Knowledge · 六項綁定</p>
+        <h3>零知識對帳：證明一致，但不交出任何數字</h3>
         <p className="note" style={{ margin: '0 0 0.6rem' }}>
           交叉對帳原本需要一個同時看得到工時與入帳明文的元件——那本身就是個可信第三方。
           按下按鈕，證明會<strong>在你這台瀏覽器裡產生</strong>：工時、加班、入帳金額都不離開這台裝置，
