@@ -50,6 +50,29 @@ fails closed）；`packages/vlei/test/kel.test.ts`（anchoring 與 pre-rotation 
 **證據**：`packages/agents/test/vleiBridge.test.ts`；`packages/agents/src/delegationGate.ts`
 （搜 `knownInstitutions`——已不存在）。
 
+### Q4b. 官方 OOR／ECR 是發給自然人的，你們卻發給 AI Agent 和稽核機構？
+
+問得對，這是本專案與規範最明顯的一處差距，我們寫在 `docs/vlei.md` 簡化清單第 6 條，
+不等人問。兩處要分開看，因為性質不同：
+
+**發給 AI Agent（`agentDid`）是刻意且必要的擴充。** 整個題目就是「Agent 代表機構去
+觀察別人」，那 Agent 就必須有一個可驗證、**可被機構單方撤銷**的授權身分。ECR 的語意
+（engagement context role，特定情境下的角色）本來就最接近這件事；官方生態系目前沒有
+「機構授權給非自然人代理」的憑證型別，這是規範還沒追上 AI Agent 的地方，不是我們
+繞過它。
+
+**發給稽核機構（`third-party-auditor`）是簡化，我們承認。** 更貼近規範的做法是：由該
+稽核機構的**自然人**持 OOR 代表機構簽署背書，或用法人對法人的 ACDC edge 表示背書
+關係。我們把角色憑證直接發給組織 DID，是為了在黑客松時間內讓「撤銷稽核機構 → 它
+背書過的 T2 全部降級」這條級聯可被當場演示。
+
+**對驗證邏輯零影響**：鏈驗證、撤銷級聯、角色比對三者的程式碼路徑完全相同，改成
+自然人持證只是換掉 subject 與多一層 edge。要改的檔案是
+`packages/agents/src/auditorDirectory.ts` 一個。
+
+**證據**：`packages/agents/test/auditorChain.test.ts`（含「角色不可互換」一項——
+持 agent ECR 的機構不能充當稽核者）；`docs/vlei.md` 簡化清單第 6 條。
+
 ### Q5. 勞工的四張憑證為什麼不乾脆也改成 ACDC？
 
 vLEI 是法人身分憑證體系，勞工不是法人；而勞工憑證的核心需求是**選擇性揭露**

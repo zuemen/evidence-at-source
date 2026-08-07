@@ -39,9 +39,9 @@ LegalEntityEngagementContextRolevLEICredential）。擴充欄位：
 | Schema | 官方欄位 | PoC 擴充欄位 | 擴充理由 |
 |---|---|---|---|
 | QVI | LEI | — | — |
-| Legal Entity | LEI, legalName | didWeb, credentialSigningJwk | 綁定機構的 SD-JWT 簽章身分 |
-| OOR | LEI, personLegalName, officialRole | — | 完整性保留，目前未接線 |
-| ECR | LEI, engagementContextRole | agentDid | 指名被授權的 AI Agent |
+| Legal Entity | LEI, legalName | didWeb, credentialSigningJwk, issuerTier | 綁定機構的 SD-JWT 簽章身分；`issuerTier` 由 QVI 寫入，機構改不了（題06 Q1） |
+| OOR | LEI, personLegalName, officialRole | — | **已接線**：銀行覆核主管持有，稽核軌跡記其 SAID（題06 Q4） |
+| ECR | LEI, engagementContextRole | agentDid | 兩種角色：`ai-verification-agent`（查驗 Agent）與 `third-party-auditor`（稽核機構背書） |
 
 rules 區塊逐字收錄官方 usageDisclaimer 與 issuanceDisclaimer。
 
@@ -54,6 +54,14 @@ rules 區塊逐字收錄官方 usageDisclaimer 與 issuanceDisclaimer。
 4. ~~偷到舊金鑰可偽簽舊 seq~~ → **TEL 事件已錨定控制者 KEL**：每個 vcp/iss/rev 先以現行金鑰
    在 KEL 寫入 seal（ixn）再簽發；偽簽者無法用舊金鑰延長 KEL 補錨，未錨定事件 fail-closed。
 5. 所有 LEI 由 `syntheticLei()` 產生（tag + X 填充 + 合法檢查碼），明顯為合成值。
+6. **角色憑證的持有者被擴充到自然人以外**，這是本 PoC 與 GLEIF 規範最明顯的一處偏離，
+   必須主動說明而不是等人問：官方 OOR 與 ECR 都是**發給自然人**的。本 repo 有兩處擴充——
+   ECR 發給 **AI Agent 的 DID**（`agentDid` 擴充欄位，是整個專案的前提：Agent 要有可撤銷的
+   授權身分），以及 ECR 發給**稽核機構這個法人**以表示「第三方稽核者」資格。
+   後者在正式 vLEI 裡更貼近的做法，是由該稽核機構的**自然人**持 OOR／ECR 代表機構背書，
+   或以法人對法人的 ACDC 鏈結（edge）表示背書關係，而不是把角色憑證發給組織 DID。
+   **對驗證邏輯沒有影響**（鏈驗證、撤銷級聯、角色比對都相同），但對「我們是否照規範建模」
+   這個問題，誠實的答案是：**Agent 那一處是刻意且必要的擴充，稽核機構那一處是簡化。**
 
 ## 原因碼
 
