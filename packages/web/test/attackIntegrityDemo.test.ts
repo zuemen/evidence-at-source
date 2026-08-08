@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'vitest';
+import { K_ANONYMITY } from '@eas/shared';
 import { createDemoWorld } from '@eas/web';
 
 describe('demo world — attack & integrity panels', () => {
@@ -18,12 +19,19 @@ describe('demo world — attack & integrity panels', () => {
 
     const { steps } = world.attackDemo().t9;
 
-    expect(steps).toHaveLength(3);
+    expect(steps).toHaveLength(4);
     expect(steps[0]?.ok).toBe(true);
     expect(steps[1]?.ok).toBe(true);
     expect(steps[2]?.ok).toBe(false);
     expect(steps[2]?.reason).toBe('DIFFERENCING_ATTACK_DETECTED');
-    expect(steps[2]?.explanation).toContain('3');
+    // The fourth is the legitimate case the guard used to refuse: a provably
+    // non-overlapping period whose roster barely changed. Answering it is the
+    // continuous monitoring this system is for; refusing it protected nobody.
+    expect(steps[3]?.ok).toBe(true);
+    // The explanation names the difference and the bar it fell under, so a
+    // viewer can see why the third query was the dangerous one.
+    expect(steps[2]?.explanation).toContain('母體差');
+    expect(steps[2]?.explanation).toContain(String(K_ANONYMITY.rate));
     expect(typeof steps[2]?.auditRef).toBe('number');
   });
 

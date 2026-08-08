@@ -7,9 +7,10 @@
  * badly — it is a query it has no data to answer at all.
  */
 
-import type { ReasonCode } from '@eas/shared';
+import { K_ANONYMITY, disclosureFor, type KAnonymityThresholds, type ReasonCode } from '@eas/shared';
 import type { ReconciliationCode } from '@eas/reconciliation';
-import { checkQueryLayer, type AggregateMetric, type Query } from './policyGate.js';
+import { checkQueryLayer, type AggregateMetric, type Disclosure, type Query } from './policyGate.js';
+import { createQuerySession, type QuerySession, type WindowRange } from './differencing.js';
 import { computeEvidenceIntegrityIndex, type IntegrityGrade } from './evidenceIntegrity.js';
 import { classifyRbaItem } from './rbaItems.js';
 
@@ -79,14 +80,34 @@ export type RbaItemAnswer =
   | { readonly ok: true; readonly item: string; readonly answerable: true }
   | { readonly ok: false; readonly reason: ReasonCode };
 
+/**
+ * Every answer carries the bar it cleared, so a reader of an audit trail can
+ * tell whether "83%" was published under a threshold of twenty or of five.
+ */
 export type BrandAnswer =
   | {
       readonly ok: true;
+      readonly disclosure: 'rate';
       readonly metric: AggregateMetric;
       readonly cohort: string;
       readonly cohortSize: number;
       readonly rate: number;
       readonly compliant: boolean;
+      readonly thresholds: KAnonymityThresholds;
+    }
+  /**
+   * The middle band: the cohort is large enough to say whether anyone differs,
+   * not large enough to say how many. No rate field exists on this shape, so a
+   * caller cannot read one by accident.
+   */
+  | {
+      readonly ok: true;
+      readonly disclosure: 'universal';
+      readonly metric: AggregateMetric;
+      readonly cohort: string;
+      readonly cohortSize: number;
+      readonly compliant: boolean;
+      readonly thresholds: KAnonymityThresholds;
     }
   | { readonly ok: false; readonly reason: ReasonCode };
 
@@ -100,16 +121,118 @@ export interface BrandAgent {
   answerRbaItem(item: string): RbaItemAnswer;
 }
 
+type Refusal = { readonly ok: false; readonly reason: ReasonCode };
+
+/**
+ * The only way an aggregate leaves this agent.
+ *
+ * `compute` is a callback rather than a value because a value would have to be
+ * computed before it could be gated, and three of this agent's methods used to
+ * do exactly that — deriving a coverage figure over two workers and then
+ * returning it, because nobody had remembered to add a check. Here the figure
+ * cannot be derived at all until the query layer has said yes, which is the
+ * same reason `runAuthorizedGate` takes a callback instead of a boolean.
+ *
+ * Every cohort-derived answer must come through this. `allQueriesGated.test.ts`
+ * enumerates the interface and fails if a method appears that does not.
+ */
+function gatedAggregate<T>(
+  input: {
+    readonly cohort: string;
+    readonly window: string;
+    /**
+     * The period this answer measures. Supplying it lets the differencing guard
+     * tell a later *period* from a later *slice of the same period*; omitting it
+     * keeps the guard strict, which is the safe default.
+     */
+    readonly range?: WindowRange;
+    readonly metric: AggregateMetric;
+    /** The population this particular answer would be derived from. */
+    readonly cohortSize: number;
+    /** What this answer would publish. Defaults to the stricter of the two. */
+    readonly disclosure?: Disclosure;
+    /** Null only when the caller has explicitly opted out. */
+    readonly session: QuerySession | null;
+    readonly recordIds: readonly string[];
+  },
+  compute: () => T | Refusal,
+): T | Refusal {
+  const decision = checkQueryLayer(
+    { kind: 'aggregate', metric: input.metric, cohort: input.cohort },
+    { cohortSize: input.cohortSize, ...(input.disclosure ? { disclosure: input.disclosure } : {}) },
+  );
+  if (!decision.ok) {
+    // Only the reason code travels back — never a partial result.
+    return { ok: false, reason: decision.reason };
+  }
+
+  // The differencing guard sees only queries that already cleared the gate,
+  // because it is a record of what was *answered*. A refusal here is still a
+  // refusal: compute() never runs, so nothing is derived.
+  if (input.session !== null) {
+    const verdict = input.session.submit({
+      cohort: input.cohort,
+      window: input.window,
+      ...(input.range === undefined ? {} : { range: input.range }),
+      recordIds: input.recordIds,
+    });
+    if (!verdict.ok) {
+      return { ok: false, reason: verdict.reason };
+    }
+  }
+
+  return compute();
+}
+
 /** Discrepancy = a verdict that is neither consistent nor unassessable. */
 function isDiscrepancy(code: ReconciliationCode): boolean {
   return code === 'DISCREPANCY_UNDERPAID' || code === 'DISCREPANCY_OVERPAID';
+}
+
+export interface BrandAgentOptions {
+  readonly thresholds?: KAnonymityThresholds;
+  /**
+   * Protection against differencing attacks — two answers that each clear
+   * k-anonymity but whose populations differ by fewer than k, so subtracting
+   * one from the other isolates the difference.
+   *
+   * This used to be an object a caller had to remember to construct and wire
+   * up. The demo did; a caller of the API did not; and anyone copying this
+   * file got an agent that answered both halves of the pair. So the default is
+   * now a session of the agent's own, and going without one means passing
+   * `differencing: false` — visible in the call site, and in code review.
+   */
+  readonly differencing?: QuerySession | false;
 }
 
 export function createBrandAgent(
   evidence: readonly CohortEvidence[],
   reconciliations: readonly ReconciliationCohort[] = [],
   omissions: readonly OmissionCohort[] = [],
+  options: BrandAgentOptions = {},
 ): BrandAgent {
+  const thresholds = options.thresholds ?? K_ANONYMITY;
+  const session =
+    options.differencing === false
+      ? null
+      : (options.differencing ?? createQuerySession({ kAnonymity: thresholds.rate }));
+
+  /**
+   * Opaque, positional ids for the records an answer covers.
+   *
+   * `CohortEvidence` deliberately carries no identifiers, so there is nothing
+   * real to key on — and that is the property worth keeping. Positional ids
+   * are enough for the attack that actually exists here: the same cohort asked
+   * twice, one worker having departed in between, gives a symmetric difference
+   * of one. They are keyed on the cohort and not the metric, so two different
+   * metrics over the same unchanged population differ by zero and are allowed.
+   *
+   * A caller with real record ids should use `createQuerySession` directly and
+   * pass it in; this is the floor, not the ceiling.
+   */
+  function positionalIds(cohort: string, size: number): string[] {
+    return Array.from({ length: size }, (_, i) => `${cohort}#${i}`);
+  }
   function findOmissionCohort(cohort: string, window: string): OmissionCohort | undefined {
     return omissions.find((o) => o.cohort === cohort && o.window === window);
   }
@@ -117,16 +240,29 @@ export function createBrandAgent(
   function gateReconciliation(
     cohort: string,
     window: string,
+    disclosure: Disclosure,
   ): { ok: true; record: ReconciliationCohort } | { ok: false; reason: ReasonCode } {
     const record = reconciliations.find((r) => r.cohort === cohort && r.window === window);
 
     // Reuse the L2 query layer so payroll queries clear the same k-anonymity bar.
+    const size = record?.outcomes.length ?? 0;
     const decision = checkQueryLayer(
       { kind: 'aggregate', metric: 'payrollDiscrepancyRate', cohort },
-      { cohortSize: record?.outcomes.length ?? 0 },
+      { cohortSize: size, disclosure },
     );
     if (!decision.ok) {
       return { ok: false, reason: decision.reason };
+    }
+
+    if (session !== null) {
+      const verdict = session.submit({
+        cohort,
+        window,
+        recordIds: positionalIds(cohort, size),
+      });
+      if (!verdict.ok) {
+        return { ok: false, reason: verdict.reason };
+      }
     }
     if (!record) {
       return { ok: false, reason: 'CLAIM_NOT_DISCLOSED' };
@@ -137,7 +273,8 @@ export function createBrandAgent(
 
   return {
     getDiscrepancyRate(cohort, window) {
-      const gated = gateReconciliation(cohort, window);
+      // A rate: needs the higher bar.
+      const gated = gateReconciliation(cohort, window, 'rate');
       if (!gated.ok) {
         return { ok: false, reason: gated.reason };
       }
@@ -155,7 +292,9 @@ export function createBrandAgent(
     },
 
     checkPayrollConsistency(cohort, window) {
-      const gated = gateReconciliation(cohort, window);
+      // A universal proposition — "did anyone's deposit disagree" — so the
+      // middle band can answer it. This is the degraded form of the rate above.
+      const gated = gateReconciliation(cohort, window, 'universal');
       if (!gated.ok) {
         return { ok: false, reason: gated.reason };
       }
@@ -171,23 +310,49 @@ export function createBrandAgent(
 
     getOmissionSignalCount(cohort, window) {
       const record = findOmissionCohort(cohort, window);
-      if (!record) {
-        return { ok: false, reason: 'CLAIM_NOT_DISCLOSED' };
-      }
 
-      // Only the count travels back — never which positions were omitted.
-      return { ok: true, cohort, window, count: record.signals.filter(Boolean).length };
+      const size = record?.signals.length ?? 0;
+
+      return gatedAggregate(
+        {
+          cohort,
+          window,
+          metric: 'omissionSignalCount',
+          cohortSize: size,
+          session,
+          recordIds: positionalIds(cohort, size),
+        },
+        () => {
+          if (!record) return { ok: false, reason: 'CLAIM_NOT_DISCLOSED' };
+
+          // Only the count travels back — never which positions were omitted.
+          return { ok: true, cohort, window, count: record.signals.filter(Boolean).length };
+        },
+      );
     },
 
     getCommitmentCoverage(cohort, window) {
       const record = findOmissionCohort(cohort, window);
-      if (!record || record.signals.length === 0) {
-        return { ok: false, reason: 'CLAIM_NOT_DISCLOSED' };
-      }
 
-      const covered = record.signals.filter((omitted) => !omitted).length;
+      const size = record?.signals.length ?? 0;
 
-      return { ok: true, cohort, window, coverage: covered / record.signals.length };
+      return gatedAggregate(
+        {
+          cohort,
+          window,
+          metric: 'commitmentCoverageRate',
+          cohortSize: size,
+          session,
+          recordIds: positionalIds(cohort, size),
+        },
+        () => {
+          if (!record) return { ok: false, reason: 'CLAIM_NOT_DISCLOSED' };
+
+          const covered = record.signals.filter((omitted) => !omitted).length;
+
+          return { ok: true, cohort, window, coverage: covered / record.signals.length };
+        },
+      );
     },
 
     getEvidenceIntegrityIndex(cohort, window) {
@@ -196,22 +361,55 @@ export function createBrandAgent(
         (r) => r.cohort === cohort && r.window === window,
       );
 
-      const components: { coverage?: number; consistency?: number } = {};
-      if (omission && omission.signals.length > 0) {
-        const covered = omission.signals.filter((omitted) => !omitted).length;
-        components.coverage = covered / omission.signals.length;
-      }
-      if (reconciliation && reconciliation.outcomes.length > 0) {
-        const discrepancies = reconciliation.outcomes.filter(isDiscrepancy).length;
-        components.consistency = 1 - discrepancies / reconciliation.outcomes.length;
-      }
+      // This answer is derived from two populations, so both must clear the bar
+      // independently. Gating on the smaller one alone would let a healthy
+      // reconciliation cohort carry a two-person omission cohort past the gate,
+      // and the index would still be partly about those two people.
+      const omissionSize = omission?.signals.length ?? 0;
+      const reconciliationSize = reconciliation?.outcomes.length ?? 0;
 
-      const { index, grade } = computeEvidenceIntegrityIndex(components);
-      if (index === null || grade === null) {
-        return { ok: false, reason: 'CLAIM_NOT_DISCLOSED' };
-      }
+      return gatedAggregate(
+        {
+          cohort,
+          window,
+          metric: 'evidenceIntegrityIndex',
+          cohortSize: omissionSize,
+          session,
+          recordIds: positionalIds(cohort, omissionSize),
+        },
+        () =>
+          gatedAggregate(
+            {
+              cohort,
+              window,
+              metric: 'evidenceIntegrityIndex',
+              cohortSize: reconciliationSize,
+              // The outer gate already recorded this query with the session;
+              // recording it twice would make an honest index look like a pair
+              // of near-identical queries and refuse itself.
+              session: null,
+              recordIds: [],
+            },
+            () => {
+              const components: { coverage?: number; consistency?: number } = {};
+              if (omission && omission.signals.length > 0) {
+                const covered = omission.signals.filter((omitted) => !omitted).length;
+                components.coverage = covered / omission.signals.length;
+              }
+              if (reconciliation && reconciliation.outcomes.length > 0) {
+                const discrepancies = reconciliation.outcomes.filter(isDiscrepancy).length;
+                components.consistency = 1 - discrepancies / reconciliation.outcomes.length;
+              }
 
-      return { ok: true, cohort, window, index, grade, components };
+              const { index, grade } = computeEvidenceIntegrityIndex(components);
+              if (index === null || grade === null) {
+                return { ok: false, reason: 'CLAIM_NOT_DISCLOSED' };
+              }
+
+              return { ok: true, cohort, window, index, grade, components };
+            },
+          ),
+      );
     },
 
     answerRbaItem(item) {
@@ -231,11 +429,34 @@ export function createBrandAgent(
         query.kind === 'aggregate'
           ? evidence.find((e) => e.cohort === query.cohort && e.metric === query.metric)
           : undefined;
+      const cohortSize = record?.conclusions.length ?? 0;
 
-      const decision = checkQueryLayer(query, { cohortSize: record?.conclusions.length ?? 0 });
+      // Ask for what this cohort can actually support rather than for a rate
+      // and a refusal. A cohort that has shrunk past the rate threshold — a
+      // worker departing is enough — should degrade to "are they all
+      // compliant" instead of going silent, because silence tells a brand
+      // nothing it can act on and the universal answer still tells it
+      // something true.
+      const supported = disclosureFor(cohortSize, thresholds);
+      const decision = checkQueryLayer(query, {
+        cohortSize,
+        thresholds,
+        ...(supported === null ? {} : { disclosure: supported }),
+      });
       if (!decision.ok) {
         // Only the reason code travels back — never any part of the query.
         return { ok: false, reason: decision.reason };
+      }
+
+      if (session !== null && query.kind === 'aggregate') {
+        const verdict = session.submit({
+          cohort: query.cohort,
+          window: query.metric,
+          recordIds: positionalIds(query.cohort, cohortSize),
+        });
+        if (!verdict.ok) {
+          return { ok: false, reason: verdict.reason };
+        }
       }
 
       if (!record) {
@@ -243,14 +464,29 @@ export function createBrandAgent(
       }
 
       const passing = record.conclusions.filter(Boolean).length;
+      const compliant = passing === record.conclusions.length;
+
+      if (decision.disclosure === 'universal') {
+        return {
+          ok: true,
+          disclosure: 'universal',
+          metric: record.metric,
+          cohort: record.cohort,
+          cohortSize: record.conclusions.length,
+          compliant,
+          thresholds: decision.thresholds,
+        };
+      }
 
       return {
         ok: true,
+        disclosure: 'rate',
         metric: record.metric,
         cohort: record.cohort,
         cohortSize: record.conclusions.length,
         rate: passing / record.conclusions.length,
-        compliant: passing === record.conclusions.length,
+        compliant,
+        thresholds: decision.thresholds,
       };
     },
   };

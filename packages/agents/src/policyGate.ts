@@ -10,22 +10,28 @@
  * no code path that produces one, which is the point.
  */
 
-import type { ReasonCode } from '@eas/shared';
+import {
+  K_ANONYMITY,
+  disclosureFor,
+  type Disclosure,
+  type KAnonymityThresholds,
+  type ReasonCode,
+} from '@eas/shared';
 
-/**
- * Minimum cohort size before an aggregate may be answered. Below this, a
- * "compliance rate" over a handful of workers can be reversed into a statement
- * about a named person, which is exactly the retaliation risk this system
- * exists to remove.
- */
-export const K_ANONYMITY_THRESHOLD = 5;
+export type { Disclosure, KAnonymityThresholds };
 
 export type AggregateMetric =
   | 'workingHoursComplianceRate'
   | 'recruitmentFeeComplianceRate'
   | 'documentCustodyComplianceRate'
   | 'contractConsentComplianceRate'
-  | 'payrollDiscrepancyRate';
+  | 'payrollDiscrepancyRate'
+  // Integrity metrics. They are aggregates like any other and must clear the
+  // same bar: a coverage figure over two workers says as much about a named
+  // person as a compliance rate over two workers does.
+  | 'commitmentCoverageRate'
+  | 'omissionSignalCount'
+  | 'evidenceIntegrityIndex';
 
 export type Query =
   | {
@@ -40,10 +46,26 @@ export type Query =
 
 export interface CohortContext {
   readonly cohortSize: number;
+  /**
+   * What the caller intends to publish. A rate needs a bigger cohort than a
+   * universal proposition, because a rate carries how many differ and a
+   * universal proposition only carries whether any do.
+   *
+   * Defaults to `rate`, the stricter of the two: a caller that has not thought
+   * about this should get the safer answer, not the looser one.
+   */
+  readonly disclosure?: Disclosure;
+  readonly thresholds?: KAnonymityThresholds;
 }
 
 export type QueryDecision =
-  | { readonly ok: true }
+  | {
+      readonly ok: true;
+      /** What this cohort actually supports, which may be less than requested. */
+      readonly disclosure: Disclosure;
+      /** Reported back so an auditor knows which bar the answer cleared. */
+      readonly thresholds: KAnonymityThresholds;
+    }
   | { readonly ok: false; readonly reason: ReasonCode };
 
 export function checkQueryLayer(query: Query, context: CohortContext): QueryDecision {
@@ -51,9 +73,20 @@ export function checkQueryLayer(query: Query, context: CohortContext): QueryDeci
     return { ok: false, reason: 'INDIVIDUAL_QUERY_REJECTED' };
   }
 
-  if (context.cohortSize < K_ANONYMITY_THRESHOLD) {
+  const thresholds = context.thresholds ?? K_ANONYMITY;
+  const supported = disclosureFor(context.cohortSize, thresholds);
+
+  // Below the floor nothing is said, and the code says so distinctly: a caller
+  // that could tell "too small for a rate" from "too small for anything" would
+  // learn where the cohort sits relative to the bar.
+  if (supported === null) {
+    return { ok: false, reason: 'COHORT_TOO_SMALL' };
+  }
+
+  const requested = context.disclosure ?? 'rate';
+  if (requested === 'rate' && supported !== 'rate') {
     return { ok: false, reason: 'AGGREGATE_BELOW_K_ANONYMITY' };
   }
 
-  return { ok: true };
+  return { ok: true, disclosure: requested, thresholds };
 }

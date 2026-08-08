@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'vitest';
+import { K_ANONYMITY } from '@eas/shared';
 import { createBrandAgent, type OmissionCohort } from '@eas/agents';
 
 const WINDOW = '2026-08';
@@ -7,7 +8,10 @@ const WINDOW = '2026-08';
 const COHORT: OmissionCohort = {
   cohort: 'factory-a',
   window: WINDOW,
-  signals: [false, false, false, false, true],
+  // Twenty with the same 4:1 ratio as before: the figures these tests assert
+  // are unchanged, and the cohort now clears the rate threshold that an index
+  // or a coverage fraction requires.
+  signals: Array.from({ length: K_ANONYMITY.rate }, (_, i) => i % 5 === 4),
 };
 
 describe('Agent B — omission queries', () => {
@@ -17,7 +21,7 @@ describe('Agent B — omission queries', () => {
     const answer = agent.getOmissionSignalCount('factory-a', WINDOW);
 
     expect(answer.ok).toBe(true);
-    expect(answer.ok === true && answer.count).toBe(1);
+    expect(answer.ok === true && answer.count).toBe(K_ANONYMITY.rate / 5);
   });
 
   test('getCommitmentCoverage returns the fraction of records the commitment covers', () => {

@@ -11,5 +11,8 @@
     "@eas/reconciliation": "*",
     "@eas/shared": "*",
     "@eas/vlei": "*"
+  },
+  "devDependencies": {
+    "@eas/explain": "*"
   }
 }

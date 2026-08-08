@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'vitest';
+import { K_ANONYMITY } from '@eas/shared';
 import { createBrandAgent, type ReconciliationCohort } from '@eas/agents';
 
 const WINDOW = '2026-08';
@@ -7,14 +8,11 @@ const WINDOW = '2026-08';
 const MIXED: ReconciliationCohort = {
   cohort: 'factory-a',
   window: WINDOW,
-  outcomes: [
-    'CONSISTENT',
-    'CONSISTENT',
-    'CONSISTENT',
-    'CONSISTENT',
-    'CONSISTENT',
-    'DISCREPANCY_OVERPAID',
-  ],
+  // Twenty-four, one in six discrepant — the same 1/6 rate the assertions
+  // below expect, over a cohort that now clears the rate threshold.
+  outcomes: Array.from({ length: 24 }, (_, i) =>
+    i % 6 === 5 ? ('DISCREPANCY_OVERPAID' as const) : ('CONSISTENT' as const),
+  ),
 };
 
 describe('Agent B — payroll reconciliation queries', () => {
@@ -25,7 +23,7 @@ describe('Agent B — payroll reconciliation queries', () => {
 
     expect(answer.ok).toBe(true);
     expect(answer.ok === true && answer.rate).toBeCloseTo(1 / 6);
-    expect(answer.ok === true && answer.cohortSize).toBe(6);
+    expect(answer.ok === true && answer.cohortSize).toBe(24);
   });
 
   test('checkPayrollConsistency is false when any worker shows a discrepancy', () => {
@@ -39,13 +37,17 @@ describe('Agent B — payroll reconciliation queries', () => {
 
   test('refuses a cohort too small to protect an individual', () => {
     const agent = createBrandAgent([], [
-      { cohort: 'tiny', window: WINDOW, outcomes: ['CONSISTENT', 'DISCREPANCY_OVERPAID'] },
+      {
+        cohort: 'tiny',
+        window: WINDOW,
+        outcomes: Array.from({ length: K_ANONYMITY.minimum - 1 }, () => 'CONSISTENT' as const),
+      },
     ]);
 
     const answer = agent.getDiscrepancyRate('tiny', WINDOW);
 
     expect(answer.ok).toBe(false);
-    expect(answer.ok === false && answer.reason).toBe('AGGREGATE_BELOW_K_ANONYMITY');
+    expect(answer.ok === false && answer.reason).toBe('COHORT_TOO_SMALL');
   });
 
   test('the answer carries no per-worker outcome list and no identifiers', () => {

@@ -26,6 +26,9 @@ export type { RevocationQuery, RevocationRegistry } from './revocation.js';
 export { createRevocationDirectory } from './revocationPaths.js';
 export type { RevocationDirectory, RevocationPath } from './revocationPaths.js';
 
+export { K_ANONYMITY, disclosureFor } from './kAnonymity.js';
+export type { Disclosure, KAnonymityThresholds } from './kAnonymity.js';
+
 export { REASON_CODES } from './reasonCodes.js';
 export type { ReasonCode } from './reasonCodes.js';
 

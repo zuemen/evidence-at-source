@@ -11,6 +11,7 @@
  */
 
 import {
+  K_ANONYMITY,
   createEnrollmentRegistry,
   createRevocationRegistry,
   createWorkerAttestation,
@@ -677,11 +678,16 @@ export async function createDemoWorld(): Promise<DemoWorld> {
     deviceFingerprint: DEVICE,
   });
 
-  // Five more workers, one of them over the limit, so the cohort clears k=5.
+  // Nineteen more workers, three of them over the limit. Twenty in total, which
+  // is exactly the rate threshold — so the cohort can be shown a rate, and the
+  // departure demo drops it to nineteen and degrades to a universal
+  // proposition. That degradation is the point of the scene: the same query,
+  // the same evidence, one fewer worker, and the answer gets less specific
+  // rather than disappearing.
   const others: CohortMember[] = [];
   const factoryKey = requireIssuerKey(factory);
-  for (let i = 2; i <= 6; i += 1) {
-    others.push(await buildCohortMember(factory, factoryKey, i, i !== 5));
+  for (let i = 2; i <= K_ANONYMITY.rate; i += 1) {
+    others.push(await buildCohortMember(factory, factoryKey, i, i % 6 !== 0));
   }
 
   async function presentationFor(entry: HeldCredential): Promise<string> {
@@ -726,15 +732,50 @@ export async function createDemoWorld(): Promise<DemoWorld> {
     },
     // ── T9: two broad queries answered, the narrowing third denied ──────────
     t9: (() => {
-      const K = 10;
+      // The differencing guard uses the same rate threshold as everything else.
+      const K = K_ANONYMITY.rate;
       const session = createQuerySession({ kAnonymity: K, auditBase: 1043 });
       const ids = (n: number, prefix: string): string[] =>
         Array.from({ length: n }, (_, i) => `${prefix}${i}`);
 
-      const v1 = session.submit({ cohort: 'factory-a', window: 'jan-oct', recordIds: ids(15, 'a') });
-      const v2 = session.submit({ cohort: 'factory-b', window: 'jan-oct', recordIds: ids(15, 'b') });
-      // Subset of v1 (a0..a11): the difference from v1 is 3 records, below k.
-      const v3 = session.submit({ cohort: 'factory-a', window: 'week-4', recordIds: ids(12, 'a') });
+      // Ranges are supplied throughout, so this also shows that naming a period
+      // does not weaken the guard: jan–oct and week-4 overlap, and the attack is
+      // refused exactly as before.
+      const janOct = { start: '2026-01-01', end: '2026-10-31' };
+      const week4 = { start: '2026-01-22', end: '2026-01-28' };
+      const nov = { start: '2026-11-01', end: '2026-11-30' };
+
+      const v1 = session.submit({
+        cohort: 'factory-a',
+        window: 'jan-oct',
+        range: janOct,
+        recordIds: ids(30, 'a'),
+      });
+      const v2 = session.submit({
+        cohort: 'factory-b',
+        window: 'jan-oct',
+        range: janOct,
+        recordIds: ids(30, 'b'),
+      });
+      // Subset of v1 (a0..a24) inside the same period: the difference from v1 is
+      // 5 records, below k — subtracting the two answers would isolate five people.
+      const v3 = session.submit({
+        cohort: 'factory-a',
+        window: 'week-4',
+        range: week4,
+        recordIds: ids(25, 'a'),
+      });
+      // The same near-identical roster, but a period that provably does not
+      // overlap: November's hours are not October's, so subtracting the two says
+      // the aggregate moved, not what anyone's October value was. This is the
+      // continuous monitoring the whole system exists to make possible, and the
+      // guard used to refuse it precisely because the roster barely changed.
+      const v4 = session.submit({
+        cohort: 'factory-a',
+        window: 'nov',
+        range: nov,
+        recordIds: ids(29, 'a'),
+      });
 
       const toStep = (label: string, cohortSize: number, v: typeof v1): T9Step => ({
         label,
@@ -751,21 +792,27 @@ export async function createDemoWorld(): Promise<DemoWorld> {
           toStep('工廠 A・全期合規率', 15, v1),
           toStep('工廠 B・全期合規率', 15, v2),
           toStep('工廠 A・僅第 4 週（＝全期 − 前面幾週）', 12, v3),
+          toStep('工廠 A・十一月（不重疊的下一期，1 人離職）', 29, v4),
         ],
       };
     })(),
   };
 
   // ── P6: evidence integrity index over a synthetic supplier ────────────────
+  // Twenty apiece, keeping the 4:1 ratios the panel has always shown, so the
+  // integrity index clears the rate threshold. An index is built from rates and
+  // therefore needs the same cohort a rate needs.
   const integrityReconciliation: ReconciliationCohort = {
     cohort: 'supplier-x',
     window: '2026-08',
-    outcomes: ['CONSISTENT', 'CONSISTENT', 'CONSISTENT', 'CONSISTENT', 'DISCREPANCY_OVERPAID'],
+    outcomes: Array.from({ length: K_ANONYMITY.rate }, (_, i) =>
+      i % 5 === 4 ? ('DISCREPANCY_OVERPAID' as const) : ('CONSISTENT' as const),
+    ),
   };
   const integrityOmission: OmissionCohort = {
     cohort: 'supplier-x',
     window: '2026-08',
-    signals: [false, false, false, false, true],
+    signals: Array.from({ length: K_ANONYMITY.rate }, (_, i) => i % 5 === 4),
   };
   const integrityAnswer = createBrandAgent(
     [],

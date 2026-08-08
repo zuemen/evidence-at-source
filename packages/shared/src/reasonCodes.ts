@@ -53,7 +53,12 @@ export const REASON_CODES = [
   'POLICY_CHECK_FAILED',
   // L2 — query layer
   'INDIVIDUAL_QUERY_REJECTED',
+  // A rate was requested over a cohort that can support only a universal
+  // proposition. Distinct from COHORT_TOO_SMALL: something can still be asked.
   'AGGREGATE_BELOW_K_ANONYMITY',
+  // The cohort is below the floor. Nothing is answered about it at all —
+  // not a rate, not a count, not "are they all compliant".
+  'COHORT_TOO_SMALL',
   // Two answered aggregates whose populations differ by fewer than k can be
   // subtracted to isolate an individual. The later query is refused.
   'DIFFERENCING_ATTACK_DETECTED',

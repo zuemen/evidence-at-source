@@ -6,7 +6,12 @@ const SYNTHETIC_EVIDENCE = [
   {
     cohort: 'factory-a-2026-08',
     metric: 'workingHoursComplianceRate',
-    conclusions: [true, true, true, true, true, true, false, false],
+    // Twenty-four with the same 6:2 ratio as before, so the expected rate is
+    // unchanged and the cohort now clears the rate threshold.
+    conclusions: [
+      ...Array.from({ length: 18 }, () => true),
+      ...Array.from({ length: 6 }, () => false),
+    ],
   },
 ] as const;
 
@@ -32,8 +37,8 @@ describe('Agent B — brand verifier', () => {
     });
 
     expect(answer.ok).toBe(true);
-    expect(answer.ok === true && answer.rate).toBeCloseTo(0.75);
-    expect(answer.ok === true && answer.cohortSize).toBe(8);
+    expect(answer.ok === true && answer.disclosure === 'rate' && answer.rate).toBeCloseTo(0.75);
+    expect(answer.ok === true && answer.cohortSize).toBe(24);
     expect(JSON.stringify(answer)).not.toContain('zWorker');
   });
 
@@ -53,6 +58,34 @@ describe('Agent B — brand verifier', () => {
     });
 
     expect(answer.ok).toBe(false);
-    expect(answer.ok === false && answer.reason).toBe('AGGREGATE_BELOW_K_ANONYMITY');
+    expect(answer.ok === false && answer.reason).toBe('COHORT_TOO_SMALL');
+  });
+
+  test('a cohort in the middle band degrades to a universal proposition', () => {
+    // Six workers: too few for a rate, enough to say whether anyone differs.
+    // Going silent here would be worse than answering — the brand learns
+    // nothing actionable from silence, and "not all compliant" is true and
+    // says less than "83%" would.
+    const agent = createBrandAgent([
+      {
+        cohort: 'small-line-2026-08',
+        metric: 'workingHoursComplianceRate',
+        conclusions: [true, true, true, true, true, false],
+      },
+    ]);
+
+    const answer = agent.answer({
+      kind: 'aggregate',
+      metric: 'workingHoursComplianceRate',
+      cohort: 'small-line-2026-08',
+    });
+
+    expect(answer.ok).toBe(true);
+    expect(answer.ok === true && answer.disclosure).toBe('universal');
+    expect(answer.ok === true && answer.compliant).toBe(false);
+    // The count of non-compliant workers must not be recoverable. Checked on
+    // the object rather than its JSON, because the reported thresholds legitimately
+    // contain a `rate` key — that is the bar, not an answer about anybody.
+    expect(Object.keys(answer)).not.toContain('rate');
   });
 });

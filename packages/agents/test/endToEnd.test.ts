@@ -83,9 +83,24 @@ describe('end to end — presentation through both gate layers into an agent', (
       metric: 'workingHoursComplianceRate',
       cohort: COHORT,
     });
+    // Six survivors is the middle band under the shipped thresholds, so the
+    // honest end-to-end answer is the universal one. Rebuilding this with
+    // twenty-one signed submissions would test the same gate more slowly.
     expect(aggregate.ok).toBe(true);
-    expect(aggregate.ok === true && aggregate.rate).toBeCloseTo(4 / 6);
+    expect(aggregate.ok === true && aggregate.disclosure).toBe('universal');
     expect(aggregate.ok === true && aggregate.compliant).toBe(false);
+
+    // The same evidence under a verifier whose bar is low enough for a rate,
+    // so the rate path stays covered end to end rather than only in isolation.
+    const lenient = createBrandAgent([evidence], [], [], {
+      thresholds: { rate: 5, minimum: 2 },
+    });
+    const rated = lenient.answer({
+      kind: 'aggregate',
+      metric: 'workingHoursComplianceRate',
+      cohort: COHORT,
+    });
+    expect(rated.ok === true && rated.disclosure === 'rate' && rated.rate).toBeCloseTo(4 / 6);
 
     const individual = agent.answer({ kind: 'individual', workerDID: 'did:key:zWorker005' });
     expect(individual.ok).toBe(false);

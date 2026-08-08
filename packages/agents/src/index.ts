@@ -1,4 +1,5 @@
-export { K_ANONYMITY_THRESHOLD, checkQueryLayer } from './policyGate.js';
+export { checkQueryLayer } from './policyGate.js';
+export type { Disclosure, KAnonymityThresholds } from './policyGate.js';
 export type {
   AggregateMetric,
   CohortContext,
@@ -122,6 +123,7 @@ export type {
 
 export {
   DEFAULT_APPLICATION_THRESHOLD,
+  DEFAULT_APPLICATION_WINDOW_DAYS,
   createApplicationMonitor,
 } from './applicationMonitor.js';
 export type { ApplicationMonitor, ApplicationRisk } from './applicationMonitor.js';

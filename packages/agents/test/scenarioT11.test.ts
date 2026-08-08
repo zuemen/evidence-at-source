@@ -1,5 +1,7 @@
 import { describe, expect, test } from 'vitest';
-import { createWorkerAttestation, credentialHash, generateKeyPair, presentCredential } from '@eas/shared';
+import { createWorkerAttestation, credentialHash, generateKeyPair, presentCredential,
+  K_ANONYMITY,
+} from '@eas/shared';
 import { createIssuer } from '@eas/issuer';
 import {
   buildMerkleTree,
@@ -26,7 +28,7 @@ describe('T11 — omission detection across a cohort', () => {
 
     // Five workers each hold a counter-signed working-hours credential.
     const recordHashes: string[] = [];
-    for (let i = 1; i <= 5; i += 1) {
+    for (let i = 1; i <= K_ANONYMITY.rate; i += 1) {
       const worker = await generateKeyPair();
       const credential = await factory.issue('WorkingHoursCredential', {
         workerDID: `did:key:zWorker${String(i).padStart(3, '0')}`,
@@ -43,8 +45,8 @@ describe('T11 — omission detection across a cohort', () => {
       recordHashes.push(credentialHash(await presentCredential(credential, ['withinRBALimit'])));
     }
 
-    // The factory commits to only the first four records; worker 5 is omitted.
-    const published = recordHashes.slice(0, 4);
+    // The factory commits to every record but the last; one worker is omitted.
+    const published = recordHashes.slice(0, K_ANONYMITY.rate - 1);
     const { commitment } = createRecordSetCommitment(published, META);
     const publishedTree = buildMerkleTree(published);
 
@@ -52,7 +54,9 @@ describe('T11 — omission detection across a cohort', () => {
     // for records it actually committed to.
     const heldRecords: HeldRecord[] = recordHashes.map((hash, index) => ({
       recordHash: hash,
-      inclusionProof: index < 4 ? getInclusionProof(publishedTree, index) : null,
+      // Derived from what was actually published rather than a fixed number,
+      // so resizing the cohort cannot silently change what this test asserts.
+      inclusionProof: index < published.length ? getInclusionProof(publishedTree, index) : null,
     }));
 
     const cohort = buildOmissionCohort({ cohort: COHORT, window: WINDOW, commitment, heldRecords });
@@ -63,7 +67,9 @@ describe('T11 — omission detection across a cohort', () => {
 
     expect(count.ok).toBe(true);
     expect(count.ok === true && count.count).toBe(1);
-    expect(coverage.ok === true && coverage.coverage).toBeCloseTo(4 / 5);
+    expect(coverage.ok === true && coverage.coverage).toBeCloseTo(
+      (K_ANONYMITY.rate - 1) / K_ANONYMITY.rate,
+    );
 
     // The answer names nobody.
     const serialised = JSON.stringify(count) + JSON.stringify(coverage);

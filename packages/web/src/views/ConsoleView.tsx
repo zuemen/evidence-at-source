@@ -299,10 +299,23 @@ export function ConsoleView({
                 {brandAnswer.compliant ? '全數合規' : '存在不合規'}
               </p>
               <div style={{ marginTop: '1.4rem' }}>
-                <div className="claim-row">
-                  <span className="name">workingHoursComplianceRate</span>
-                  <span className="value">{(brandAnswer.rate * 100).toFixed(0)}%</span>
-                </div>
+                {brandAnswer.disclosure === 'rate' ? (
+                  <div className="claim-row">
+                    <span className="name">workingHoursComplianceRate</span>
+                    <span className="value">{(brandAnswer.rate * 100).toFixed(0)}%</span>
+                  </div>
+                ) : (
+                  <div className="claim-row is-wide">
+                    <span className="name">是否全部合規</span>
+                    <span className="value">
+                      {brandAnswer.compliant ? '是' : '否'}
+                      <span className="qualifier">
+                        母體 {brandAnswer.cohortSize} 人低於比率門檻 {brandAnswer.thresholds.rate}
+                        ，降級為全稱命題——比率會說出「恰好幾人不合規」，這個不會
+                      </span>
+                    </span>
+                  </div>
+                )}
                 <div className="claim-row">
                   <span className="name">cohortSize</span>
                   <span className="value">{brandAnswer.cohortSize}</span>

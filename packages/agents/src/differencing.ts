@@ -11,14 +11,33 @@
  * can measure set differences; they are never returned to the caller.
  */
 
-import type { ReasonCode } from '@eas/shared';
+import { K_ANONYMITY, type ReasonCode } from '@eas/shared';
 
-export const DEFAULT_K_ANONYMITY = 10;
+/**
+ * Subtracting two answered rates yields a rate over the difference set, so the
+ * difference set has to be publishable at the same level the answers were —
+ * the rate threshold, not the floor. This used to be its own number (10),
+ * which meant the guard protected a bar nothing else used.
+ */
+export const DEFAULT_K_ANONYMITY = K_ANONYMITY.rate;
 export const DEFAULT_QUERY_BUDGET = 20;
+
+/**
+ * A closed time range, as ISO dates. Supplying one lets the guard tell a second
+ * *measurement* from a second *slice*: February's hours are not January's hours,
+ * so subtracting the two reveals that the aggregate moved, not what anyone's
+ * January value was. Without it the guard assumes overlap and stays strict.
+ */
+export interface WindowRange {
+  readonly start: string;
+  readonly end: string;
+}
 
 export interface AuditedQuery {
   readonly cohort: string;
   readonly window: string;
+  /** Optional structured range. Absent means "assume it overlaps everything". */
+  readonly range?: WindowRange;
   /** Opaque ids of the records this query aggregates over. No worker DIDs. */
   readonly recordIds: readonly string[];
 }
@@ -33,7 +52,22 @@ export type QueryVerdict =
     };
 
 export interface QuerySessionOptions {
+  /**
+   * The bar a *difference* between two answered queries must clear.
+   *
+   * Subtracting two answered rates yields a rate over the difference set, so
+   * that set has to be publishable at the same level the answers were.
+   */
   readonly kAnonymity?: number;
+  /**
+   * The floor below which a single query is refused outright.
+   *
+   * A different question from the one above, and therefore a different number:
+   * the middle band of the two-tier design can answer a universal proposition
+   * over five workers, and a session that refused it would contradict the gate
+   * that had just allowed it.
+   */
+  readonly minimumCohort?: number;
   readonly queryBudget?: number;
   /** Starting number for audit-chain references. */
   readonly auditBase?: number;
@@ -41,6 +75,18 @@ export interface QuerySessionOptions {
 
 export interface QuerySession {
   submit(query: AuditedQuery): QueryVerdict;
+}
+
+/**
+ * Fail-closed: only a pair of ranges that can be *shown* not to touch is treated
+ * as independent. A missing range on either side, or any overlap — including one
+ * range containing the other, which is how `jan-oct` against `jan-sep` isolates
+ * October — leaves the differencing guard in force.
+ */
+function provablyDisjoint(a: WindowRange | undefined, b: WindowRange | undefined): boolean {
+  if (a === undefined || b === undefined) return false;
+
+  return a.end < b.start || b.end < a.start;
 }
 
 function symmetricDifferenceSize(a: ReadonlySet<string>, b: readonly string[]): number {
@@ -59,10 +105,11 @@ function symmetricDifferenceSize(a: ReadonlySet<string>, b: readonly string[]): 
 
 export function createQuerySession(options: QuerySessionOptions = {}): QuerySession {
   const k = options.kAnonymity ?? DEFAULT_K_ANONYMITY;
+  const floor = options.minimumCohort ?? K_ANONYMITY.minimum;
   const budget = options.queryBudget ?? DEFAULT_QUERY_BUDGET;
   const auditBase = options.auditBase ?? 1;
 
-  const answered: Array<ReadonlySet<string>> = [];
+  const answered: Array<{ readonly range?: WindowRange; readonly ids: ReadonlySet<string> }> = [];
   let submissions = 0;
 
   return {
@@ -79,17 +126,21 @@ export function createQuerySession(options: QuerySessionOptions = {}): QuerySess
         };
       }
 
-      if (query.recordIds.length < k) {
+      if (query.recordIds.length < floor) {
         return {
           ok: false,
-          reason: 'AGGREGATE_BELOW_K_ANONYMITY',
-          explanation: `本次查詢母體為 ${query.recordIds.length}，低於 k-匿名門檻 ${k}`,
+          reason: 'COHORT_TOO_SMALL',
+          explanation: `本次查詢母體為 ${query.recordIds.length}，低於最低門檻 ${floor}`,
           auditRef,
         };
       }
 
       for (const prior of answered) {
-        const diff = symmetricDifferenceSize(prior, query.recordIds);
+        // Two disjoint periods are two different measurements, and the whole
+        // point of this system is watching one cohort across many of them.
+        if (provablyDisjoint(prior.range, query.range)) continue;
+
+        const diff = symmetricDifferenceSize(prior.ids, query.recordIds);
         if (diff > 0 && diff < k) {
           return {
             ok: false,
@@ -102,7 +153,10 @@ export function createQuerySession(options: QuerySessionOptions = {}): QuerySess
         }
       }
 
-      answered.push(new Set(query.recordIds));
+      answered.push({
+        ...(query.range === undefined ? {} : { range: query.range }),
+        ids: new Set(query.recordIds),
+      });
 
       return { ok: true, auditRef };
     },

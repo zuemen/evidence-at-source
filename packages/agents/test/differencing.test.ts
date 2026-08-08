@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'vitest';
-import { createQuerySession } from '@eas/agents';
+import { K_ANONYMITY } from '@eas/shared';
+import { createBrandAgent, createQuerySession } from '@eas/agents';
 
 /** A cohort of 12 opaque record ids. No worker DIDs. */
 const records = (n: number, prefix = 'r'): string[] =>
@@ -59,7 +60,9 @@ describe('T9 — differencing attack detection', () => {
     const verdict = session.submit({ cohort: 'tiny', window: 'q1', recordIds: records(4) });
 
     expect(verdict.ok).toBe(false);
-    expect(verdict.ok === false && verdict.reason).toBe('AGGREGATE_BELOW_K_ANONYMITY');
+    // The session's own floor is the "nothing at all" bar, not the rate bar —
+    // those are different questions and now carry different codes.
+    expect(verdict.ok === false && verdict.reason).toBe('COHORT_TOO_SMALL');
   });
 
   test('the agent runs out of query budget after its per-period allowance', () => {
@@ -90,5 +93,94 @@ describe('T9 — differencing attack detection', () => {
     const second = session.submit({ cohort: 'factory-a', window: 'jan-sep', recordIds: records(12) });
 
     expect(JSON.stringify(second)).not.toContain('r0');
+  });
+});
+
+describe('the agent protects itself, without being asked to', () => {
+  // The failure this closes: createQuerySession existed, the demo wired it up,
+  // and a caller of createBrandAgent got no protection at all. Anyone copying
+  // brandAgent.ts into their own project inherited that silence.
+  const COHORT = 'factory-a-2026-08';
+
+  function evidenceOf(size: number) {
+    return {
+      cohort: COHORT,
+      metric: 'workingHoursComplianceRate' as const,
+      conclusions: Array.from({ length: size }, (_, i) => i !== 0),
+    };
+  }
+
+  const AGGREGATE = {
+    kind: 'aggregate',
+    metric: 'workingHoursComplianceRate',
+    cohort: COHORT,
+  } as const;
+
+  test('a second query narrowing the cohort by one is refused by default', () => {
+    // Twenty workers, then nineteen: subtracting the two rates isolates the
+    // worker who left. No session was passed; the agent made its own.
+    const wide = createBrandAgent([evidenceOf(K_ANONYMITY.rate)]);
+    expect(wide.answer(AGGREGATE).ok).toBe(true);
+
+    // The same agent instance is what an API caller would hold across requests.
+    const narrowed = createBrandAgent([evidenceOf(K_ANONYMITY.rate)]);
+    expect(narrowed.answer(AGGREGATE).ok).toBe(true);
+    const second = narrowed.answer({
+      ...AGGREGATE,
+      cohort: COHORT,
+    });
+
+    // Identical population, difference of zero — allowed, and worth asserting
+    // so the guard is not simply refusing everything after the first query.
+    expect(second.ok).toBe(true);
+  });
+
+  test('two queries whose populations differ by less than k: the second is refused', () => {
+    const agent = createBrandAgent([
+      evidenceOf(K_ANONYMITY.rate),
+      {
+        cohort: COHORT,
+        metric: 'recruitmentFeeComplianceRate',
+        conclusions: Array.from({ length: K_ANONYMITY.rate - 1 }, () => true),
+      },
+    ]);
+
+    expect(agent.answer(AGGREGATE).ok).toBe(true);
+
+    const narrowing = agent.answer({
+      kind: 'aggregate',
+      metric: 'recruitmentFeeComplianceRate',
+      cohort: COHORT,
+    });
+
+    expect(narrowing.ok).toBe(false);
+    expect(narrowing.ok === false && narrowing.reason).toBe('DIFFERENCING_ATTACK_DETECTED');
+  });
+
+  test('opting out is possible but has to be written down', () => {
+    // Not forbidden — a caller with its own auditing may have reason. It just
+    // cannot happen by forgetting.
+    const agent = createBrandAgent(
+      [
+        evidenceOf(K_ANONYMITY.rate),
+        {
+          cohort: COHORT,
+          metric: 'recruitmentFeeComplianceRate',
+          conclusions: Array.from({ length: K_ANONYMITY.rate - 1 }, () => true),
+        },
+      ],
+      [],
+      [],
+      { differencing: false },
+    );
+
+    expect(agent.answer(AGGREGATE).ok).toBe(true);
+    expect(
+      agent.answer({
+        kind: 'aggregate',
+        metric: 'recruitmentFeeComplianceRate',
+        cohort: COHORT,
+      }).ok,
+    ).toBe(true);
   });
 });
