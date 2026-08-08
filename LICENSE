@@ -19,3 +19,45 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+---
+
+## Scope of this license / 本授權的適用範圍
+
+**English**
+
+The MIT license above applies to the source code written for this project
+(`packages/*/src`, `poc/`, `docs/`, and the tests).
+
+It does **not** cover the built web artifacts. Running
+`npm run build --workspace @eas/web` produces `packages/web/dist/`, which bundles
+third-party components licensed under **GPL-3.0** — `snarkjs` (with its
+transitive dependency `ffjavascript`) and `circomlibjs`, together roughly 2.14 MB
+of the output. Under GPL-3.0 §5, a combined work containing GPL-licensed code is
+distributed as a whole under GPL-3.0. **Distribution of `packages/web/dist/` is
+therefore governed by GPL-3.0**, not by the MIT license above.
+
+If you copy this repository: the source is yours to use under MIT, but
+distributing the built web bundle carries GPL-3.0 obligations, including making
+the corresponding source available.
+
+See `THIRD-PARTY-LICENSES.md` for the component list, the exact files they
+produce, and commands to verify all of this yourself.
+
+**繁體中文**
+
+上述 MIT 授權適用於本專案自撰之原始碼（`packages/*/src`、`poc/`、`docs/` 與測試）。
+
+它**不涵蓋網頁建置產物**。執行 `npm run build --workspace @eas/web` 產生的
+`packages/web/dist/` 打包了以 **GPL-3.0** 授權的第三方元件——`snarkjs`（含其傳遞
+相依 `ffjavascript`）與 `circomlibjs`，合計約 2.14 MB，佔產物多數。依 GPL-3.0 §5，
+與 GPL 程式結合而成的整體作品，散布時須整體適用 GPL-3.0。因此**散布
+`packages/web/dist/` 依 GPL-3.0 條款**，而非上述 MIT。
+
+若你要複製本 repo：原始碼依 MIT 可自由使用，但只要散布網頁建置產物，即承擔
+GPL-3.0 義務（包含提供對應原始碼）。
+
+元件清單、其產出的確切檔案，以及可自行驗證的指令，見 `THIRD-PARTY-LICENSES.md`。
+
+*撰寫者非法律專業人士，以上為依授權條款文義所作之整理，不構成法律意見。*
+*Not legal advice — a good-faith reading of the license texts.*

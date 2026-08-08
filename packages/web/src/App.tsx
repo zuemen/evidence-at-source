@@ -245,6 +245,33 @@ export function App(): JSX.Element {
           onReset={() => void run(api.reset)}
         />
       )}
+
+      {/*
+        GPL-3.0 §4 requires license notices to survive distribution, and a web
+        page is a distribution. This build bundles GPL-3.0 snarkjs and
+        circomlibjs, so the notice belongs on the page itself — not only in a
+        file a visitor never opens.
+      */}
+      <footer className="site-footer">
+        <p>
+          本專案原始碼依 <strong>MIT</strong> 授權；本網頁的建置產物包含{' '}
+          <strong>GPL-3.0</strong> 授權之第三方元件（<code>snarkjs</code>、
+          <code>circomlibjs</code>），其整體散布依 GPL-3.0。
+        </p>
+        <p>
+          Source code is licensed <strong>MIT</strong>. This built page bundles
+          third-party components under <strong>GPL-3.0</strong> (<code>snarkjs</code>,{' '}
+          <code>circomlibjs</code>); distribution of the build as a whole is governed
+          by GPL-3.0.{' '}
+          <a
+            href="https://github.com/zuemen/evidence-at-source/blob/main/THIRD-PARTY-LICENSES.md"
+            target="_blank"
+            rel="noreferrer"
+          >
+            THIRD-PARTY-LICENSES.md
+          </a>
+        </p>
+      </footer>
     </div>
   );
 }

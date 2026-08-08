@@ -7,6 +7,18 @@
 **專案狀態：Work in progress — hackathon prototype**
 2026 可信 AI 黑客松（Trustworthy AI Hackathon）參賽作品。
 
+> [!IMPORTANT]
+> **授權：原始碼 MIT，但網頁建置產物是 GPL-3.0。**
+> `packages/web/dist/` 打包了 GPL-3.0 的 `snarkjs` 與 `circomlibjs`（約 2.14 MB，
+> 佔產物多數），因此該產物的散布依 GPL-3.0。**要複製這個 repo 的人請先讀
+> [`THIRD-PARTY-LICENSES.md`](THIRD-PARTY-LICENSES.md)** ——你會連同這個義務一起帶走。
+>
+> **Licensing: the source is MIT, the web build is GPL-3.0.** `packages/web/dist/`
+> bundles GPL-3.0 `snarkjs` and `circomlibjs` (~2.14 MB, most of the output), so
+> distributing that build is governed by GPL-3.0. **If you are copying this repo,
+> read [`THIRD-PARTY-LICENSES.md`](THIRD-PARTY-LICENSES.md) first** — the
+> obligation travels with it.
+
 ---
 
 ## 問題
@@ -363,7 +375,7 @@ npx vite preview --port 4173          # 本機預覽靜態站
 
 ```bash
 npm install      # 於 repo 根目錄，安裝 workspace 依賴
-npm test         # vitest，目前 378 個測試全綠
+npm test         # vitest，目前 383 個測試全綠
 npm run typecheck
 ```
 
@@ -475,7 +487,7 @@ Agent A 的能力邊界也寫在型別裡：`BankAssessment.requiresHumanReview`
 | 交件 | 位置 |
 |---|---|
 | 挑戰命題 | **Track 05（主賽道）＋ Track 06（加分題）**——主辦載明命題 06 為 Track 01 延伸的加分題、可與其他命題同時挑戰，本作品同時交付兩軌，對照見上 |
-| 程式碼 | 本 repo（CI 每次 push 跑 378 tests + `demo:vlei` 閘門） |
+| 程式碼 | 本 repo（CI 每次 push 跑 383 tests + `demo:vlei` 閘門） |
 | 簡報 | <https://zuemen.github.io/evidence-at-source/slides.html>（←→ 翻頁） |
 | Demo | <https://zuemen.github.io/evidence-at-source/>（免安裝）＋[講稿](docs/demo-video-script.md) |
 | 治理／信任設計說明 | [`docs/governance-memo.md`](docs/governance-memo.md)（六信任點逐點＋證據） |
@@ -514,4 +526,21 @@ Agent A 的能力邊界也寫在型別裡：`BankAssessment.requiresHumanReview`
 
 ## 授權
 
-MIT — 見 [`LICENSE`](LICENSE)。
+**原始碼 MIT；網頁建置產物 GPL-3.0。** 這兩件事必須分開講，因為它們真的不一樣：
+
+| 範圍 | 授權 |
+|---|---|
+| 本專案自撰之原始碼（`packages/*/src`、`poc/`、`docs/`、測試） | **MIT** — 見 [`LICENSE`](LICENSE) |
+| `npm run build --workspace @eas/web` 產生的 `packages/web/dist/` | **GPL-3.0** |
+
+原因：建置產物打包了 GPL-3.0 的 `snarkjs`（含傳遞相依 `ffjavascript`，約 275 KB）
+與 `circomlibjs`（約 1.86 MB），合計約 2.14 MB、佔產物多數。依 GPL-3.0 §5，與 GPL
+程式結合而成的整體作品散布時須整體適用 GPL-3.0。
+
+**若你要複製這個 repo**：原始碼依 MIT 可自由使用；但只要你散布網頁建置產物，就承擔
+GPL-3.0 義務（包含提供對應原始碼）。不想承擔的話，可移除 ZK 功能，或改為執行時從
+外部載入而不打包（本專案尚未採此作法）。
+
+元件清單、確切檔案與**可自行驗證的指令**見 [`THIRD-PARTY-LICENSES.md`](THIRD-PARTY-LICENSES.md)。
+
+*撰寫者非法律專業人士，以上為依授權條款文義所作之整理，不構成法律意見。*
