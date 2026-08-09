@@ -154,3 +154,10 @@ export {
   unmatchedSelfReportCount,
 } from './selfReport.js';
 export type { SelfReportCohort, SelfReportInput, SelfReportState } from './selfReport.js';
+
+export {
+  MAX_COERCION_DISCOUNT,
+  READING_TIME_FLOOR_MS,
+  computeCoercionSignals,
+} from './coercion.js';
+export type { AttestationRecord, CoercionSignals } from './coercion.js';

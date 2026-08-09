@@ -32,14 +32,20 @@ export default defineConfig({
     // should legitimately take twenty seconds; this is headroom, not patience.
     testTimeout: 20_000,
     hookTimeout: 20_000,
-    // Half the cores, not all of them.
+    // Four workers, regardless of how many cores are available.
     //
-    // Every test file that issues a credential pays the Poseidon build above,
-    // and enough of them running at once turns a 4-second file into a
-    // 20-second one — the whole suite went red at full parallelism while each
-    // file passed alone. The tests are not slow; the machine was oversubscribed.
-    // Capping workers keeps the result a property of the code rather than of
-    // whatever else the machine happens to be doing.
-    maxWorkers: '50%',
+    // These tests do real cryptography — ed25519 keygen, a multisig vLEI
+    // ecosystem, KEL anchoring, a Poseidon commitment per credential — and a
+    // file that takes four seconds alone takes twenty when ten of its siblings
+    // are competing for the same cores. The whole suite went red at full
+    // parallelism while every file passed on its own.
+    //
+    // `isolate: false` was tried first, on the theory that the cost was
+    // per-file module initialisation. It changed nothing: the work is the
+    // crypto, not the imports. So the fix is fewer workers rather than a
+    // larger timeout — a timeout raised until the contention fits underneath
+    // it hides the problem instead of bounding it, and the next few test files
+    // would put it right back.
+    maxWorkers: 4,
   },
 });
