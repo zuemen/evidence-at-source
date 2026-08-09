@@ -66,6 +66,8 @@ export const REASON_CODES = [
   'QUERY_BUDGET_EXCEEDED',
   // The queried RBA item cannot be answered by a credential (題06 Q3).
   'REQUIRES_ONSITE_AUDIT',
+  // Generated prose contradicted the verdict and was discarded for the template.
+  'EXPLANATION_REJECTED',
   // ZK reconciliation binding (Phase 4). The proof itself is checked by an
   // injected verifier; these guard the binding between proof and credentials.
   'PROOF_INVALID',

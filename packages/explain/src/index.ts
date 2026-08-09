@@ -42,6 +42,14 @@ export interface ExplainableDecision {
    * written by the party being audited.
    */
   readonly remark?: string;
+  /**
+   * Figures the verifier is entitled to see, as strings.
+   *
+   * The guard treats any other number in the generated prose as invented —
+   * which, since the model's only other source of digits is the untrusted
+   * remark, is the safe reading.
+   */
+  readonly disclosedValues?: readonly string[];
 }
 
 export interface Explanation {
@@ -50,6 +58,12 @@ export interface Explanation {
   readonly source: 'offline' | 'model';
   /** Set when a model-backed explainer failed and the offline one stood in. */
   readonly degradedFrom?: string;
+  /**
+   * Guard violations that caused generated prose to be discarded. Present only
+   * on a substituted explanation, and the caller's cue to record an
+   * EXPLANATION_REJECTED entry in the audit trail.
+   */
+  readonly rejected?: readonly import('./guard.js').GuardViolation[];
 }
 
 export type Explainer = (decision: ExplainableDecision) => Promise<Explanation>;
@@ -83,3 +97,6 @@ export const offlineExplainer: Explainer = async (decision) => {
  * which is exactly how a Buffer reference once reached the built site and left
  * every tab blank.
  */
+
+export { checkExplanation, guardExplainer } from './guard.js';
+export type { GuardViolation } from './guard.js';
