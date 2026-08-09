@@ -32,7 +32,7 @@ export default defineConfig({
     // should legitimately take twenty seconds; this is headroom, not patience.
     testTimeout: 20_000,
     hookTimeout: 20_000,
-    // Four workers, regardless of how many cores are available.
+    // Two workers, regardless of how many cores are available.
     //
     // These tests do real cryptography — ed25519 keygen, a multisig vLEI
     // ecosystem, KEL anchoring, a Poseidon commitment per credential — and a
@@ -46,6 +46,15 @@ export default defineConfig({
     // larger timeout — a timeout raised until the contention fits underneath
     // it hides the problem instead of bounding it, and the next few test files
     // would put it right back.
-    maxWorkers: 4,
+    //
+    // Which is exactly what happened. Four workers held at 413 tests and went
+    // red at 449, with the two vLEI world-building files timing out under
+    // contention and passing on their own. The prediction in the paragraph
+    // above was about a raised timeout, and it applies to a worker count set
+    // just high enough to fit today's suite too — so the number moved to the
+    // one that has real headroom rather than to the next one that barely fits.
+    // The right permanent fix is for the demo fixtures to stop rebuilding a
+    // whole vLEI ecosystem per file; until then this bounds the damage.
+    maxWorkers: 2,
   },
 });

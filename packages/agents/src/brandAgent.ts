@@ -18,6 +18,16 @@ import {
   unmatchedSelfReportCount,
   type SelfReportCohort,
 } from './selfReport.js';
+import {
+  MIN_POOLED_FACILITIES,
+  checkEndorsement,
+  poolSmallFacilities,
+  type EndorsementAnswer,
+  type FacilityEndorsement,
+  type PooledRateAnswer,
+  type SmallFacilityCohort,
+} from './smallFacility.js';
+import type { AuditorDirectory } from './auditorDirectory.js';
 
 export interface CohortEvidence {
   readonly cohort: string;
@@ -128,6 +138,20 @@ export interface BrandAgent {
   getSelfReportDivergenceRate(cohort: string, window: string): PayrollRateAnswer;
   /** How many workers reported hours the employer has no record of at all. */
   getUnmatchedSelfReportCount(cohort: string, window: string): OmissionCountAnswer;
+  /**
+   * A rate over every small facility in one industry, region and period.
+   *
+   * The stratum is the unit of the answer. There is no facility parameter for
+   * the same reason there is no facility field on the result: asking about one
+   * is the thing this path exists to make unaskable.
+   */
+  getAggregatedSmallFacilityRate(
+    industry: string,
+    region: string,
+    window: string,
+  ): PooledRateAnswer;
+  /** The site-visit evidence that stands in for a statistic below the floor. */
+  getFacilityEndorsement(facility: string, asOf?: Date): EndorsementAnswer;
 }
 
 type Refusal = { readonly ok: false; readonly reason: ReasonCode };
@@ -221,6 +245,18 @@ export interface BrandAgentOptions {
    * the retaliation this system exists to prevent.
    */
   readonly selfReports?: readonly SelfReportCohort[];
+  /**
+   * Facilities too small to be answered about individually, for the pooled
+   * path. Supplying them does not make any one of them answerable.
+   */
+  readonly smallFacilities?: readonly SmallFacilityCohort[];
+  /** Site visits signed for by audit bodies, for the endorsement path. */
+  readonly endorsements?: readonly FacilityEndorsement[];
+  /**
+   * Resolves an endorsement's audit body up the vLEI chain. Absent means no
+   * endorsement resolves — an unconfigured verifier has verified nothing.
+   */
+  readonly auditors?: AuditorDirectory;
 }
 
 export function createBrandAgent(
@@ -480,6 +516,61 @@ export function createBrandAgent(
           // A count of workers the employer has no record of — never which ones.
           return { ok: true, cohort, window, count: unmatchedSelfReportCount(record.states) };
         },
+      );
+    },
+
+    getAggregatedSmallFacilityRate(industry, region, window) {
+      const stratum = poolSmallFacilities(options.smallFacilities ?? [], {
+        industry,
+        region,
+        window,
+      });
+      const size = stratum.conclusions.length;
+
+      return gatedAggregate(
+        {
+          // The stratum is the cohort. A facility never appears as one.
+          cohort: `${industry}/${region}`,
+          window,
+          metric: 'smallFacilityPooledRate',
+          cohortSize: size,
+          session,
+          // Facility-keyed, so the guard sees what actually varies here: which
+          // facilities are in the pool. No range is supplied even across
+          // periods — facility membership is stable in a way a worker roster is
+          // not, so the usual "a later period is a different measurement"
+          // argument is weaker here and this path stays strict.
+          recordIds: stratum.recordIds,
+        },
+        () => {
+          // Checked after the k-anonymity bar, not before: a pool that cannot
+          // clear the worker threshold is refused for that reason first, and a
+          // caller learns one fact about the stratum rather than two.
+          if (stratum.facilities.length < MIN_POOLED_FACILITIES) {
+            return { ok: false, reason: 'POOL_TOO_FEW_FACILITIES' };
+          }
+
+          const passing = stratum.conclusions.filter(Boolean).length;
+
+          return {
+            ok: true,
+            industry,
+            region,
+            window,
+            pooledSize: size,
+            facilityCount: stratum.facilities.length,
+            rate: passing / size,
+            attributableToFacility: false,
+          };
+        },
+      );
+    },
+
+    getFacilityEndorsement(facility, asOf = new Date()) {
+      return checkEndorsement(
+        (options.endorsements ?? []).find((e) => e.facility === facility),
+        options.auditors,
+        asOf,
       );
     },
 

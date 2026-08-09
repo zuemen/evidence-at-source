@@ -88,6 +88,19 @@ export type {
 } from './bankAgent.js';
 
 export { createAuditorDirectory } from './auditorDirectory.js';
+export {
+  ENDORSEMENT_VALID_DAYS,
+  MIN_POOLED_FACILITIES,
+  checkEndorsement,
+  poolSmallFacilities,
+} from './smallFacility.js';
+export type {
+  EndorsementAnswer,
+  FacilityEndorsement,
+  PooledRateAnswer,
+  PooledStratum,
+  SmallFacilityCohort,
+} from './smallFacility.js';
 export type { AuditorDirectory, AuditorEntry, AuditorStanding } from './auditorDirectory.js';
 
 export {

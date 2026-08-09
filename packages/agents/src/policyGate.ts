@@ -35,7 +35,10 @@ export type AggregateMetric =
   // Self-report divergence. Same bar again: a divergence rate over three
   // workers in a factory of three is a statement about those three people.
   | 'selfReportDivergenceRate'
-  | 'unmatchedSelfReportCount';
+  | 'unmatchedSelfReportCount'
+  // A rate over many small facilities pooled into one stratum. Same bar as any
+  // other rate — pooling exists to reach the bar, never to lower it.
+  | 'smallFacilityPooledRate';
 
 export type Query =
   | {

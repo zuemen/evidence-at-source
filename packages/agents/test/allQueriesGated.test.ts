@@ -28,7 +28,22 @@ import { createBrandAgent, type BrandAgent } from '@eas/agents';
  * from anybody. Every other entry added here needs the same kind of argument
  * written next to it.
  */
-const NON_COHORT_QUERIES = new Set<keyof BrandAgent>(['answerRbaItem']);
+const NON_COHORT_QUERIES = new Set<keyof BrandAgent>([
+  'answerRbaItem',
+  /**
+   * `getFacilityEndorsement` returns an audit body's own signed judgement of a
+   * facility, not a figure computed from anybody's credentials. There is no
+   * population behind it to be too small — a three-worker site and a
+   * three-thousand-worker site produce the same shape of answer, and the type
+   * carries no headcount, rate or per-worker fact for one to hide in.
+   *
+   * The verdict does describe the employer, and an employer is not the party
+   * this system protects. That is the point of the path: below the floor the
+   * honest substitute for a statistic about workers is a judgement about the
+   * factory. See `smallFacility.test.ts` for the fields it must never grow.
+   */
+  'getFacilityEndorsement',
+]);
 
 /** Reason codes that mean "the population was too small to answer from". */
 const K_ANONYMITY_REASONS = new Set(['AGGREGATE_BELOW_K_ANONYMITY', 'COHORT_TOO_SMALL']);
@@ -68,12 +83,30 @@ function agentWithTinyCohorts(): BrandAgent {
           ),
         },
       ],
+      // A stratum of one tiny facility: pooling reaches the bar or it refuses
+      // like everything else. It does not lower the bar to reach an answer.
+      smallFacilities: [
+        {
+          facility: 'did:web:tiny.example',
+          industry: INDUSTRY,
+          region: REGION,
+          window: WINDOW,
+          conclusions: Array.from({ length: TINY }, (_, i) => i !== 0),
+        },
+      ],
     },
   );
 }
 
+const INDUSTRY = 'garment';
+const REGION = 'north';
+
 /** Calls a method with whatever shape of arguments it takes. */
 function callWithTinyCohort(agent: BrandAgent, method: keyof BrandAgent): unknown {
+  if (method === 'getAggregatedSmallFacilityRate') {
+    return agent.getAggregatedSmallFacilityRate(INDUSTRY, REGION, WINDOW);
+  }
+
   if (method === 'answer') {
     return agent.answer({
       kind: 'aggregate',
@@ -163,6 +196,14 @@ describe('every cohort-derived query is gated, including ones added later', () =
             states: Array.from({ length: size }, () => 'CONFIRMED' as const),
           },
         ],
+        // Enough facilities and enough workers that the pooled path answers.
+        smallFacilities: ['alpha', 'bravo', 'charlie', 'delta'].map((name) => ({
+          facility: `did:web:${name}.example`,
+          industry: INDUSTRY,
+          region: REGION,
+          window: WINDOW,
+          conclusions: Array.from({ length: size }, () => true),
+        })),
       },
     );
 
