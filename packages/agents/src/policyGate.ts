@@ -31,7 +31,11 @@ export type AggregateMetric =
   // person as a compliance rate over two workers does.
   | 'commitmentCoverageRate'
   | 'omissionSignalCount'
-  | 'evidenceIntegrityIndex';
+  | 'evidenceIntegrityIndex'
+  // Self-report divergence. Same bar again: a divergence rate over three
+  // workers in a factory of three is a statement about those three people.
+  | 'selfReportDivergenceRate'
+  | 'unmatchedSelfReportCount';
 
 export type Query =
   | {

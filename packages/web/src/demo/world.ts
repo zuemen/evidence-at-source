@@ -87,7 +87,7 @@ const DEVICE = 'sha256:synthetic-device-001';
  */
 type WalletCredentialType = Exclude<
   CredentialType,
-  'SalaryDepositCredential' | 'ResidencyCredential'
+  'SalaryDepositCredential' | 'ResidencyCredential' | 'SelfReportedHoursCredential'
 >;
 
 /** The single public claim each credential contributes to a verifier. */

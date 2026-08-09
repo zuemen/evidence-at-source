@@ -10,6 +10,19 @@
  */
 
 export const ISSUER_TIERS = [
+  /**
+   * T0: the worker attesting about their own hours, with nobody
+   * countersigning. Deliberately below every institutional tier — it is one
+   * person's word, and a verifier that wants it must ask for it by name.
+   *
+   * It exists because the tiers above it all require the employer to have
+   * produced a record in the first place. A factory that simply never writes
+   * one down leaves the worker holding nothing, and every mechanism in this
+   * repo that compares employer evidence against worker evidence compares two
+   * empty sets and finds no anomaly. This tier is the worker's ability to put
+   * something on the record without permission.
+   */
+  'SELF_REPORTED',
   'SELF_DECLARED', // T1: factory / agency attesting about itself
   'THIRD_PARTY_VERIFIED', // T2: audit body or bank endorsement
   'AUTHORITY_CERTIFIED', // T3: government authority certification

@@ -58,6 +58,17 @@ function agentWithTinyCohorts(): BrandAgent {
       },
     ],
     [{ cohort: COHORT, window: WINDOW, signals: Array.from({ length: TINY }, (_, i) => i === 0) }],
+    {
+      selfReports: [
+        {
+          cohort: COHORT,
+          window: WINDOW,
+          states: Array.from({ length: TINY }, (_, i) =>
+            i === 0 ? ('OMITTED' as const) : ('CONFIRMED' as const),
+          ),
+        },
+      ],
+    },
   );
 }
 
@@ -144,6 +155,15 @@ describe('every cohort-derived query is gated, including ones added later', () =
         },
       ],
       [{ cohort: COHORT, window: WINDOW, signals: Array.from({ length: size }, () => false) }],
+      {
+        selfReports: [
+          {
+            cohort: COHORT,
+            window: WINDOW,
+            states: Array.from({ length: size }, () => 'CONFIRMED' as const),
+          },
+        ],
+      },
     );
 
     for (const method of methods.filter((name) => !NON_COHORT_QUERIES.has(name))) {

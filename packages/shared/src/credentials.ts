@@ -13,6 +13,7 @@ export const CREDENTIAL_TYPES = [
   'WorkingHoursCredential',
   'SalaryDepositCredential',
   'ResidencyCredential',
+  'SelfReportedHoursCredential',
 ] as const;
 
 export type CredentialType = (typeof CREDENTIAL_TYPES)[number];
@@ -44,6 +45,22 @@ const SCHEMAS: Record<CredentialType, DisclosureSchema> = {
     public: ['withinRBALimit', 'periodStart', 'valueCommitment'],
     hidden: ['totalHours', 'overtimeHours', 'commitmentSalt'],
   },
+  /**
+   * The worker's own account of their hours, signed by the worker alone.
+   *
+   * Every other credential here starts with an employer writing something
+   * down. This one does not, which is the entire point: a factory that keeps
+   * no record of an overtime shift cannot be caught by comparing its records
+   * to the worker's, because both sides are empty. A self-report is weak
+   * evidence on its own — see docs/self-reported-hours.md — but a whole
+   * cohort's self-reports diverging from a factory's filings is a signal that
+   * did not previously exist.
+   */
+  SelfReportedHoursCredential: {
+    public: ['withinRBALimit', 'periodStart', 'periodEnd'],
+    hidden: ['reportedHours'],
+  },
+
   // Issued by a bank or remittance operator — a data source the factory cannot
   // control. Cross-checking it against working hours turns single-party lying
   // into a two-party conspiracy between institutions with opposing interests.

@@ -147,3 +147,10 @@ export type {
   AuditVerification,
   SealedAuditEntry,
 } from './auditTrail.js';
+
+export {
+  divergenceRate,
+  reconcileSelfReport,
+  unmatchedSelfReportCount,
+} from './selfReport.js';
+export type { SelfReportCohort, SelfReportInput, SelfReportState } from './selfReport.js';

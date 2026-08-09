@@ -47,6 +47,10 @@ export const CREDENTIAL_LIFETIME_SECONDS: Record<CredentialType, number> = {
   // back, short enough that stale hours cannot answer a current question.
   WorkingHoursCredential: 90 * DAYS,
   SalaryDepositCredential: 90 * DAYS,
+  // A worker's own account of one period. Same quarter as the employer filing
+  // it is meant to be compared against — a self-report that outlived the
+  // filing would have nothing left to diverge from.
+  SelfReportedHoursCredential: 90 * DAYS,
   // Custody changes whenever a passport moves. Half a year matches the rhythm
   // RBA audits actually run at, and forces a fresh declaration in between.
   DocumentCustodyCredential: 180 * DAYS,

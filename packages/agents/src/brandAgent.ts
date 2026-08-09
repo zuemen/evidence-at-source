@@ -13,6 +13,11 @@ import { checkQueryLayer, type AggregateMetric, type Disclosure, type Query } fr
 import { createQuerySession, type QuerySession, type WindowRange } from './differencing.js';
 import { computeEvidenceIntegrityIndex, type IntegrityGrade } from './evidenceIntegrity.js';
 import { classifyRbaItem } from './rbaItems.js';
+import {
+  divergenceRate,
+  unmatchedSelfReportCount,
+  type SelfReportCohort,
+} from './selfReport.js';
 
 export interface CohortEvidence {
   readonly cohort: string;
@@ -119,6 +124,10 @@ export interface BrandAgent {
   getCommitmentCoverage(cohort: string, window: string): CommitmentCoverageAnswer;
   getEvidenceIntegrityIndex(cohort: string, window: string): EvidenceIntegrityAnswer;
   answerRbaItem(item: string): RbaItemAnswer;
+  /** Fraction of the cohort whose self-report diverges from the employer filing. */
+  getSelfReportDivergenceRate(cohort: string, window: string): PayrollRateAnswer;
+  /** How many workers reported hours the employer has no record of at all. */
+  getUnmatchedSelfReportCount(cohort: string, window: string): OmissionCountAnswer;
 }
 
 type Refusal = { readonly ok: false; readonly reason: ReasonCode };
@@ -203,6 +212,15 @@ export interface BrandAgentOptions {
    * `differencing: false` — visible in the call site, and in code review.
    */
   readonly differencing?: QuerySession | false;
+  /**
+   * Per-worker self-report reconciliation states for a cohort and period.
+   * Like every other cohort here it is a bare list with no identifiers, so the
+   * agent can report a divergence rate but cannot name whose account differed
+   * from their employer's — which matters more here than anywhere else, since
+   * being identified as the worker who contradicted the factory is precisely
+   * the retaliation this system exists to prevent.
+   */
+  readonly selfReports?: readonly SelfReportCohort[];
 }
 
 export function createBrandAgent(
@@ -233,6 +251,10 @@ export function createBrandAgent(
   function positionalIds(cohort: string, size: number): string[] {
     return Array.from({ length: size }, (_, i) => `${cohort}#${i}`);
   }
+  function findSelfReportCohort(cohort: string, window: string): SelfReportCohort | undefined {
+    return (options.selfReports ?? []).find((r) => r.cohort === cohort && r.window === window);
+  }
+
   function findOmissionCohort(cohort: string, window: string): OmissionCohort | undefined {
     return omissions.find((o) => o.cohort === cohort && o.window === window);
   }
@@ -409,6 +431,55 @@ export function createBrandAgent(
               return { ok: true, cohort, window, index, grade, components };
             },
           ),
+      );
+    },
+
+    getSelfReportDivergenceRate(cohort, window) {
+      const record = findSelfReportCohort(cohort, window);
+      const size = record?.states.length ?? 0;
+
+      return gatedAggregate(
+        {
+          cohort,
+          window,
+          metric: 'selfReportDivergenceRate',
+          cohortSize: size,
+          session,
+          recordIds: positionalIds(cohort, size),
+        },
+        () => {
+          if (!record) return { ok: false, reason: 'CLAIM_NOT_DISCLOSED' };
+
+          return {
+            ok: true,
+            cohort,
+            window,
+            cohortSize: size,
+            rate: divergenceRate(record.states),
+          };
+        },
+      );
+    },
+
+    getUnmatchedSelfReportCount(cohort, window) {
+      const record = findSelfReportCohort(cohort, window);
+      const size = record?.states.length ?? 0;
+
+      return gatedAggregate(
+        {
+          cohort,
+          window,
+          metric: 'unmatchedSelfReportCount',
+          cohortSize: size,
+          session,
+          recordIds: positionalIds(cohort, size),
+        },
+        () => {
+          if (!record) return { ok: false, reason: 'CLAIM_NOT_DISCLOSED' };
+
+          // A count of workers the employer has no record of — never which ones.
+          return { ok: true, cohort, window, count: unmatchedSelfReportCount(record.states) };
+        },
       );
     },
 

@@ -32,5 +32,14 @@ export default defineConfig({
     // should legitimately take twenty seconds; this is headroom, not patience.
     testTimeout: 20_000,
     hookTimeout: 20_000,
+    // Half the cores, not all of them.
+    //
+    // Every test file that issues a credential pays the Poseidon build above,
+    // and enough of them running at once turns a 4-second file into a
+    // 20-second one — the whole suite went red at full parallelism while each
+    // file passed alone. The tests are not slow; the machine was oversubscribed.
+    // Capping workers keeps the result a property of the code rather than of
+    // whatever else the machine happens to be doing.
+    maxWorkers: '50%',
   },
 });
