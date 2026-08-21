@@ -8,8 +8,9 @@
  * an agent is ever given.
  */
 
-import type { ReasonCode, PublicJwk, RevocationRegistry } from '@eas/shared';
+import type { IssuerTier, ReasonCode, PublicJwk, RevocationRegistry } from '@eas/shared';
 import { checkCredentialLayer } from './credentialLayer.js';
+import type { AuditorDirectory } from './auditorDirectory.js';
 import type { IssuerSigningKey } from './vleiBridge.js';
 import type { CohortEvidence } from './brandAgent.js';
 import type { AggregateMetric } from './policyGate.js';
@@ -28,6 +29,18 @@ export interface CohortRequest {
   readonly claim: string;
   readonly submissions: readonly Submission[];
   readonly revocations?: RevocationRegistry;
+  /**
+   * The three policy inputs below used to exist on the credential layer and be
+   * passed by nobody. A check that never receives its argument is, from an
+   * attacker's side of the wire, the same thing as a check that was never
+   * written — and all three were reachable only from tests.
+   */
+  /** The minimum issuer tier the asking institution's mandate demands (題06 Q1). */
+  readonly minimumIssuerTier?: IssuerTier;
+  /** The facility being audited. Without it one plant answers for another (GS1). */
+  readonly expectedFacilityId?: string;
+  /** Resolves a credential's `verifiedBy` to a body that is really an auditor. */
+  readonly auditors?: AuditorDirectory;
 }
 
 export interface CohortResult {
@@ -48,6 +61,13 @@ export async function buildCohortEvidence(request: CohortRequest): Promise<Cohor
       workerPublicKey: submission.workerPublicKey,
       requiredClaims: [request.claim],
       ...(request.revocations === undefined ? {} : { revocations: request.revocations }),
+      ...(request.minimumIssuerTier === undefined
+        ? {}
+        : { minimumIssuerTier: request.minimumIssuerTier }),
+      ...(request.expectedFacilityId === undefined
+        ? {}
+        : { expectedFacilityId: request.expectedFacilityId }),
+      ...(request.auditors === undefined ? {} : { auditors: request.auditors }),
     });
 
     if (!decision.ok) {

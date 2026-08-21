@@ -28,16 +28,47 @@ const PACKAGES = fileURLToPath(new URL('../../', import.meta.url));
  */
 const DECISION_PACKAGES = ['agents', 'shared', 'issuer', 'vlei', 'reconciliation', 'integrity'];
 
+/**
+ * Module specifiers, matched against what a file actually imports.
+ *
+ * They used to be matched as bare substrings of the whole file, which was both
+ * too loose and too tight. Too loose: `policyIsCoherent` in recovery.ts tripped
+ * the `cohere` marker, and a guard that cries wolf gets its offender list
+ * pasted into an ignore rule. Too tight: prose mentioning a vendor would fire
+ * while an aliased import would not. What matters is the import graph, so that
+ * is what is read.
+ */
 const LLM_MARKERS = [
   'openai',
   '@anthropic-ai',
-  "from 'anthropic'",
+  'anthropic',
   'langchain',
   'cohere',
   '@google/generative',
   'mistralai',
   'ollama',
 ];
+
+/** Every module specifier a file imports, static or dynamic. */
+function importedModules(text: string): string[] {
+  const specifiers: string[] = [];
+  for (const quote of ["'", '"']) {
+    let at = 0;
+    while (true) {
+      const from = text.indexOf(`from ${quote}`, at);
+      const dynamic = text.indexOf(`import(${quote}`, at);
+      const next = from === -1 ? dynamic : dynamic === -1 ? from : Math.min(from, dynamic);
+      if (next === -1) break;
+      const start = text.indexOf(quote, next) + 1;
+      const end = text.indexOf(quote, start);
+      if (end === -1) break;
+      specifiers.push(text.slice(start, end).toLowerCase());
+      at = end + 1;
+    }
+  }
+
+  return specifiers;
+}
 
 async function sourcesIn(packages: readonly string[]): Promise<string[]> {
   const entries = await readdir(PACKAGES, { recursive: true, withFileTypes: true });
@@ -50,6 +81,39 @@ async function sourcesIn(packages: readonly string[]): Promise<string[]> {
       || path.includes(join(PACKAGES, name) + '/')));
 }
 
+describe('守門自己也要被守', () => {
+  // The scanner replaced a substring match that fired on `policyIsCoherent`.
+  // A guard whose failure mode is crying wolf gets silenced by an ignore rule,
+  // so the discrimination it now makes is worth pinning down here rather than
+  // rediscovering it the next time someone names a function well.
+  const detect = (text: string): string[] =>
+    importedModules(text).filter((specifier) =>
+      LLM_MARKERS.some((name) => specifier === name || specifier.startsWith(`${name}/`)),
+    );
+
+  test('it catches a real model import', () => {
+    expect(detect("import OpenAI from 'openai';")).toEqual(['openai']);
+  });
+
+  test('it catches a deep import into a model package', () => {
+    expect(detect(`import { x } from "@anthropic-ai/sdk";`)).toEqual(['@anthropic-ai/sdk']);
+  });
+
+  test('it catches a dynamic one', () => {
+    expect(detect("const m = await import('langchain/llms');")).toEqual(['langchain/llms']);
+  });
+
+  test('it does not fire on a well-named function', () => {
+    // The false positive that prompted the rewrite: `cohere` inside
+    // `policyIsCoherent`, in a file that imports no such thing.
+    expect(detect('function policyIsCoherent() { return true; }')).toEqual([]);
+  });
+
+  test('it does not fire on prose that merely names a vendor', () => {
+    expect(detect('// deliberately no openai client here')).toEqual([]);
+  });
+});
+
 describe('a language model may explain a decision and may never make one', () => {
   test('no file in a decision-making package imports a model client', async () => {
     const sources = await sourcesIn(DECISION_PACKAGES);
@@ -57,12 +121,13 @@ describe('a language model may explain a decision and may never make one', () =>
 
     const offenders: string[] = [];
     for (const file of sources) {
-      const text = (await readFile(file, 'utf8')).toLowerCase();
-      for (const marker of LLM_MARKERS) {
-        // The markers appear in this file's own list, so it excludes itself.
-        if (text.includes(marker) && !file.includes('llmBoundary')) {
-          offenders.push(`${file} → ${marker}`);
-        }
+      for (const specifier of importedModules(await readFile(file, 'utf8'))) {
+        // A package name matches the specifier or a scoped path within it —
+        // `openai` and `openai/resources`, never `policyIsCoherent`.
+        const marker = LLM_MARKERS.find(
+          (name) => specifier === name || specifier.startsWith(`${name}/`),
+        );
+        if (marker !== undefined) offenders.push(`${file} → ${marker}`);
       }
     }
 

@@ -16,6 +16,7 @@ import {
   verifyPresentation,
   type AllowedQueryType,
   type DelegationClaims,
+  type IssuerTier,
   type ReasonCode,
   type RevocationRegistry,
 } from '@eas/shared';
@@ -64,6 +65,12 @@ function toClaims(payload: Record<string, unknown>): DelegationClaims {
     : [];
   const scope = Array.isArray(payload['scope']) ? (payload['scope'] as string[]) : [];
 
+  // The institution's declared minimum issuer tier used to be dropped here, so
+  // a mandate could demand third-party backing and the gate would never hear
+  // about it. Carrying it is only half the fix; runAuthorizedGate hands the
+  // claims to the worker layers so the demand can actually be applied.
+  const minimumIssuerTier = payload['minimumIssuerTier'];
+
   return {
     principal: String(payload['principal']),
     principalName: String(payload['principalName']),
@@ -71,6 +78,9 @@ function toClaims(payload: Record<string, unknown>): DelegationClaims {
     allowedQueryTypes: queryTypes,
     scope,
     purpose: String(payload['purpose']),
+    ...(typeof minimumIssuerTier === 'string'
+      ? { minimumIssuerTier: minimumIssuerTier as IssuerTier }
+      : {}),
     iat: Number(payload['iat']),
     exp: Number(payload['exp']),
   };
@@ -171,17 +181,22 @@ export type AuthorizedGateResult<T> =
  * Runs L0, and only if it passes, the worker-facing layers. The worker layers
  * are a callback, so a caller can prove — by spying on it — that a failed L0
  * never reads worker data.
+ *
+ * The callback receives the verified claims. It did not, and that was how the
+ * mandate's own `minimumIssuerTier` came to be enforced nowhere: the worker
+ * layers had no way to see what the institution had asked for. A limit an
+ * institution states and the gate cannot read is not a limit.
  */
 export async function runAuthorizedGate<T>(
   ctx: DelegationContext,
-  runWorkerLayers: () => Promise<T>,
+  runWorkerLayers: (claims: DelegationClaims) => Promise<T>,
 ): Promise<AuthorizedGateResult<T>> {
   const l0 = await checkAgentDelegation(ctx);
   if (!l0.ok) {
     return { ok: false, layer: 'L0', reason: l0.reason };
   }
 
-  const worker = await runWorkerLayers();
+  const worker = await runWorkerLayers(l0.claims);
 
   return { ok: true, claims: l0.claims, worker };
 }

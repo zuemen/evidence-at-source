@@ -58,7 +58,6 @@
 | 欄位 | 型別 | 歸屬 | 說明 |
 |---|---|---|---|
 | `passportHeldByWorker` | boolean | 公開 | 護照是否由勞工本人持有。RBA 的紅線指標 |
-| `custodyConsentGiven` | boolean | 公開 | 若非本人持有，是否有勞工明示同意 |
 | `documentType` | string | 公開 | 證件類別，例 `passport`、`arc` |
 | `documentHash` | string | 隱藏 | 證件影像的 SHA-256，用於比對是否為同一份 |
 | `custodyLocation` | string | 隱藏 | 保管地點描述 |
@@ -66,7 +65,15 @@
 | 證件影像 | — | 不入憑證 | 只存勞工裝置 |
 | 生物特徵模板 | — | 不入憑證 | 僅用於裝置本地解鎖，不離開裝置 |
 
-設計要點：`passportHeldByWorker` 為 `false` 且 `custodyConsentGiven` 為 `false`，是 RBA 稽核的直接違規訊號。**這兩個布林值就足以判定，不需要看到任何一本護照。**
+設計要點：`passportHeldByWorker` 為 `false` **本身就是**違規訊號。**這一個布林值就足以判定，不需要看到任何一本護照。**
+
+### 為什麼移除了 `custodyConsentGiven`
+
+這個欄位原本的設計是「若非本人持有，是否有勞工明示同意」——也就是說，`passportHeldByWorker: false` 加上 `custodyConsentGiven: true` 會被讀成「沒有違規」。
+
+**那正是護照扣留的漂白路徑。** 「他自己同意的」是每一個扣留護照的雇主都會講的那句話，而 ILO 強迫勞動指標把證件扣留本身列為指標，不因當事人是否「同意」而改變——因為在那個權力關係裡取得的同意，本來就不構成有效同意。
+
+一個會把違規變成不違規的同意欄位，比沒有這個欄位更糟。它同時也是一個沒有任何檢查在讀的公開欄位——**多一個公開欄位就是多一份可外洩的資料**，沒人用的更不該留著。
 
 ---
 

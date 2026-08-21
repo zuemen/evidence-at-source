@@ -127,11 +127,13 @@
 
 | 落差 | 現況 | 影響 |
 |---|---|---|
-| **身分綁定沒接上開戶路徑** | `checkCredentialLayer` 的 `identity` 分支完整實作且有測試，但開戶流程（`world.ts` 的 `bankResult`）只傳 `revocations`。仲介持有勞工手機的情境，在**實際判斷路徑上沒有被擋** | 題05 Q1／Q2 的機制存在，但不在決策路徑上 |
-| **`minimumIssuerTier` 從未被授權憑證驅動** | `DelegationCredential` 有這個欄位，`checkCredentialLayer` 也會執行檢查——但**只有測試會傳值進去**。沒有任何程式碼把授權憑證裡的門檻接到閘門上 | 機構可以在授權裡宣告「只收第三方查核」，實際上照收自我宣告 |
-| **`expectedFacilityId` 沒有任何實際呼叫端** | GS1 防挪用檢查只在 `credentialLayer.ts` 內部被引用。匯總路徑 `cohort.ts` 不傳 | 一家合格工廠的憑證，目前確實可以替另一條產線作答 |
-| **匯總路徑不解析 `verifiedBy`** | `cohort.ts` 呼叫閘門時沒有傳 `auditors` | 「第三方查核」在品牌查詢路徑上仍然是一個沒人驗證的字串 |
-| **`custodyConsentGiven` 沒有任何消費者** | 它是 `DocumentCustodyCredential` 的公開欄位，fixtures 與 demo 都有填，**沒有任何檢查讀它** | 一個公開欄位＝一份可外洩的資料。沒人用就不該存在 |
+| **身分綁定沒接上開戶路徑** ✅**已修** | `checkCredentialLayer` 的 `identity` 分支完整實作且有測試，但開戶流程（`world.ts` 的 `bankResult`）只傳 `revocations`。仲介持有勞工手機的情境，在**實際判斷路徑上沒有被擋** | 題05 Q1／Q2 的機制存在，但不在決策路徑上 |
+| **`minimumIssuerTier` 從未被授權憑證驅動** ✅**已修** | `DelegationCredential` 有這個欄位，`checkCredentialLayer` 也會執行檢查——但**只有測試會傳值進去**。沒有任何程式碼把授權憑證裡的門檻接到閘門上 | 機構可以在授權裡宣告「只收第三方查核」，實際上照收自我宣告 |
+| **`expectedFacilityId` 沒有任何實際呼叫端** ✅**已修** | GS1 防挪用檢查只在 `credentialLayer.ts` 內部被引用。匯總路徑 `cohort.ts` 不傳 | 一家合格工廠的憑證，目前確實可以替另一條產線作答 |
+| **匯總路徑不解析 `verifiedBy`** ✅**已修** | `cohort.ts` 呼叫閘門時沒有傳 `auditors` | 「第三方查核」在品牌查詢路徑上仍然是一個沒人驗證的字串 |
+| **`custodyConsentGiven` 沒有任何消費者** ✅**已移除** | 它是 `DocumentCustodyCredential` 的公開欄位，fixtures 與 demo 都有填，**沒有任何檢查讀它**。更糟的是它的語意：`passportHeldByWorker: false` ＋ 同意 ＝「不違規」，那正是護照扣留的漂白路徑 | 已刪除。理由見 [`docs/credentials.md`](docs/credentials.md) |
+
+五項全數修復，並且加了一道**列舉式守門**（[`policyInputsWired.test.ts`](packages/agents/test/policyInputsWired.test.ts)）：它掃描正式程式碼裡每一個閘門呼叫點，要求每一個都明白宣告傳了哪些政策輸入、沒傳的為什麼。新增一個呼叫點而不做這個宣告，測試就轉紅——「不小心漏掉」不再是這個結構留給人的選項。
 
 另外兩項是設計上的界限，不是漏接：
 
@@ -228,7 +230,7 @@ flowchart TD
 | 憑證 | 簽發者 | 需勞工反簽 | 公開欄位（可揭露） | 隱藏欄位（選擇性揭露） |
 |---|---|---|---|---|
 | `RecruitmentFeeCredential` | 仲介公司 | 是 | `feeWithinLegalCap`、`currency`、`contractPeriod` | `feeAmount`、`paymentSchedule`、`lenderName` |
-| `DocumentCustodyCredential` | 雇主／工廠 | 是 | `passportHeldByWorker`、`custodyConsentGiven`、`documentType` | `documentHash`、`custodyLocation` |
+| `DocumentCustodyCredential` | 雇主／工廠 | 是 | `passportHeldByWorker`、`documentType` | `documentHash`、`custodyLocation` |
 | `ContractConsentCredential` | 仲介公司 | 是 | `nativeLanguageVersionProvided`、`language`、`consentTimestamp` | `salaryAmount`、`contractDocumentHash` |
 | `WorkingHoursCredential` | 工廠打卡系統 | 是 | `withinRBALimit`、`periodStart`、`valueCommitment` | `totalHours`、`overtimeHours`、`commitmentSalt` |
 
@@ -458,7 +460,7 @@ npx vite preview --port 4173          # 本機預覽靜態站
 
 ```bash
 npm install      # 於 repo 根目錄，安裝 workspace 依賴
-npm test         # vitest，目前 465 個測試全綠
+npm test         # vitest，目前 485 個測試全綠
 npm run typecheck
 ```
 
@@ -570,7 +572,7 @@ Agent A 的能力邊界也寫在型別裡：`BankAssessment.requiresHumanReview`
 | 交件 | 位置 |
 |---|---|
 | 挑戰命題 | **Track 05（主賽道）＋ Track 06（加分題）**——主辦載明命題 06 為 Track 01 延伸的加分題、可與其他命題同時挑戰，本作品同時交付兩軌，對照見上 |
-| 程式碼 | 本 repo（CI 每次 push 跑 465 tests + `demo:vlei` 閘門） |
+| 程式碼 | 本 repo（CI 每次 push 跑 485 tests + `demo:vlei` 閘門） |
 | 簡報 | <https://zuemen.github.io/evidence-at-source/slides.html>（←→ 翻頁） |
 | Demo | <https://zuemen.github.io/evidence-at-source/>（免安裝）＋[講稿](docs/demo-video-script.md) |
 | 治理／信任設計說明 | [`docs/governance-memo.md`](docs/governance-memo.md)（六信任點逐點＋證據） |

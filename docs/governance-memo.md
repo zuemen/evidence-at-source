@@ -55,7 +55,7 @@ Agent A 只能讀已揭露結論、產生「建議＋原因碼」交人類覆核
 能不能問」（拒個體查詢、k-匿名、差分攻擊偵測、查詢預算）。**L0 失敗時勞工資料零讀取**
 ——結構保證，測試以 spy 佐證。順序不可顛倒：先驗料再驗人的話，未授權的 Agent 會在
 被拒絕之前就已經讀到資料。
-**證據**：`runAuthorizedGate` 回呼設計；`packages/agents/test/` 44 個測試檔。
+**證據**：`runAuthorizedGate` 回呼設計；`packages/agents/test/` 46 個測試檔。
 
 ## 5. Audit Log — 行動、決策與授權依據如何記錄？
 
@@ -87,7 +87,7 @@ SAID），以及**人類覆核者的職務憑證 SAID**（Agent 的建議與人�
 
 ---
 
-**總驗證**：GitHub Actions 每次 push 跑 465 個測試＋`npm run demo:vlei`（17 步主張，
+**總驗證**：GitHub Actions 每次 push 跑 485 個測試＋`npm run demo:vlei`（17 步主張，
 exit code 0 即全數成立）＋**瀏覽器煙霧測試**（實際載入建置站，頁面未渲染／主控台有錯／
 水平溢出／觸控目標不足即失敗）；線上 demo <https://zuemen.github.io/evidence-at-source/>，
 全部合成資料、無後端、私鑰不離開瀏覽器。

@@ -30,8 +30,21 @@ const SCHEMAS: Record<CredentialType, DisclosureSchema> = {
     public: ['feeWithinLegalCap', 'currency', 'contractPeriod'],
     hidden: ['feeAmount', 'paymentSchedule', 'lenderName'],
   },
+  /**
+   * There is no consent-to-custody field here, and that is deliberate.
+   *
+   * One used to exist, so that `passportHeldByWorker: false` plus consent read
+   * as "not a violation". That is the laundering path for passport
+   * confiscation — "he agreed to it" is what every employer says, and the ILO
+   * forced-labour indicators count document retention regardless of consent,
+   * because consent obtained inside that power relationship is not consent.
+   *
+   * A field that can turn a violation into a non-violation is worse than no
+   * field. This one was also read by no check at all, which made it purely a
+   * liability: a public field is a field that can leak.
+   */
   DocumentCustodyCredential: {
-    public: ['passportHeldByWorker', 'custodyConsentGiven', 'documentType'],
+    public: ['passportHeldByWorker', 'documentType'],
     hidden: ['documentHash', 'custodyLocation'],
   },
   ContractConsentCredential: {

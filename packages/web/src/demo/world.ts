@@ -27,6 +27,8 @@ import {
   type PublicJwk,
   type ReasonCode,
   type RevocationRegistry,
+  type AssertionVerifier,
+  type DeviceAssertion,
 } from '@eas/shared';
 import { createVleiIssuer, type Issuer, type VleiIssuer } from '@eas/issuer';
 import {
@@ -111,7 +113,6 @@ const CLAIMS: Record<WalletCredentialType, Record<string, unknown>> = {
   DocumentCustodyCredential: {
     workerDID: WORKER_DID,
     passportHeldByWorker: true,
-    custodyConsentGiven: true,
     documentType: 'passport',
     documentHash: 'sha256:synthetic-document-hash',
     custodyLocation: 'worker residence locker',
@@ -331,6 +332,15 @@ export interface DemoWorld {
   proveReconciliation(): Promise<ZkProofResult>;
   /** 題05 Q1: is this wallet still the one bound to this person? */
   identityState(): IdentityState;
+  /**
+   * Ends the worker's wallet binding, as a lost or confiscated phone does.
+   *
+   * Exists to be visible on the *decision* path: after this, the bank flow
+   * refuses with WORKER_IDENTITY_UNBOUND rather than assessing anything. That
+   * refusal is what proves the identity check is wired into account opening —
+   * it was implemented, tested, and passed by no caller until now.
+   */
+  simulateLostDevice(): void;
   /** 題06 Q1/Q4: tier, endorsement, reviewer and record — all off the chain. */
   governanceState(): Promise<GovernanceState>;
   /** Strike off the audit body; every endorsement it gave stops resolving. */
@@ -518,6 +528,35 @@ export async function createDemoWorld(): Promise<DemoWorld> {
     arcReference: 'synthetic-arc-reference',
   });
   enrollments.enroll(residency);
+
+  /**
+   * The demo's stand-in for a platform authenticator.
+   *
+   * A real assertion is produced inside a secure element by a key that cannot
+   * be exported — see `wallet/webauthn.ts`, which is the production path and is
+   * used when the browser has one. This exists because the demo also runs in
+   * Node, where there is no authenticator at all, and the alternative was to
+   * leave the identity check switched off on the decision path. It was switched
+   * off, and that is precisely the gap this replaces.
+   *
+   * It is deliberately not `stubAssertionVerifier`: the stub refuses everything,
+   * which is the right default for a verifier that cannot check. This one checks
+   * what a synthetic assertion can carry — that it names the enrolled device and
+   * that the authenticator reported a verified user — and nothing more. It
+   * proves the wiring, never the person.
+   */
+  const demoAssertionVerifier: AssertionVerifier = (assertion) =>
+    assertion.credentialId === residency.deviceCredentialId &&
+    assertion.userVerified === true &&
+    assertion.challenge.length > 0;
+
+  /** What the demo wallet attaches when it counter-signs. */
+  const demoDeviceAssertion = (): DeviceAssertion => ({
+    credentialId: residency.deviceCredentialId,
+    challenge: `synthetic-challenge-${Date.now()}`,
+    userVerified: true,
+    signature: 'synthetic-authenticator-signature',
+  });
   /** Set when the demo has been asked to play the broker's move. */
   let brokerAttempt: ReasonCode | null = null;
 
@@ -866,6 +905,7 @@ export async function createDemoWorld(): Promise<DemoWorld> {
         workerDID: WORKER_DID,
         credential: entry.credential,
         deviceFingerprint: DEVICE,
+        deviceAssertion: demoDeviceAssertion(),
       });
     },
 
@@ -875,6 +915,7 @@ export async function createDemoWorld(): Promise<DemoWorld> {
           workerDID: WORKER_DID,
           credential: entry.credential,
           deviceFingerprint: DEVICE,
+          deviceAssertion: demoDeviceAssertion(),
         });
       }
     },
@@ -967,6 +1008,17 @@ export async function createDemoWorld(): Promise<DemoWorld> {
             workerPublicKey: workerKeys.publicKey,
             requiredClaims: [HEADLINE_CLAIM[entry.type]],
             revocations,
+            // 題05 Q1/Q2 on the path that actually decides.
+            //
+            // This block existed, was tested, and was passed by nobody — so the
+            // broker holding the worker's phone, the case the whole mechanism
+            // was built for, sailed through the account-opening flow. A check
+            // that is never handed its argument protects no one.
+            identity: {
+              enrollments,
+              at: new Date(),
+              verifyAssertion: demoAssertionVerifier,
+            },
           });
 
           if (!decision.ok) {
@@ -1008,7 +1060,7 @@ export async function createDemoWorld(): Promise<DemoWorld> {
       });
 
       // Agent B (brand): L0 first, same guarantee.
-      const brandResult = await runAuthorizedGate(brandL0, async () => {
+      const brandResult = await runAuthorizedGate(brandL0, async (brandClaims) => {
         const hours = held.find((entry) => entry.type === 'WorkingHoursCredential');
         const submissions: Submission[] = others.map((member) => member.submission);
         if (hours !== undefined && hours.attestation !== null) {
@@ -1026,6 +1078,13 @@ export async function createDemoWorld(): Promise<DemoWorld> {
           claim: 'withinRBALimit',
           submissions,
           revocations,
+          // The brand's own mandate says what backing it will accept, and the
+          // directory is what turns "verified by SGS" from a string into a
+          // resolvable claim. Both used to stop at the gate's front door.
+          ...(brandClaims.minimumIssuerTier === undefined
+            ? {}
+            : { minimumIssuerTier: brandClaims.minimumIssuerTier }),
+          auditors,
         });
 
         const brandAgent = createBrandAgent([evidence]);
@@ -1270,6 +1329,10 @@ export async function createDemoWorld(): Promise<DemoWorld> {
           typeof globalThis.PublicKeyCredential !== 'undefined' &&
           typeof globalThis.navigator?.credentials?.get === 'function',
       };
+    },
+
+    simulateLostDevice() {
+      enrollments.revoke(WORKER_DID);
     },
 
     attemptBrokerWallet() {

@@ -32,7 +32,6 @@ async function world() {
   const credential = await factory.issue('DocumentCustodyCredential', {
     workerDID: WORKER_DID,
     passportHeldByWorker: true,
-    custodyConsentGiven: true,
     documentType: 'passport',
     documentHash: 'sha256:synthetic-document-hash',
     custodyLocation: 'worker residence locker',
