@@ -48,6 +48,13 @@ export const REASON_CODES = [
   'RESIDENCY_PERMIT_EXPIRED',
   'USER_PRESENCE_NOT_VERIFIED',
   'DEVICE_CREDENTIAL_MISMATCH',
+  // M-of-N social key recovery. The mechanism that returns an identity is the
+  // mechanism that takes one, so each refusal names which guard held.
+  'RECOVERY_POLICY_INVALID',
+  'RECOVERY_THRESHOLD_NOT_MET',
+  'RECOVERY_EPOCH_STALE',
+  'RECOVERY_DELAY_NOT_ELAPSED',
+  'RECOVERY_VETOED',
   // A required fact was disclosed and did not satisfy policy. Distinct from
   // CLAIM_NOT_DISCLOSED so a human reviewer can tell "missing" from "failing".
   'POLICY_CHECK_FAILED',

@@ -63,3 +63,20 @@ export type {
   PresenceResult,
   ResidencyFacts,
 } from './identity.js';
+
+export {
+  MIN_RECOVERY_THRESHOLD,
+  approveRecovery,
+  createGuardianKey,
+  proposalDigest,
+  verifyRecovery,
+} from './recovery.js';
+export type {
+  Guardian,
+  GuardianKey,
+  RecoveryApproval,
+  RecoveryPolicy,
+  RecoveryProposal,
+  RecoveryResult,
+  VerifyRecoveryInput,
+} from './recovery.js';
