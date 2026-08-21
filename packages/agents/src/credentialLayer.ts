@@ -150,6 +150,14 @@ export async function checkCredentialLayer(
   }
 
   const subject = payload['workerDID'];
+
+  // Pairing proved a keyholder signed this credential. This proves they are
+  // the person it is about. Without it, a worker could counter-sign a
+  // colleague's credential and the pair would verify — every signature
+  // genuine, the binding wrong.
+  if (pairing.workerDID !== subject) {
+    return { ok: false, reason: 'ATTESTATION_SUBJECT_MISMATCH' };
+  }
   const revoked = input.revocations?.isRevoked({
     credentialHash: credentialHash(input.presentation),
     workerDID: typeof subject === 'string' ? subject : undefined,

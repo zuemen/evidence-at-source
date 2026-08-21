@@ -2,9 +2,13 @@
  * Dual-signature pairing.
  *
  * The worker signs a short JWT whose `subjectCredentialHash` points at the
- * issuer's credential. Because the hash covers the whole credential, an issuer
- * that re-issues with different numbers can no longer produce a matching pair
- * without the worker's private key.
+ * issuer's credential. An issuer that re-issues with different numbers can no
+ * longer produce a matching pair without the worker's private key.
+ *
+ * The hash covers the issuer-signed segment only — see `credentialHash` for
+ * why, because it is the one decision in this file that two implementations
+ * would get wrong differently. The normative statement lives in
+ * spec/dual-signature-pairing.md.
  */
 
 import { SignJWT, jwtVerify, importJWK, type JWK } from 'jose';
@@ -53,7 +57,21 @@ export interface AttestationInput {
   readonly deviceAssertion?: DeviceAssertion;
 }
 
-export type PairingResult = { readonly ok: true } | { readonly ok: false; readonly reason: ReasonCode };
+export type PairingResult =
+  | {
+      readonly ok: true;
+      /**
+       * The subject the attestation names.
+       *
+       * Returned rather than discarded because pairing on its own proves only
+       * that *some* keyholder signed *this* credential. Establishing that they
+       * are the credential's subject needs the credential payload, which this
+       * function does not parse — so it hands the caller what it knows and the
+       * credential layer completes the check. See ATTESTATION_SUBJECT_MISMATCH.
+       */
+      readonly workerDID: string;
+    }
+  | { readonly ok: false; readonly reason: ReasonCode };
 
 export async function createWorkerAttestation(
   workerPrivateKey: PrivateJwk,
@@ -80,11 +98,17 @@ export async function verifyPairing(
   workerPublicKey: PublicJwk,
 ): Promise<PairingResult> {
   let subjectCredentialHash: unknown;
+  let workerDID: unknown;
 
   try {
     const key = await importJWK(workerPublicKey as JWK, 'ES256');
-    const { payload } = await jwtVerify(attestation, key);
+    // `typ` is checked here rather than left to the caller. Without it, any
+    // ES256 JWT the worker ever signed that happens to carry a
+    // subjectCredentialHash claim would be accepted as a counter-signature —
+    // the classic cross-protocol confusion, and cheap to close.
+    const { payload } = await jwtVerify(attestation, key, { typ: ATTESTATION_TYP });
     subjectCredentialHash = payload['subjectCredentialHash'];
+    workerDID = payload['workerDID'];
   } catch {
     // An unverifiable attestation is indistinguishable from having none.
     return { ok: false, reason: 'MISSING_WORKER_ATTESTATION' };
@@ -94,5 +118,9 @@ export async function verifyPairing(
     return { ok: false, reason: 'ATTESTATION_HASH_MISMATCH' };
   }
 
-  return { ok: true };
+  if (typeof workerDID !== 'string') {
+    return { ok: false, reason: 'MISSING_WORKER_ATTESTATION' };
+  }
+
+  return { ok: true, workerDID };
 }

@@ -27,6 +27,11 @@ export const REASON_CODES = [
   'INVALID_ISSUER_SIGNATURE',
   'MISSING_WORKER_ATTESTATION',
   'ATTESTATION_HASH_MISMATCH',
+  // The counter-signature is valid and points at this credential, but names a
+  // different person than the credential is about. Pairing alone proves only
+  // that some keyholder signed this credential; this is what makes them the
+  // subject of it.
+  'ATTESTATION_SUBJECT_MISMATCH',
   'CREDENTIAL_REVOKED',
   'CREDENTIAL_EXPIRED',
   'CLAIM_NOT_DISCLOSED',
