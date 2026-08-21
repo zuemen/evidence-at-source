@@ -1,0 +1,27 @@
+{
+  "id": "dsp-002",
+  "description": "簽發者事後篡改內容",
+  "rationale": "雇主用不同的數字重新簽發。反簽仍在，但它指向的是原始那一份。",
+  "input": {
+    "issuerCredential": "eyJ0eXAiOiJkYytzZC1qd3QiLCJhbGciOiJFUzI1NiJ9.eyJ3b3JrZXJESUQiOiJkaWQ6a2V5OnpTcGVjV29ya2VyMDAxIiwid2l0aGluUkJBTGltaXQiOnRydWUsInBlcmlvZFN0YXJ0IjoiMjAyNi0wOC0wMSIsInZhbHVlQ29tbWl0bWVudCI6IjU3MDIwNzA1Njg1Nzc5MDI0ODU1OTk1NDM4MzI5ODEyNjc4ODI3ODQyOTE3Nzk3OTI0OTYzNDU0ODA5MTY0MDM3OTU1NTcyNzkzMTgiLCJpc3MiOiJkaWQ6d2ViOnNwZWMtZmFjdG9yeS5leGFtcGxlIiwiaWF0IjoxNzg3MzAwMDIwLCJ2Y3QiOiJXb3JraW5nSG91cnNDcmVkZW50aWFsIiwiZXhwIjoxNzk1MDc2MDIwLCJpc3N1ZXJUaWVyIjoiU0VMRl9ERUNMQVJFRCIsIl9zZCI6WyJJUmJpTVRqVThHYkJNelNWM0tCTVE4U3RoNnhkMU05b1V6a3haNlBlQWtZIiwiS1BhN3BUa2dPNUpoSkU5VWJ1YVh1cDA3MFRQa1FYaVcxQ09uYTR1TVd6RSIsIk1SQmtXYUdfU0o4dkdqaThjdW9SS2hUa0VENG1vOFdyMkxTMVhETFo3N1UiXSwiX3NkX2FsZyI6InNoYS0yNTYifQ.UOa-_UoegPneK9vonfVSYNyZxjM7HRXDbUx27Q8MemSgaGQB-_ufQG2Q_O5movuSUfh4xuQvOkRjh5tZW3Q1VQ~WyI4MjllMGYyMGUzOGFlYWMyIiwidG90YWxIb3VycyIsMTUwXQ~WyI1NDA4YjdkYjY2ZWYzYTIzIiwib3ZlcnRpbWVIb3VycyIsNl0~WyI5YTE0ZmRjMTUwMGM3MjM3IiwiY29tbWl0bWVudFNhbHQiLCI3Njc5Mzg5NDExOTUzOTEwODgxMDA2MTQyMjU1NDY0ODk1MTMzNDA5Mzk4NDkzMDg4MTA4NTAzMjI3NDcwNjM4ODgwOTAwNjgxNCJd~",
+    "workerAttestation": "eyJhbGciOiJFUzI1NiIsInR5cCI6Indvcmtlci1hdHRlc3RhdGlvbitqd3QifQ.eyJzdWJqZWN0Q3JlZGVudGlhbEhhc2giOiJKY1dNOWRWdnhBb004a3h6dlJQakE0OGd6OW5jemZnSjFzWDBEdjU1ckZZIiwid29ya2VyRElEIjoiZGlkOmtleTp6U3BlY1dvcmtlcjAwMSIsImF0dGVzdGVkQXQiOiIyMDI2LTA4LTIxVDA4OjEzOjQwLjAwMFoiLCJkZXZpY2VGaW5nZXJwcmludCI6InNoYTI1NjpzcGVjLWRldmljZS0wMDAxIiwiaXNzIjoiZGlkOmtleTp6U3BlY1dvcmtlcjAwMSJ9.WEgf44Y2KqmOR4b-kNWQUH2pvT3kqoz4r7wrD2rcQMQDMJwD1hqW8eQrzAAKqIr34rA9GjJD_KM-bn8RENGV9g",
+    "workerPublicJwk": {
+      "kty": "EC",
+      "x": "2vS416Y_rgfvu_vSJytLaaFee92XLLFP0MQouVPIBIA",
+      "y": "Qnjz8AWJKpLV6Ewt8jS5Lbt_QPDpZMzGIQxy8UMKlO8",
+      "crv": "P-256",
+      "alg": "ES256"
+    },
+    "issuerPublicJwk": {
+      "kty": "EC",
+      "x": "Cu0GpfsDAzSpgZpp-pmmdicGX7yaOXcozW4sVJMieGo",
+      "y": "vwbLGh4qt5zjNXqFaN7BPO58b0H70kZx8z3Ts97yGmQ",
+      "crv": "P-256",
+      "alg": "ES256"
+    }
+  },
+  "expected": {
+    "pairingValid": false,
+    "reasonCode": "ATTESTATION_HASH_MISMATCH"
+  }
+}

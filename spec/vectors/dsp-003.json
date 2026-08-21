@@ -1,0 +1,27 @@
+{
+  "id": "dsp-003",
+  "description": "缺少勞工反簽",
+  "rationale": "沒有當事人確認的紀錄不成立。空字串與「有但驗不過」回同一個碼——見規格 6 節。",
+  "input": {
+    "issuerCredential": "eyJ0eXAiOiJkYytzZC1qd3QiLCJhbGciOiJFUzI1NiJ9.eyJ3b3JrZXJESUQiOiJkaWQ6a2V5OnpTcGVjV29ya2VyMDAxIiwid2l0aGluUkJBTGltaXQiOnRydWUsInBlcmlvZFN0YXJ0IjoiMjAyNi0wOC0wMSIsInZhbHVlQ29tbWl0bWVudCI6IjE5MDg4MjU3NzMyMzM2MjgyMTA0MjcyNzU0NTg4MzI1MTY5MTAyMjYzMzc5OTg4NTk5MTkwOTUyMjc3OTM5ODM2MDExOTAxMzE1NTgxIiwiaXNzIjoiZGlkOndlYjpzcGVjLWZhY3RvcnkuZXhhbXBsZSIsImlhdCI6MTc4NzMwMDAxOSwidmN0IjoiV29ya2luZ0hvdXJzQ3JlZGVudGlhbCIsImV4cCI6MTc5NTA3NjAxOSwiaXNzdWVyVGllciI6IlNFTEZfREVDTEFSRUQiLCJfc2QiOlsiNVR0YmRaSHNYQ2NuMG9TaUxpazFQWEdHYUNSRkVUN00tbl9sRWRSdkRIWSIsIk9nY3dWczhjWGFRQjU0V2t2M00yVkQ5M1pFQ0ZOUmJYZHVZZTFNYk4xQWMiLCJwYXBiS2dyM1ZDUFZ0OU5sOGd5VzRzQVNmd2hueEYzMktyal9zZUk0ZGxzIl0sIl9zZF9hbGciOiJzaGEtMjU2In0.voR3nqSDu2IorLLi-fDrS9DdCm1MrDZoFsAsqapYhM7e2WeoxZTUDt8_BWPLboTlxGKKUGgARAO4Vbdfz6aVDQ~WyIwMTYyMGQ0MTMxMTJmMDhlIiwidG90YWxIb3VycyIsMTg2XQ~WyJiNDc5YzZlZDViOTA1YTU2Iiwib3ZlcnRpbWVIb3VycyIsNDJd~WyJmNzljMzQzMTQyOTBkMmNjIiwiY29tbWl0bWVudFNhbHQiLCI1MjQ3NTY4NjQ2NzEzMTMyNDkxMjMwOTE4ODE1MTUxNzMwOTc1MzM3NDI0NzQ5NDA0OTQyOTY3MTgwMzY0NDcyNTk4NDYxMzk3NCJd~",
+    "workerAttestation": "",
+    "workerPublicJwk": {
+      "kty": "EC",
+      "x": "2vS416Y_rgfvu_vSJytLaaFee92XLLFP0MQouVPIBIA",
+      "y": "Qnjz8AWJKpLV6Ewt8jS5Lbt_QPDpZMzGIQxy8UMKlO8",
+      "crv": "P-256",
+      "alg": "ES256"
+    },
+    "issuerPublicJwk": {
+      "kty": "EC",
+      "x": "Cu0GpfsDAzSpgZpp-pmmdicGX7yaOXcozW4sVJMieGo",
+      "y": "vwbLGh4qt5zjNXqFaN7BPO58b0H70kZx8z3Ts97yGmQ",
+      "crv": "P-256",
+      "alg": "ES256"
+    }
+  },
+  "expected": {
+    "pairingValid": false,
+    "reasonCode": "MISSING_WORKER_ATTESTATION"
+  }
+}

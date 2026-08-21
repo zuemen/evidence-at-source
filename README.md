@@ -561,7 +561,7 @@ npx vite preview --port 4173          # 本機預覽靜態站
 
 ```bash
 npm install      # 於 repo 根目錄，安裝 workspace 依賴
-npm test         # vitest，目前 542 個測試全綠
+npm test         # vitest，目前 559 個測試全綠
 npm run typecheck
 ```
 
@@ -676,7 +676,7 @@ Agent A 的能力邊界也寫在型別裡：`BankAssessment.requiresHumanReview`
 | 交件 | 位置 |
 |---|---|
 | 挑戰命題 | **Track 05（主賽道）＋ Track 06（加分題）**——主辦載明命題 06 為 Track 01 延伸的加分題、可與其他命題同時挑戰，本作品同時交付兩軌，對照見上 |
-| 程式碼 | 本 repo（CI 每次 push 跑 542 tests + `demo:vlei` 閘門） |
+| 程式碼 | 本 repo（CI 每次 push 跑 559 tests + `demo:vlei` 閘門） |
 | 簡報 | <https://zuemen.github.io/evidence-at-source/slides.html>（←→ 翻頁） |
 | Demo | <https://zuemen.github.io/evidence-at-source/>（免安裝）＋[講稿](docs/demo-video-script.md) |
 | 治理／信任設計說明 | [`docs/governance-memo.md`](docs/governance-memo.md)（六信任點逐點＋證據） |
@@ -716,7 +716,21 @@ Agent A 的能力邊界也寫在型別裡：`BankAssessment.requiresHumanReview`
 
 ## 授權
 
-**原始碼 MIT；網頁建置產物 GPL-3.0。** 這兩件事必須分開講，因為它們真的不一樣：
+**三層授權，因為這個 repo 有三種東西。** 完整說明見 [`LICENSING.md`](LICENSING.md)。
+
+| 層 | 涵蓋 | 授權 |
+|---|---|---|
+| Specification | [`spec/`](spec/) | **CC BY 4.0** |
+| Verifier | [`packages/verifier/`](packages/verifier/) | **Apache-2.0，永久** |
+| Runtime | 其餘原始碼 | MIT |
+| 網頁建置產物 | `packages/web/dist/` | **GPL-3.0**（打包了 snarkjs／circomlibjs） |
+
+驗證器之所以永久開放，是因為**驗證不應依賴我們的授權選擇，也不應依賴我們還在不在**。一個移工在 2029 年拿著 2026 年的憑證去某個機構，那個機構必須能驗它而不必問我們任何事。
+
+
+### GPL 的細節：原始碼與建置產物不同授權
+
+這兩件事必須分開講，因為它們真的不一樣：
 
 | 範圍 | 授權 |
 |---|---|

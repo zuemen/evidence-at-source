@@ -1,0 +1,28 @@
+{
+  "id": "dsp-006",
+  "description": "憑證已過期",
+  "rationale": "過期由 exp 判定，與配對是分開的兩步。",
+  "input": {
+    "issuerCredential": "eyJ0eXAiOiJkYytzZC1qd3QiLCJhbGciOiJFUzI1NiJ9.eyJ3b3JrZXJESUQiOiJkaWQ6a2V5OnpTcGVjV29ya2VyMDAxIiwid2l0aGluUkJBTGltaXQiOnRydWUsInBlcmlvZFN0YXJ0IjoiMjAyNi0wOC0wMSIsInZhbHVlQ29tbWl0bWVudCI6IjExNzAyMjQ2NDA5MDIzODU3NDYwNjg3MDc1MTU0NzkzMDkyMTM5MDQxMjgwMTg1MjI1MDM2OTI4OTg0MDc2ODM1NTc3NjU2MzY3MzYxIiwiaXNzIjoiZGlkOndlYjpzcGVjLWZhY3RvcnkuZXhhbXBsZSIsImlhdCI6MTc4NzMwMDAyMCwidmN0IjoiV29ya2luZ0hvdXJzQ3JlZGVudGlhbCIsImV4cCI6MTc4NzI5NjQyMCwiaXNzdWVyVGllciI6IlNFTEZfREVDTEFSRUQiLCJfc2QiOlsiRVpHV0d1NmRfSlBiZmhiOXpIcVJCT3MyYnJjZXNTWGUyUFVFTVFmdDRzcyIsImQ1Q1BudExob21wRk9FTENJLUt2OEhLcWpzNHlNR2VaTkxBbkRnYnp3bmsiLCJ0dDFENTNCS1o2ZDFDNW5aRDB0ME1kRE4tdVNxdFpPckdHdTZUV1U0cnRBIl0sIl9zZF9hbGciOiJzaGEtMjU2In0.nU2DQDO8_zR_vp7KZ0wAACiGHQDcWb1Mqu7NzkraNBdwCQ0_E7pSe2bbqpcTfp3HTVpHp2j7edjcJxlUzd8Ang~WyIyMWM5OTZkNTMwZTM2Y2VjIiwidG90YWxIb3VycyIsMTg2XQ~WyI0NWUxYzY0MjQ2YjY5NjgxIiwib3ZlcnRpbWVIb3VycyIsNDJd~WyJkMzk0N2Q2NjI0MTgxNzk0IiwiY29tbWl0bWVudFNhbHQiLCIzNTU4MDc1NTM4ODA1MDA0NzAyMDY3MTM2NzE0MDM3NzQyOTcxNTkzMzcxNzkxNjAxNzE1ODEzNTYwMTUwMDEyNDEwODg5MTkwODQiXQ~",
+    "workerAttestation": "eyJhbGciOiJFUzI1NiIsInR5cCI6Indvcmtlci1hdHRlc3RhdGlvbitqd3QifQ.eyJzdWJqZWN0Q3JlZGVudGlhbEhhc2giOiI2OTdHSnNsSEtjUGRWSFRDTnNGOHE0RmdtcUU3NTBQR0pYS1NCLTlfY2NzIiwid29ya2VyRElEIjoiZGlkOmtleTp6U3BlY1dvcmtlcjAwMSIsImF0dGVzdGVkQXQiOiIyMDI2LTA4LTIxVDA4OjEzOjQwLjAwOVoiLCJkZXZpY2VGaW5nZXJwcmludCI6InNoYTI1NjpzcGVjLWRldmljZS0wMDAxIiwiaXNzIjoiZGlkOmtleTp6U3BlY1dvcmtlcjAwMSJ9.B9jhB0e0k6_SeztWtI5E09muSSYM9WqB1h40DP5R2C8KAKnN5wlmj-M9gLjkjOMFyHx6q1j4xdVE7PoV8nrLaw",
+    "workerPublicJwk": {
+      "kty": "EC",
+      "x": "2vS416Y_rgfvu_vSJytLaaFee92XLLFP0MQouVPIBIA",
+      "y": "Qnjz8AWJKpLV6Ewt8jS5Lbt_QPDpZMzGIQxy8UMKlO8",
+      "crv": "P-256",
+      "alg": "ES256"
+    },
+    "issuerPublicJwk": {
+      "kty": "EC",
+      "x": "Cu0GpfsDAzSpgZpp-pmmdicGX7yaOXcozW4sVJMieGo",
+      "y": "vwbLGh4qt5zjNXqFaN7BPO58b0H70kZx8z3Ts97yGmQ",
+      "crv": "P-256",
+      "alg": "ES256"
+    }
+  },
+  "expected": {
+    "pairingValid": true,
+    "reasonCode": null,
+    "credentialExpired": true
+  }
+}

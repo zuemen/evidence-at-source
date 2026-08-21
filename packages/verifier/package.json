@@ -1,0 +1,14 @@
+{
+  "name": "@eas/verifier",
+  "version": "0.1.0",
+  "description": "Independent verifier for Evidence at Source credentials and receipts. Depends on no @eas/* package.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "bin": { "eas-verify": "./cli.js" },
+  "exports": { ".": "./src/index.js" },
+  "files": ["cli.js", "src", "LICENSE", "README.md"],
+  "dependencies": {
+    "@noble/hashes": "^1.8.0",
+    "jose": "^6.2.3"
+  }
+}

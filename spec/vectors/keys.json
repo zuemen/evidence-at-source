@@ -1,0 +1,48 @@
+{
+  "note": "PUBLIC TEST KEYS. Never use in any real deployment.",
+  "issuerPublicJwk": {
+    "kty": "EC",
+    "x": "Cu0GpfsDAzSpgZpp-pmmdicGX7yaOXcozW4sVJMieGo",
+    "y": "vwbLGh4qt5zjNXqFaN7BPO58b0H70kZx8z3Ts97yGmQ",
+    "crv": "P-256",
+    "alg": "ES256"
+  },
+  "workerPublicJwk": {
+    "kty": "EC",
+    "x": "2vS416Y_rgfvu_vSJytLaaFee92XLLFP0MQouVPIBIA",
+    "y": "Qnjz8AWJKpLV6Ewt8jS5Lbt_QPDpZMzGIQxy8UMKlO8",
+    "crv": "P-256",
+    "alg": "ES256"
+  },
+  "otherPublicJwk": {
+    "kty": "EC",
+    "x": "xDKXMy08q2sY4S8XVNyvu6oyVGesuEJjl4xK0kOBuxo",
+    "y": "CJCFGiPZpCo-Dy19kTh1PykQFpfyOFfTiuqDP5dPN7I",
+    "crv": "P-256",
+    "alg": "ES256"
+  },
+  "issuerPrivateJwk": {
+    "kty": "EC",
+    "x": "Cu0GpfsDAzSpgZpp-pmmdicGX7yaOXcozW4sVJMieGo",
+    "y": "vwbLGh4qt5zjNXqFaN7BPO58b0H70kZx8z3Ts97yGmQ",
+    "crv": "P-256",
+    "d": "mtmaCz5Jz7f-lK5MZMoUESn2YdF315hCbI35AJT1Am4",
+    "alg": "ES256"
+  },
+  "workerPrivateJwk": {
+    "kty": "EC",
+    "x": "2vS416Y_rgfvu_vSJytLaaFee92XLLFP0MQouVPIBIA",
+    "y": "Qnjz8AWJKpLV6Ewt8jS5Lbt_QPDpZMzGIQxy8UMKlO8",
+    "crv": "P-256",
+    "d": "0cd98lFMKsJyAbPcdXBu3nwyyQfmvDjyuJ_OLgeugm8",
+    "alg": "ES256"
+  },
+  "otherPrivateJwk": {
+    "kty": "EC",
+    "x": "xDKXMy08q2sY4S8XVNyvu6oyVGesuEJjl4xK0kOBuxo",
+    "y": "CJCFGiPZpCo-Dy19kTh1PykQFpfyOFfTiuqDP5dPN7I",
+    "crv": "P-256",
+    "d": "qBmZZ545hDAz9yfQoX7vAWh1VF__WISxOkeWl_eTBIw",
+    "alg": "ES256"
+  }
+}
