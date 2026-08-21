@@ -66,6 +66,89 @@
 
 六信任點逐點對照與可執行證據見 [`docs/governance-memo.md`](docs/governance-memo.md)。
 
+## 從動作往回推：這個 Agent 該不該做這件事
+
+下面兩張表用的是 GLEIF 在 8／15 技術工作坊示範的方法論：**不從「我們有哪些憑證」開始，從「Agent 要做什麼動作」開始，再往回推導授權這個動作所需的每一項主張與證據。**
+
+每一個「權威證據」欄位都對應到 repo 中實際存在的憑證型別，每一個「判定測試」欄位都對應到實際的檢查函式或原因碼。標了 ⚠️ 的列是**目前程式碼沒有做到的**，理由列在第三張表——這個練習的價值有一半在這裡。
+
+### 命題 05：這個帳戶該不該開？
+
+| 必要主張 | 權威證據 | 判定測試 |
+|---|---|---|
+| 這是本人，而且簽的時候人在現場 | `ResidencyCredential`（`identityAnchor`、`holderDid`、`deviceCredentialId`、`permitValidUntil`） | `checkCredentialLayer` 的 `identity` 分支：`statusOf` → `WORKER_IDENTITY_UNBOUND`／`RESIDENCY_PERMIT_EXPIRED`；`verifyDevicePresence` → `USER_PRESENCE_NOT_VERIFIED`／`DEVICE_CREDENTIAL_MISMATCH` ⚠️ |
+| 這份證據沒有被雇主事後改過 | 勞工反簽（`attestation`） | `verifyPairing` → `ATTESTATION_HASH_MISMATCH`／`MISSING_WORKER_ATTESTATION` |
+| 簽發這份證據的機構有資格 | 簽發方的 vLEI Legal Entity 鏈 | `isChainVerifiedKey` → `ISSUER_VLEI_MISSING`；`requireIssuerSigningKey` → `ISSUER_VLEI_CHAIN_INVALID`／`ISSUER_VLEI_REVOKED` |
+| 仲介費未超收 | `RecruitmentFeeCredential.feeWithinLegalCap`（布林；`feeAmount` 在 `_sd` 內，永遠不出現） | `createBankAgent().assess` 的 `REQUIRED_FACTS` → `POLICY_CHECK_FAILED`（揭露了但不合格）／`CLAIM_NOT_DISCLOSED`（根本沒揭露） |
+| 護照在勞工自己手上 | `DocumentCustodyCredential.passportHeldByWorker` | 同上 |
+| 契約有母語版本 | `ContractConsentCredential.nativeLanguageVersionProvided` | 同上 |
+| 憑證此刻仍然有效 | 撤銷登錄簿 ＋ 憑證的 `exp` | `CREDENTIAL_REVOKED`／`CREDENTIAL_EXPIRED` |
+| 未在多處同時申辦 | `applicationMonitor.risk()` 回傳的 `{ count, flagged }`——只有次數，沒有「在哪幾家」 | 14 天內超過 3 次 → `riskFlags: ['MULTIPLE_APPLICATIONS']`。**只提示，不決定**：`requiresHumanReview` 是字面量 `true` ⚠️ |
+| 本人自願 | — | ⚠️ **沒有這項檢查** |
+| 聘僱關係仍存在 | — | ⚠️ **沒有專屬憑證** |
+
+> **沒有任何單一簽章能證明整筆交易。**
+
+### 命題 06：這批工人的工時該不該被判定合規？
+
+| 必要主張 | 權威證據 | 判定測試 |
+|---|---|---|
+| 提問的這個 Agent 有權提問 | `DelegationCredential` ＋ 該機構的 vLEI ECR 鏈 | L0 `runAuthorizedGate` → `AGENT_DELEGATION_MISSING`／`_INVALID`／`_EXPIRED`／`_REVOKED`、`QUERY_TYPE_NOT_IN_SCOPE`、`CREDENTIAL_TYPE_NOT_IN_SCOPE`、`AGENT_VLEI_*` |
+| 工時憑證為真 | `WorkingHoursCredential.withinRBALimit`（`totalHours`、`overtimeHours` 在 `_sd` 內） | `verifyPresentation` → `INVALID_ISSUER_SIGNATURE` |
+| 勞工本人確認過這份紀錄 | 勞工反簽 | `verifyPairing` → `ATTESTATION_HASH_MISMATCH` |
+| 簽發方的層級足夠 | `issuerTier` 與 vLEI 鏈上實際授予的層級 | `ISSUER_TIER_MISMATCH`（宣稱高於鏈上授予）／`ISSUER_TIER_BELOW_THRESHOLD` ⚠️ |
+| 宣稱的「第三方查核」的第三方是真的 | `verifiedBy` ＋ `AuditorDirectory`（走同一條鏈到同一個根） | `AUDITOR_CHAIN_INVALID` ⚠️ |
+| 這張憑證屬於被查的那個廠 | 憑證的 `facilityId` | `CREDENTIAL_FACILITY_MISMATCH` ⚠️ |
+| 憑證未撤銷、未過期 | 撤銷登錄簿 ＋ `exp` | `CREDENTIAL_REVOKED`／`CREDENTIAL_EXPIRED` |
+| 母體大到答案不是在講某一個人 | 已驗證結論的數量 | `checkQueryLayer` → `COHORT_TOO_SMALL`（低於 5，什麼都不答）／`AGGREGATE_BELOW_K_ANONYMITY`（5–19，只答全稱命題） |
+| 這次提問不能跟上次相減回推到個人 | `QuerySession` 的已答紀錄 | `DIFFERENCING_ATTACK_DETECTED` |
+| 工廠沒有整段漏報 | `SelfReportedHoursCredential` 的 `OMITTED` 比率 | `getSelfReportDivergenceRate`／`getUnmatchedSelfReportCount`（皆走 k-匿名閘門） |
+| 工時與實際入帳對得起來 | `SalaryDepositCredential`（銀行簽發，工廠控制不了） | `reconcile()`／`verifyReconciliationProof` → `PROOF_INVALID`、`PROOF_BINDING_MISMATCH`、`PROOF_SUBJECT_MISMATCH`、`PROOF_COMMITMENT_MISMATCH` |
+
+> **沒有任何單一簽章能證明整筆交易。**
+
+### 憑證回答不了的：必須有人走進廠房
+
+`rbaItems.ts` 把 RBA 稽核項目分成兩類，這是寫在程式碼裡的誠實聲明——問到第二類，Agent 回 `REQUIRES_ONSITE_AUDIT`，而不是給一個看起來像答案的東西。
+
+| 憑證可回答 | 必須實地查核 |
+|---|---|
+| `workingHoursWithinLimit` | `fireSafetyConditions` |
+| `passportHeldByWorker` | `dormitoryLivingConditions` |
+| `recruitmentFeeWithinLegalCap` | `machineGuardingSafety` |
+| `contractNativeLanguageProvided` | `hazardousChemicalHandling` |
+| | `grievanceMechanismEffectiveness` |
+
+沒有列在表上的項目回 `UNKNOWN`，不會被當成可回答。
+
+### 表上有、程式碼裡其實沒做
+
+把論述改成從動作往回推，逼出了五個「我們宣稱檢查、但實際上沒檢查」的項目。列在這裡而不是修掉就算了，因為**這種落差的成因比落差本身重要**：每一項都是「檢查寫好了，但沒有任何呼叫端傳參數進去」。
+
+| 落差 | 現況 | 影響 |
+|---|---|---|
+| **身分綁定沒接上開戶路徑** | `checkCredentialLayer` 的 `identity` 分支完整實作且有測試，但開戶流程（`world.ts` 的 `bankResult`）只傳 `revocations`。仲介持有勞工手機的情境，在**實際判斷路徑上沒有被擋** | 題05 Q1／Q2 的機制存在，但不在決策路徑上 |
+| **`minimumIssuerTier` 從未被授權憑證驅動** | `DelegationCredential` 有這個欄位，`checkCredentialLayer` 也會執行檢查——但**只有測試會傳值進去**。沒有任何程式碼把授權憑證裡的門檻接到閘門上 | 機構可以在授權裡宣告「只收第三方查核」，實際上照收自我宣告 |
+| **`expectedFacilityId` 沒有任何實際呼叫端** | GS1 防挪用檢查只在 `credentialLayer.ts` 內部被引用。匯總路徑 `cohort.ts` 不傳 | 一家合格工廠的憑證，目前確實可以替另一條產線作答 |
+| **匯總路徑不解析 `verifiedBy`** | `cohort.ts` 呼叫閘門時沒有傳 `auditors` | 「第三方查核」在品牌查詢路徑上仍然是一個沒人驗證的字串 |
+| **`custodyConsentGiven` 沒有任何消費者** | 它是 `DocumentCustodyCredential` 的公開欄位，fixtures 與 demo 都有填，**沒有任何檢查讀它** | 一個公開欄位＝一份可外洩的資料。沒人用就不該存在 |
+
+另外兩項是設計上的界限，不是漏接：
+
+- **「本人自願」沒有被檢查，而且無法被檢查。** 目前檢查到的是「契約有母語版本」與「這把金鑰簽了名」，兩者都不等於自願。`identity.ts` 的模組註解已經寫明：指紋不會因為刀架在脖子上就失效。`coercion.ts` 的匿名脅迫訊號是目前唯一的緩解，而它只在品牌側的匯總路徑，不在開戶路徑。
+- **「聘僱關係仍存在」沒有專屬憑證。** 目前靠憑證效期、工廠主動撤銷、居留效期三者近似。一個已經離職、而工廠沒有撤銷憑證的勞工，仍然會通過。
+- **`applicationMonitor` 的「跨機構」目前名不副實。** 它是一個行程內的 Map，沒有任何跨機構共享協定。同一個人在三家不同銀行申辦，除非三家共用同一個 monitor，否則偵測不到。
+
+### 硬閘門優先，信心分數只決定覆核路徑
+
+GLEIF 的原則：
+
+> An LLM confidence score cannot override failed cryptography, authority, identity or mandate checks.
+
+本專案的判斷路徑上**沒有 LLM**。三層閘門（L0 授權 → L1 憑證 → L2 提問）全部是確定性的密碼學與集合運算，同一份證據永遠得到同一個結論。
+
+語言模型只出現在最後一步——把已經作成的結論寫成人看得懂的句子——而且它寫出來的每一句話都要先通過 `checkExplanation` 的純規則比對：與結論矛盾、捏造數字、宣稱最終決定，任一項觸發就丟棄，改用確定性樣板。這讓 T8 的 prompt injection 演示有了真正的對象：注入確實改變了模型寫出來的字，但改變不了送到讀者面前的東西。
+
 ## 系統架構
 
 ### 機構信任層：vLEI
@@ -375,7 +458,7 @@ npx vite preview --port 4173          # 本機預覽靜態站
 
 ```bash
 npm install      # 於 repo 根目錄，安裝 workspace 依賴
-npm test         # vitest，目前 449 個測試全綠
+npm test         # vitest，目前 465 個測試全綠
 npm run typecheck
 ```
 
@@ -487,7 +570,7 @@ Agent A 的能力邊界也寫在型別裡：`BankAssessment.requiresHumanReview`
 | 交件 | 位置 |
 |---|---|
 | 挑戰命題 | **Track 05（主賽道）＋ Track 06（加分題）**——主辦載明命題 06 為 Track 01 延伸的加分題、可與其他命題同時挑戰，本作品同時交付兩軌，對照見上 |
-| 程式碼 | 本 repo（CI 每次 push 跑 449 tests + `demo:vlei` 閘門） |
+| 程式碼 | 本 repo（CI 每次 push 跑 465 tests + `demo:vlei` 閘門） |
 | 簡報 | <https://zuemen.github.io/evidence-at-source/slides.html>（←→ 翻頁） |
 | Demo | <https://zuemen.github.io/evidence-at-source/>（免安裝）＋[講稿](docs/demo-video-script.md) |
 | 治理／信任設計說明 | [`docs/governance-memo.md`](docs/governance-memo.md)（六信任點逐點＋證據） |
