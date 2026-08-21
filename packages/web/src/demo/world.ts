@@ -132,6 +132,15 @@ const CLAIMS: Record<WalletCredentialType, Record<string, unknown>> = {
   WorkingHoursCredential: {
     workerDID: WORKER_DID,
     withinRBALimit: true,
+    // Weekly and monthly are separate criteria under separate standards, and
+    // this worker shows why: inside RBA's 60-hour week every week, past
+    // Taiwan's 46 monthly overtime hours. One boolean could not say both.
+    withinRBAWeeklyLimit: true,
+    withinLocalMonthlyLimit: false,
+    weeklyHoursLimit: 60,
+    overtimeVoluntary: true,
+    restDayCompliant: true,
+    standardVersion: 'RBA-CoC-8.0',
     periodStart: '2026-08-01',
     totalHours: 186,
     overtimeHours: 42,

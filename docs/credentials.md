@@ -130,7 +130,13 @@ RBA Code of Conduct 8.0 採 **Employer Pays Principle**：
 
 | 欄位 | 型別 | 歸屬 | 說明 |
 |---|---|---|---|
-| `withinRBALimit` | boolean | 公開 | 本週期工時是否在 RBA 上限內 |
+| `withinRBALimit` | boolean | 公開 | **週工時含加班未超過上限**（RBA 60 小時／週）。語意已明確化，見下 |
+| `withinRBAWeeklyLimit` | boolean | 公開 | 同上，明確命名的版本 |
+| `withinLocalMonthlyLimit` | boolean | 公開 | 台灣勞基法月加班上限（46 小時／月） |
+| `weeklyHoursLimit` | number | 公開 | 適用的週上限，RBA 為 60 |
+| `overtimeVoluntary` | boolean | 公開 | **加班是否出於自願**。RBA 明文要求；僅能由勞工反簽表達 |
+| `restDayCompliant` | boolean | 公開 | 每七日至少一日休息 |
+| `standardVersion` | string | 公開 | 判準版本，例 `RBA-CoC-8.0` |
 | `periodStart` | string | 公開 | 週期起日（ISO 8601 日期） |
 | `totalHours` | number | 隱藏 | 本週期總工時 |
 | `overtimeHours` | number | 隱藏 | 本週期加班時數 |
@@ -140,6 +146,22 @@ RBA Code of Conduct 8.0 採 **Employer Pays Principle**：
 | 打卡地點 GPS | — | 不入憑證 | 不收集。位置軌跡對移工是報復風險 |
 
 設計要點：這張憑證的欄位與 `poc/selective-disclosure.mjs` 完全一致，可直接執行驗證。跑 `npm run demo:disclosure` 會看到驗證後的 payload 中 `totalHours` 這個 key 不存在。
+
+### 週與月是兩套不同的計算單位
+
+RBA Code of Conduct 8.0 規定**每週不得超過 60 小時（含加班）**，緊急或異常狀況除外，並要求**每七日至少一日休息**。台灣勞基法的計算單位不同——月加班上限 46 小時。
+
+**同一份出勤資料可能週合規而月超標，反之亦然。** 一個勞工每週 58 小時、連續四週，週週符合 RBA，月加班時數卻遠超台灣上限。所以兩個判準各自成為一個欄位，驗證方依自己適用的標準查詢，而不是拿一個布林去回答兩個問題——那正是招募費那一項犯過的錯。
+
+### `overtimeVoluntary` 只能由勞工反簽表達
+
+RBA 明文要求**所有加班應為自願**。這一項我們原本完全沒有。
+
+補上它的時候有一個關鍵限制：**雇主單方聲稱「加班是自願的」沒有任何意義。** 會扣留護照的雇主，也會在自己的系統裡打勾說加班出於自願。
+
+所以 `overtimeVoluntary` 為 `true` 的前提是**勞工反簽存在且未撤回**。沒有勞工簽章，這個欄位不得為真——不是「預設為假」，是**驗證方不接受**。這是雙簽機制除了防篡改之外的第二個正當用途：有些事實只有當事人有資格斷言。
+
+**它仍然擋不住脅迫。** 被威脅的勞工也會簽。這一欄證明的是「有人問過他、而他簽了」，不是「他真的想加班」。與 `identity.ts` 對脅迫的立場一致：能證明的只到這裡。
 
 ---
 

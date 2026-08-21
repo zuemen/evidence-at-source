@@ -11,6 +11,7 @@ import {
   claimWithinStandards,
   credentialHash,
   meetsMinimumTier,
+  overtimeVoluntary,
   verifyDevicePresence,
   verifyPairing,
   verifyPresentation,
@@ -66,6 +67,15 @@ export interface CredentialLayerInput {
    * it did not ask, in a form it would read as compliance.
    */
   readonly standards?: readonly string[];
+  /**
+   * The worker has withdrawn their agreement that overtime was voluntary.
+   *
+   * Withdrawal is not revocation: the hours record stays true and verifiable,
+   * and only the one claim the worker is the source of stops being readable as
+   * true. A worker who felt safe enough to say so later must not have to
+   * destroy their own evidence to do it.
+   */
+  readonly overtimeConsentWithdrawn?: boolean;
 }
 
 export interface IdentityBindingCheck {
@@ -215,6 +225,24 @@ export async function checkCredentialLayer(
   // GS1: a compliant factory's credential must not answer for another line.
   if (input.expectedFacilityId !== undefined && payload['facilityId'] !== input.expectedFacilityId) {
     return { ok: false, reason: 'CREDENTIAL_FACILITY_MISMATCH' };
+  }
+
+  // RBA CoC 8.0 requires overtime to be voluntary, and only the worker has
+  // standing to say so. The pairing check above already established that the
+  // worker counter-signed this credential; without that, a factory's own
+  // assertion of voluntariness is worth nothing, so the claim is corrected to
+  // false rather than passed through. It is corrected rather than refused
+  // because "the employer says voluntary, the worker did not confirm" is a
+  // meaningful answer — and it is the honest one.
+  if (payload['overtimeVoluntary'] === true) {
+    payload = {
+      ...payload,
+      overtimeVoluntary: overtimeVoluntary({
+        claimed: true,
+        attested: true,
+        withdrawn: input.overtimeConsentWithdrawn === true,
+      }),
+    };
   }
 
   for (const claim of input.requiredClaims) {

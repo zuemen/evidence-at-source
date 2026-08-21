@@ -160,7 +160,7 @@ GLEIF 的原則：
 | Seat | 收到 | 未收到 |
 |---|---|---|
 | **銀行 Agent A** | `zeroRecruitmentFeePaid`、`feesReimbursedByEmployer`、`reimbursedWithin90Days`、`withinTaiwanLegalCap`、`standardVersion`、`passportHeldByWorker`、`documentType`、`nativeLanguageVersionProvided`、`language`、`consentTimestamp`、`recommendation`、`reasons`、`requiresHumanReview`、`riskFlags` | `feeAmount`、`paymentSchedule`、`lenderName`、`documentHash`、`custodyLocation`、`salaryAmount`、`contractDocumentHash` |
-| **品牌 Agent B** | `disclosure`、`metric`、`cohort`、`cohortSize`、`rate`、`compliant`、`thresholds` | `totalHours`、`overtimeHours`、`commitmentSalt`、`withinRBALimit`、`periodStart`、`valueCommitment`、`workerDID` |
+| **品牌 Agent B** | `disclosure`、`metric`、`cohort`、`cohortSize`、`rate`、`compliant`、`thresholds` | `totalHours`、`overtimeHours`、`commitmentSalt`、`withinRBALimit`、`withinRBAWeeklyLimit`、`withinLocalMonthlyLimit`、`weeklyHoursLimit`、`overtimeVoluntary`、`restDayCompliant`、`standardVersion`、`periodStart`、`valueCommitment`、`workerDID` |
 
 ### 兩個 Seat 的差別是種類，不是程度
 
@@ -305,6 +305,18 @@ flowchart TD
 雇主事後修改任何一個數字，憑證雜湊就變了，而勞工那張 attestation 指向的仍是舊雜湊——**配對立即失效，且雇主無法偽造新的配對，因為他沒有勞工的私鑰。**
 
 這件事已在 [`poc/dual-signature.mjs`](poc/dual-signature.mjs) 實測跑通。
+
+### 1-b. 雙簽的第二個用途：有些事實只有當事人有資格斷言
+
+雙簽最常被講的用途是防篡改——工廠改了資料，配對就不成立。但它還有第二個用途，而 RBA 的「加班應為自願」這一條把它逼了出來。
+
+**雇主單方聲稱「加班是自願的」沒有任何意義。** 會扣留護照的雇主，也會在自己的系統裡打勾說加班出於自願。
+
+所以 `overtimeVoluntary` 為真的前提是**勞工反簽存在且未撤回**。沒有勞工簽章，這一欄不得為真——而且不是靠「預設為假」達成的：閘門在配對檢查就會拒絕一張沒有反簽的憑證，所以**不存在任何路徑**讓工廠的自願聲稱在沒有勞工簽章的情況下被讀到。
+
+撤回不等於撤銷：勞工事後撤回自願聲明時，工時紀錄仍然有效可驗證，只有這一欄變成假。**一個後來覺得安全、願意說實話的勞工，不該被迫毀掉自己的證據才能說。**
+
+**它仍然擋不住脅迫。** 被威脅的勞工也會簽。這一欄證明的是「有人問過他、而他簽了」，不是「他真的想加班」。
 
 ### 2. 證據前置（Evidence at Source）
 
@@ -518,7 +530,7 @@ npx vite preview --port 4173          # 本機預覽靜態站
 
 ```bash
 npm install      # 於 repo 根目錄，安裝 workspace 依賴
-npm test         # vitest，目前 524 個測試全綠
+npm test         # vitest，目前 533 個測試全綠
 npm run typecheck
 ```
 
@@ -630,7 +642,7 @@ Agent A 的能力邊界也寫在型別裡：`BankAssessment.requiresHumanReview`
 | 交件 | 位置 |
 |---|---|
 | 挑戰命題 | **Track 05（主賽道）＋ Track 06（加分題）**——主辦載明命題 06 為 Track 01 延伸的加分題、可與其他命題同時挑戰，本作品同時交付兩軌，對照見上 |
-| 程式碼 | 本 repo（CI 每次 push 跑 524 tests + `demo:vlei` 閘門） |
+| 程式碼 | 本 repo（CI 每次 push 跑 533 tests + `demo:vlei` 閘門） |
 | 簡報 | <https://zuemen.github.io/evidence-at-source/slides.html>（←→ 翻頁） |
 | Demo | <https://zuemen.github.io/evidence-at-source/>（免安裝）＋[講稿](docs/demo-video-script.md) |
 | 治理／信任設計說明 | [`docs/governance-memo.md`](docs/governance-memo.md)（六信任點逐點＋證據） |

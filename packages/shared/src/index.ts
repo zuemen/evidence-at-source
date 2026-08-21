@@ -88,3 +88,6 @@ export { CLAIM_STANDARD, claimWithinStandards } from './delegation.js';
 
 export { meetsEmployerPays } from './recruitmentFee.js';
 export type { RecruitmentFeeFacts } from './recruitmentFee.js';
+
+export { overtimeVoluntary } from './overtimeConsent.js';
+export type { OvertimeConsentInput } from './overtimeConsent.js';

@@ -78,8 +78,31 @@ const SCHEMAS: Record<CredentialType, DisclosureSchema> = {
   // valueCommitment is public because the verifier needs it as a public input
   // to the reconciliation proof; commitmentSalt is hidden because disclosing it
   // would let anyone brute force the small range of plausible hour counts.
+  /**
+   * Weeks and months are different units, and RBA has requirements we had none
+   * of.
+   *
+   * RBA CoC 8.0 caps a week at 60 hours including overtime, requires one day
+   * of rest in seven, and requires that all overtime be voluntary. Taiwan's
+   * Labor Standards Act counts monthly instead — 46 overtime hours a month —
+   * so the same timesheet can clear one and breach the other. Four weeks at 58
+   * hours is compliant every week and far over the monthly ceiling.
+   *
+   * Two criteria, two fields. Making one boolean answer both questions is the
+   * mistake the recruitment fee credential already made once.
+   */
   WorkingHoursCredential: {
-    public: ['withinRBALimit', 'periodStart', 'valueCommitment'],
+    public: [
+      'withinRBALimit',
+      'withinRBAWeeklyLimit',
+      'withinLocalMonthlyLimit',
+      'weeklyHoursLimit',
+      'overtimeVoluntary',
+      'restDayCompliant',
+      'standardVersion',
+      'periodStart',
+      'valueCommitment',
+    ],
     hidden: ['totalHours', 'overtimeHours', 'commitmentSalt'],
   },
   /**
