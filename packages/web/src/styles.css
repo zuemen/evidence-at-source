@@ -908,3 +908,39 @@ code {
 .site-footer a:hover {
   color: var(--jade);
 }
+
+/* Disclosure Design table — the two seats side by side.
+   Field names wrap as chips because the lists are long and a reader is
+   scanning for one name, not reading a sentence. */
+.disclosure-design {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+}
+
+.disclosure-design th,
+.disclosure-design td {
+  border: 1px solid var(--border, #d5d5d5);
+  padding: 0.45rem 0.55rem;
+  text-align: left;
+  vertical-align: top;
+}
+
+.disclosure-design tbody th {
+  white-space: nowrap;
+}
+
+.disclosure-design code {
+  display: inline-block;
+  margin: 0.1rem 0.25rem 0.1rem 0;
+  padding: 0.05rem 0.3rem;
+  border-radius: 3px;
+  background: rgba(0, 0, 0, 0.06);
+}
+
+/* Withheld fields are struck through: the point is that they are absent, not
+   merely unshown. */
+.disclosure-design code.withheld {
+  text-decoration: line-through;
+  opacity: 0.75;
+}

@@ -1,3 +1,4 @@
+import { disclosureDesign } from '@eas/agents';
 import type {
   AgentAuthStatus,
   AgentRole,
@@ -607,6 +608,47 @@ export function ConsoleView({
             證明後端不可用（{zk.reason}）。缺少後端一律視為未證明，絕不當作通過。
           </p>
         )}
+      </div>
+
+      <div className="panel" style={{ marginTop: '1rem' }}>
+        <h3 style={{ margin: '0 0 0.4rem' }}>Disclosure Design：兩個 Seat 各自看到什麼</h3>
+        <p className="note" style={{ margin: '0 0 0.6rem' }}>
+          這張表由憑證 schema 的公開／隱藏定義推導，與簽發方產生 SD-JWT{' '}
+          <code>_sd</code> 摘要用的是同一份來源。
+        </p>
+        <table className="disclosure-design">
+          <thead>
+            <tr>
+              <th>Seat</th>
+              <th>收到</th>
+              <th>未收到</th>
+            </tr>
+          </thead>
+          <tbody>
+            {disclosureDesign().map((seat) => (
+              <tr key={seat.seat}>
+                <th scope="row">{seat.label}</th>
+                <td>
+                  {seat.receives.map((field) => (
+                    <code key={field}>{field}</code>
+                  ))}
+                </td>
+                <td>
+                  {seat.withheld.map((field) => (
+                    <code key={field} className="withheld">
+                      {field}
+                    </code>
+                  ))}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        <p className="note" style={{ margin: '0.6rem 0 0' }}>
+          品牌那一列的「未收到」連 <code>withinRBALimit</code> 這個<strong>公開</strong>結論都在內：
+          身分在匯總之前就消失了，Agent 手上只有一串沒有識別資訊的布林值。「列出回報超時的勞工」
+          對它來說不是會被拒絕的查詢，是<strong>沒有資料可以回答</strong>的查詢。
+        </p>
       </div>
 
       <p className="footnote">

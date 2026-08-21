@@ -151,6 +151,25 @@ GLEIF 的原則：
 
 語言模型只出現在最後一步——把已經作成的結論寫成人看得懂的句子——而且它寫出來的每一句話都要先通過 `checkExplanation` 的純規則比對：與結論矛盾、捏造數字、宣稱最終決定，任一項觸發就丟棄，改用確定性樣板。這讓 T8 的 prompt injection 演示有了真正的對象：注入確實改變了模型寫出來的字，但改變不了送到讀者面前的東西。
 
+## Disclosure Design：兩個 Seat 各自看到什麼
+
+這個系統裡有兩個會看到東西的位置，它們看到的內容差異不是設定值，是結構。
+
+**下面這張表不是手寫的。** 內容由 [`disclosureDesign()`](packages/agents/src/disclosureDesign.ts) 從憑證 schema 的 `public`／`hidden` 陣列推導——也就是簽發方拿來產生 SD-JWT `_sd` 摘要的同一份定義。有一個測試會逐欄比對這張表與實作，任何一個欄位改變歸屬而表格沒跟著改，測試就轉紅。
+
+| Seat | 收到 | 未收到 |
+|---|---|---|
+| **銀行 Agent A** | `feeWithinLegalCap`、`currency`、`contractPeriod`、`passportHeldByWorker`、`documentType`、`nativeLanguageVersionProvided`、`language`、`consentTimestamp`、`recommendation`、`reasons`、`requiresHumanReview`、`riskFlags` | `feeAmount`、`paymentSchedule`、`lenderName`、`documentHash`、`custodyLocation`、`salaryAmount`、`contractDocumentHash` |
+| **品牌 Agent B** | `disclosure`、`metric`、`cohort`、`cohortSize`、`rate`、`compliant`、`thresholds` | `totalHours`、`overtimeHours`、`commitmentSalt`、`withinRBALimit`、`periodStart`、`valueCommitment`、`workerDID` |
+
+### 兩個 Seat 的差別是種類，不是程度
+
+**銀行問的是一個人**，而且那個人在現場。它拿到的是關於那個人的布林值——身分是這個查詢的重點。「未收到」那一欄的欄位在 SD-JWT 的 `_sd` 摘要裡，驗證後的 payload **密碼學上不含這些 key**：不是值為 null、不是被遮蔽成 `***`、不是前端過濾掉，是這個 key 不在裡面。
+
+**品牌問的是一群人**，拿到的是一個數字。注意品牌那一列的「未收到」**連公開的結論欄位都在裡面**——`withinRBALimit` 是公開欄位，品牌卻拿不到，因為身分在 `buildCohortEvidence` 交出結果的那一刻就已經消失，Agent 手上只有一串沒有識別資訊的布林值。「列出回報超時的勞工」對品牌 Agent 來說不是一個會被拒絕的查詢，是一個**它沒有資料可以回答**的查詢。
+
+這也是為什麼品牌的「未收到」清單比銀行長，儘管它的憑證隱藏欄位比較少。
+
 ## 系統架構
 
 ### 機構信任層：vLEI
@@ -460,7 +479,7 @@ npx vite preview --port 4173          # 本機預覽靜態站
 
 ```bash
 npm install      # 於 repo 根目錄，安裝 workspace 依賴
-npm test         # vitest，目前 485 個測試全綠
+npm test         # vitest，目前 491 個測試全綠
 npm run typecheck
 ```
 
@@ -572,7 +591,7 @@ Agent A 的能力邊界也寫在型別裡：`BankAssessment.requiresHumanReview`
 | 交件 | 位置 |
 |---|---|
 | 挑戰命題 | **Track 05（主賽道）＋ Track 06（加分題）**——主辦載明命題 06 為 Track 01 延伸的加分題、可與其他命題同時挑戰，本作品同時交付兩軌，對照見上 |
-| 程式碼 | 本 repo（CI 每次 push 跑 485 tests + `demo:vlei` 閘門） |
+| 程式碼 | 本 repo（CI 每次 push 跑 491 tests + `demo:vlei` 閘門） |
 | 簡報 | <https://zuemen.github.io/evidence-at-source/slides.html>（←→ 翻頁） |
 | Demo | <https://zuemen.github.io/evidence-at-source/>（免安裝）＋[講稿](docs/demo-video-script.md) |
 | 治理／信任設計說明 | [`docs/governance-memo.md`](docs/governance-memo.md)（六信任點逐點＋證據） |

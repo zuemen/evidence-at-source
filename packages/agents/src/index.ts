@@ -174,3 +174,6 @@ export {
   computeCoercionSignals,
 } from './coercion.js';
 export type { AttestationRecord, CoercionSignals } from './coercion.js';
+
+export { SEAT_SCOPE, delegationScopeMatches, disclosureDesign } from './disclosureDesign.js';
+export type { Seat, SeatDisclosure } from './disclosureDesign.js';
