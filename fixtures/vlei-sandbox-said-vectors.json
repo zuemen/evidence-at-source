@@ -1,0 +1,75 @@
+{
+  "acdc_with_edges": {
+    "proto": "ACDC",
+    "labels": [
+      "d"
+    ],
+    "input": {
+      "v": "ACDC10JSON000000_",
+      "d": "",
+      "i": "EAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+      "ri": "EBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB",
+      "s": "ECCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC",
+      "a": {
+        "LEI": "5493001KJTIIGC8Y1R12",
+        "legalName": "合成法人股份有限公司"
+      },
+      "e": {
+        "d": "EDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD",
+        "qvi": {
+          "n": "EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE",
+          "s": "EFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"
+        }
+      }
+    },
+    "said": "EJrG4tZdFThOA4OBFetemG1hGAiyZiXOJy54yixsG7fE"
+  },
+  "keri_icp_d_equals_i": {
+    "proto": "KERI",
+    "labels": [
+      "d",
+      "i"
+    ],
+    "input": {
+      "v": "KERI10JSON000000_",
+      "t": "icp",
+      "d": "",
+      "i": "",
+      "s": "0",
+      "kt": "2",
+      "k": [
+        "DAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+        "DBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB"
+      ],
+      "nt": "2",
+      "n": [
+        "ECCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC"
+      ],
+      "bt": "0",
+      "b": [],
+      "c": [],
+      "a": []
+    },
+    "said": "EL7KsvEvXCCN209PT7qRqwyzRixx5Lf22t14JjVlFwBv"
+  },
+  "nested_and_numbers": {
+    "proto": "KERI",
+    "labels": [
+      "d"
+    ],
+    "input": {
+      "d": "",
+      "a": {
+        "n": 0,
+        "big": 1234567890,
+        "neg": -7,
+        "empty": [],
+        "obj": {
+          "k": "v"
+        },
+        "utf8": "中文 — dash"
+      }
+    },
+    "said": "EJVTOn5vm7wmpBrEDkuy-fRr4yJi5z5GAxWgf6nxzRZ6"
+  }
+}
