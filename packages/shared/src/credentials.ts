@@ -68,7 +68,13 @@ const SCHEMAS: Record<CredentialType, DisclosureSchema> = {
    * liability: a public field is a field that can leak.
    */
   DocumentCustodyCredential: {
-    public: ['passportHeldByWorker', 'documentType'],
+    public: [
+      'passportHeldByWorker',
+      'custodyRequestedByWorker',
+      'bilingualConsentProvided',
+      'legalBasis',
+      'documentType',
+    ],
     hidden: ['documentHash', 'custodyLocation'],
   },
   ContractConsentCredential: {

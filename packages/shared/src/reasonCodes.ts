@@ -55,6 +55,14 @@ export const REASON_CODES = [
   'RECOVERY_EPOCH_STALE',
   'RECOVERY_DELAY_NOT_ELAPSED',
   'RECOVERY_VETOED',
+  // Someone other than the worker holds their passport and the worker did not
+  // ask them to. Employment Service Act art. 57(8) and Passport Act art. 32 —
+  // a fine of NT$60,000-300,000 and up to three years imprisonment. Distinct
+  // from POLICY_CHECK_FAILED because it names a specific offence.
+  'UNLAWFUL_DOCUMENT_RETENTION',
+  // Custody was requested by the worker, but the consent form does not meet
+  // the statutory form requirements (bilingual, itemised).
+  'CUSTODY_CONSENT_DEFICIENT',
   // A required fact was disclosed and did not satisfy policy. Distinct from
   // CLAIM_NOT_DISCLOSED so a human reviewer can tell "missing" from "failing".
   'POLICY_CHECK_FAILED',

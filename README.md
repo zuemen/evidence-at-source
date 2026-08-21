@@ -159,7 +159,7 @@ GLEIF 的原則：
 
 | Seat | 收到 | 未收到 |
 |---|---|---|
-| **銀行 Agent A** | `zeroRecruitmentFeePaid`、`feesReimbursedByEmployer`、`reimbursedWithin90Days`、`withinTaiwanLegalCap`、`standardVersion`、`passportHeldByWorker`、`documentType`、`nativeLanguageVersionProvided`、`language`、`consentTimestamp`、`recommendation`、`reasons`、`requiresHumanReview`、`riskFlags` | `feeAmount`、`paymentSchedule`、`lenderName`、`documentHash`、`custodyLocation`、`salaryAmount`、`contractDocumentHash` |
+| **銀行 Agent A** | `zeroRecruitmentFeePaid`、`feesReimbursedByEmployer`、`reimbursedWithin90Days`、`withinTaiwanLegalCap`、`standardVersion`、`passportHeldByWorker`、`custodyRequestedByWorker`、`bilingualConsentProvided`、`legalBasis`、`documentType`、`nativeLanguageVersionProvided`、`language`、`consentTimestamp`、`recommendation`、`reasons`、`requiresHumanReview`、`riskFlags` | `feeAmount`、`paymentSchedule`、`lenderName`、`documentHash`、`custodyLocation`、`salaryAmount`、`contractDocumentHash` |
 | **品牌 Agent B** | `disclosure`、`metric`、`cohort`、`cohortSize`、`rate`、`compliant`、`thresholds` | `totalHours`、`overtimeHours`、`commitmentSalt`、`withinRBALimit`、`withinRBAWeeklyLimit`、`withinLocalMonthlyLimit`、`weeklyHoursLimit`、`overtimeVoluntary`、`restDayCompliant`、`standardVersion`、`periodStart`、`valueCommitment`、`workerDID` |
 
 ### 兩個 Seat 的差別是種類，不是程度
@@ -317,6 +317,25 @@ flowchart TD
 撤回不等於撤銷：勞工事後撤回自願聲明時，工時紀錄仍然有效可驗證，只有這一欄變成假。**一個後來覺得安全、願意說實話的勞工，不該被迫毀掉自己的證據才能說。**
 
 **它仍然擋不住脅迫。** 被威脅的勞工也會簽。這一欄證明的是「有人問過他、而他簽了」，不是「他真的想加班」。
+
+### 1-c. 證件保管：我們做的是一份既有法定文件的可驗證版本
+
+扣留護照在台灣**不是行政違規，是刑事犯罪**——護照條例第 32 條，三年以下有期徒刑；就業服務法第 57 條第 8 款另有 6 萬～30 萬罰鍰。
+
+而合法代管的要件法律也寫得很清楚：必須是**移工主動提出**請雇主或仲介代管，並簽署具**雙語對照**的「證件委託保管同意書」。
+
+**那份同意書已經是法定文件。** 但它是一張紙——事後無法證明簽的時候是不是自願，也無法證明證件現在在誰手上。我們做的是同一份文件的可驗證版本：
+
+| 法律要求 | 對應機制 |
+|---|---|
+| 自主意願（勞工主動提出） | `custodyRequestedByWorker` ＋ 勞工反簽 |
+| 證件委託保管同意書 | 憑證本身 |
+| 雙語對照 | `bilingualConsentProvided` ＋ 錢包母語介面 |
+| 明確項目 | `documentType` |
+
+三種組合裡，`passportHeldByWorker: false` ＋ `custodyRequestedByWorker: false` 是一個有刑度的訊號，回 `UNLAWFUL_DOCUMENT_RETENTION`——不併進通用的政策失敗碼，因為它指的是一條具體的罪。
+
+**問的是「是你提出的嗎」，不是「你同意嗎」。** 這不是措辭差異：「你同意嗎」在那個權力關係裡永遠會得到同意，而法律寫下的要件正是前者。
 
 ### 2. 證據前置（Evidence at Source）
 
@@ -530,7 +549,7 @@ npx vite preview --port 4173          # 本機預覽靜態站
 
 ```bash
 npm install      # 於 repo 根目錄，安裝 workspace 依賴
-npm test         # vitest，目前 533 個測試全綠
+npm test         # vitest，目前 540 個測試全綠
 npm run typecheck
 ```
 
@@ -642,7 +661,7 @@ Agent A 的能力邊界也寫在型別裡：`BankAssessment.requiresHumanReview`
 | 交件 | 位置 |
 |---|---|
 | 挑戰命題 | **Track 05（主賽道）＋ Track 06（加分題）**——主辦載明命題 06 為 Track 01 延伸的加分題、可與其他命題同時挑戰，本作品同時交付兩軌，對照見上 |
-| 程式碼 | 本 repo（CI 每次 push 跑 533 tests + `demo:vlei` 閘門） |
+| 程式碼 | 本 repo（CI 每次 push 跑 540 tests + `demo:vlei` 閘門） |
 | 簡報 | <https://zuemen.github.io/evidence-at-source/slides.html>（←→ 翻頁） |
 | Demo | <https://zuemen.github.io/evidence-at-source/>（免安裝）＋[講稿](docs/demo-video-script.md) |
 | 治理／信任設計說明 | [`docs/governance-memo.md`](docs/governance-memo.md)（六信任點逐點＋證據） |

@@ -91,3 +91,6 @@ export type { RecruitmentFeeFacts } from './recruitmentFee.js';
 
 export { overtimeVoluntary } from './overtimeConsent.js';
 export type { OvertimeConsentInput } from './overtimeConsent.js';
+
+export { classifyCustody, custodyReason } from './documentCustody.js';
+export type { CustodyFacts, CustodyStatus } from './documentCustody.js';

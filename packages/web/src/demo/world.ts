@@ -117,6 +117,12 @@ const CLAIMS: Record<WalletCredentialType, Record<string, unknown>> = {
   DocumentCustodyCredential: {
     workerDID: WORKER_DID,
     passportHeldByWorker: true,
+    // In the worker's own hands, so the custody consent requirements never
+    // engage. The fields are still present and false: an absent field and a
+    // false one read differently to an auditor.
+    custodyRequestedByWorker: false,
+    bilingualConsentProvided: false,
+    legalBasis: '就業服務法 57-8',
     documentType: 'passport',
     documentHash: 'sha256:synthetic-document-hash',
     custodyLocation: 'worker residence locker',

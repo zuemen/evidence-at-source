@@ -83,6 +83,9 @@ RBA Code of Conduct 8.0 採 **Employer Pays Principle**：
 | 欄位 | 型別 | 歸屬 | 說明 |
 |---|---|---|---|
 | `passportHeldByWorker` | boolean | 公開 | 護照是否由勞工本人持有。RBA 的紅線指標 |
+| `custodyRequestedByWorker` | boolean | 公開 | **代管是否由勞工主動提出**。合法代管的核心要件 |
+| `bilingualConsentProvided` | boolean | 公開 | 同意書是否具備雙語對照 |
+| `legalBasis` | string | 公開 | 法源，例 `就業服務法 57-8` |
 | `documentType` | string | 公開 | 證件類別，例 `passport`、`arc` |
 | `documentHash` | string | 隱藏 | 證件影像的 SHA-256，用於比對是否為同一份 |
 | `custodyLocation` | string | 隱藏 | 保管地點描述 |
@@ -91,6 +94,38 @@ RBA Code of Conduct 8.0 採 **Employer Pays Principle**：
 | 生物特徵模板 | — | 不入憑證 | 僅用於裝置本地解鎖，不離開裝置 |
 
 設計要點：`passportHeldByWorker` 為 `false` **本身就是**違規訊號。**這一個布林值就足以判定，不需要看到任何一本護照。**
+
+### 這張憑證對應的是一份已經存在的法定文件
+
+台灣法律**已經要求**一份與這張憑證高度對應的文件。
+
+| 法條 | 內容 | 罰則 |
+|---|---|---|
+| 就業服務法第 57 條第 8 款 | 雇主不得非法扣留或侵占所聘僱外國人之護照、居留證件或財物 | 6 萬～30 萬元罰鍰 |
+| 護照條例第 32 條 | 非法扣留他人護照，足以生損害於公眾或他人者 | **3 年以下有期徒刑**、拘役或併科 30 萬元以下罰金 |
+
+合法代管的核心在於**自主意願**：必須是移工**主動提出**請雇主或仲介代為保管，並簽署「證件委託保管同意書」，且該文件應具備**雙語對照**及明確項目。
+
+對應關係一項一項對得上：
+
+| 法律要求 | 本專案的機制 |
+|---|---|
+| 自主意願（勞工主動提出） | `custodyRequestedByWorker` ＋ 勞工反簽——沒有勞工簽章憑證不成立 |
+| 證件委託保管同意書 | 憑證本身 |
+| 雙語對照 | `bilingualConsentProvided` ＋ 錢包的母語介面 |
+| 明確項目 | `documentType` |
+
+### 三種組合，第三種是違法扣留
+
+| `passportHeldByWorker` | `custodyRequestedByWorker` | 判讀 |
+|---|---|---|
+| `true` | — | 證件在本人手上，**不需要同意書** |
+| `false` | `true` | 合法代管 |
+| `false` | `false` | **違法扣留**——`UNLAWFUL_DOCUMENT_RETENTION` |
+
+第三種不是「資料不足」，是一個有明確法源與刑度的違規訊號，所以它有自己的原因碼，而不是被歸進 `POLICY_CHECK_FAILED`。
+
+**注意 `custodyRequestedByWorker` 與已移除的 `custodyConsentGiven` 的差別**：後者問「你同意嗎」，前者問「是你提出的嗎」。這不是措辭差異——「你同意嗎」在那個權力關係裡永遠會得到同意，而「是誰先開口的」比較難事後編造，也正是法律寫下的那個要件。
 
 ### 為什麼移除了 `custodyConsentGiven`
 
