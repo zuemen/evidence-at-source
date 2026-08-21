@@ -20,6 +20,14 @@ concurrency:
 jobs:
   test:
     runs-on: ubuntu-latest
+    # `attestations: write` stores the provenance statement; `id-token: write`
+    # is what lets the runner prove to Sigstore that it is this workflow, on
+    # this commit, in this repository. Without the second one the first signs
+    # nothing anybody should believe.
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -38,6 +46,20 @@ jobs:
       - name: Install Chromium for the browser gate
         run: npx playwright install --with-deps chromium
       - run: npm run smoke:web
+      # Build provenance — the one layer of GLEIF's Workload pillar a static
+      # site can actually supply. It binds every file we publish to this commit
+      # and this workflow run, so a reader can check that the code running in
+      # their browser is the code in this repository rather than taking our
+      # word for it. See the "Workload 支柱" section of README.md for the four
+      # layers this does *not* provide.
+      #
+      # Only on main: a pull request from a fork cannot mint an attestation,
+      # and a step that fails there would be noise rather than a signal.
+      - name: Attest build provenance
+        if: github.ref == 'refs/heads/main'
+        uses: actions/attest-build-provenance@v4
+        with:
+          subject-path: 'packages/web/dist/**/*'
       - uses: actions/upload-pages-artifact@v3
         if: github.ref == 'refs/heads/main'
         with:

@@ -170,6 +170,45 @@ GLEIF 的原則：
 
 這也是為什麼品牌的「未收到」清單比銀行長，儘管它的憑證隱藏欄位比較少。
 
+## Workload 支柱：五層做到兩層
+
+GLEIF 的可信 Agent 三支柱是 **Mandate（誰授權）／Workload（什麼軟體在跑）／Transaction（這筆交易本身）**。這個專案的 Mandate 與 Transaction 一直都有，**Workload 原本完全沒有**。
+
+Workload 支柱回答的是「你怎麼知道跑在那裡的，就是你以為的那份程式碼」。GLEIF 把它分成五層。**這裡做到兩層，另外三層做不到，原因逐項列在下面。**
+
+### 做到的：Build Provenance ＋ Official Release
+
+CI 每次推上 `main`，會對 `packages/web/dist/` 的每一個檔案產生一份 [build provenance attestation](.github/workflows/ci.yml)，經 Sigstore 簽章，綁定到**特定的 commit 與特定的 workflow run**。
+
+任何人可以自己驗，不需要相信我們：
+
+```bash
+gh attestation verify <下載的檔案> --repo zuemen/evidence-at-source
+```
+
+它回答的是一個具體的問題：**你瀏覽器裡跑的這份 JavaScript，是不是這個 repo 這個版本建出來的。** 在此之前，這個問題沒有任何答案——靜態站的程式碼可以被替換，而沒有人有辦法察覺。
+
+**目前狀態：workflow 已就緒，但尚未產生任何 attestation**，因為它要在推上 `main` 之後由 CI 執行才會產生。現在對本機建置的產物執行上面那道指令，得到的是：
+
+```
+Error: HTTP 404: Not Found
+(https://api.github.com/repos/zuemen/evidence-at-source/attestations/sha256:92643e1f...)
+```
+
+這個 404 本身就是正確的行為，也值得記下來：**沒有 attestation 的產物，驗證是失敗而不是沉默通過。** 第一次推上 `main` 之後，同一道指令會回報簽章、commit SHA 與 workflow run。
+
+### 做不到的三層，以及為什麼
+
+| 層 | 為什麼做不到 |
+|---|---|
+| **Security assessment** | 需要獨立第三方的安全評估。我們沒有，而自己評估自己不構成這一層——那正是本專案在憑證層一直反對的事（`SELF_DECLARED` 不能宣稱成 `THIRD_PARTY_VERIFIED`）。 |
+| **Deployment attestation** | 需要可遠端證明的執行環境狀態（例如 TEE 或可驗證的部署管線）。瀏覽器端部署沒有這種東西：使用者的瀏覽器不會、也無法向任何人證明它載入了什麼。**這是這個架構的根本限制，不是還沒做。** |
+| **Workload identity（SPIFFE）** | SPIFFE 是為服務對服務的身分而設計的，前提是有一個長期執行的工作負載可以持有身分。靜態站沒有這種東西——它只是一堆被下載的檔案。硬套只會產生一個看起來很像的假東西。 |
+
+### 誠實的說法
+
+**不要把「做到兩層」講成「有 Workload 支柱」。** 正確的說法是：五層做到兩層，而且做到的那兩層剛好是靜態站唯一有意義的那兩層。剩下三層裡，一層是我們沒有資源做（安全評估），兩層是這個部署形態在原理上就不適用。
+
 ## 系統架構
 
 ### 機構信任層：vLEI
