@@ -46,20 +46,35 @@ describe('與 vLEI 參考沙盒的 SAID 互通性', () => {
     ]);
   });
 
-  for (const [name, vector] of Object.entries(VECTORS)) {
-    test(`${name}: our SAID equals the reference implementation's`, () => {
-      const input = { ...vector.input };
-      if ('v' in input) input['v'] = versify(vector.proto, 0);
+  // Written out one by one rather than looped. docsConsistency counts test
+  // cases statically to check the numbers the public documents claim, and a
+  // loop around `test(` produces more cases at runtime than the counter can
+  // see — which is exactly what happened here, and why that guard now also
+  // rejects a generated title.
+  const matchesReference = (name: keyof typeof VECTORS): void => {
+    const vector = VECTORS[name] as Vector;
+    const input = { ...vector.input };
+    if ('v' in input) input['v'] = versify(vector.proto, 0);
 
-      const result = saidify(input, [...vector.labels]);
+    expect(saidify(input, [...vector.labels])[vector.labels[0] as string]).toBe(vector.said);
+  };
 
-      expect(result[vector.labels[0] as string]).toBe(vector.said);
-    });
-  }
+  test('acdc_with_edges: our SAID equals the reference implementation’s', () => {
+    matchesReference('acdc_with_edges');
+  });
+
+  test('keri_icp_d_equals_i: our SAID equals the reference implementation’s', () => {
+    matchesReference('keri_icp_d_equals_i');
+  });
+
+  test('nested_and_numbers: our SAID equals the reference implementation’s', () => {
+    matchesReference('nested_and_numbers');
+  });
 
   test('every said label carries the same value, as KERI requires', () => {
     const icp = VECTORS['keri_icp_d_equals_i'] as Vector;
-    const result = saidify({ ...icp.input, v: versify('KERI', 0) }, [...icp.labels]);
+    const input: Ked = { ...icp.input, v: versify('KERI', 0) };
+    const result = saidify(input, [...icp.labels]);
 
     // The inception case: the identifier prefix `i` *is* the event SAID.
     expect(result['i']).toBe(result['d']);
@@ -70,7 +85,7 @@ describe('與 vLEI 參考沙盒的 SAID 互通性', () => {
     // Without this the tests above would also pass against an implementation
     // that returned a constant.
     const vector = VECTORS['nested_and_numbers'] as Vector;
-    const tampered = {
+    const tampered: Ked = {
       ...vector.input,
       a: { ...(vector.input['a'] as Record<string, unknown>), n: 1 },
     };

@@ -14,6 +14,8 @@ import { join } from 'node:path';
  * the assertion.
  */
 
+const EOL = String.fromCharCode(10);
+
 const REPO_ROOT = fileURLToPath(new URL('../../../', import.meta.url));
 
 /** Documents that make factual claims to an outside reader (judges included). */
@@ -36,6 +38,43 @@ const PUBLIC_DOCUMENTS = [
  */
 const TEST_CASE = /^[ \t]*(?:test|it)(?:\.\w+)?\(/gm;
 const DYNAMIC_TEST = /(?:test|it|describe)\.(?:each|skip|todo|only)\b/;
+/**
+ * Whether a test call sits inside a loop.
+ *
+ * A loop around `test(` produces more cases at runtime than the static count
+ * can see, which is exactly what slipped through: three vectors iterated in
+ * sandboxInterop showed up as one declaration, and the documents went two
+ * short while this guard stayed green. The claim above — static equals
+ * runtime — was the thing being violated, and nothing was checking it.
+ *
+ * Detection is by indentation, which is safe here because the repo is
+ * formatted: a test line indented deeper than an open loop, before the
+ * indentation returns to the loop’s own level, is inside it. An interpolated
+ * title is deliberately *not* the signal — policyGate names its k-anonymity
+ * boundaries that way and its cases are each declared once.
+ */
+function testsInsideLoop(source: string): boolean {
+  const rows = source.split(EOL);
+  const isLoop = (line: string): boolean =>
+    /(?:for|while)\s*\(/.test(line) || /\.(?:forEach|map|flatMap)\s*\(/.test(line);
+  const isTest = (line: string): boolean => /^[ 	]*(?:test|it)(?:\.\w+)?\(/.test(line);
+  const indentOf = (line: string): number => line.length - line.trimStart().length;
+
+  for (let at = 0; at < rows.length; at++) {
+    const row = rows[at] as string;
+    if (!isLoop(row) || row.trim().startsWith("*") || row.trim().startsWith("//")) continue;
+
+    const loopIndent = indentOf(row);
+    for (let scan = at + 1; scan < rows.length; scan++) {
+      const inner = rows[scan] as string;
+      if (inner.trim() === "") continue;
+      if (indentOf(inner) <= loopIndent) break;
+      if (isTest(inner)) return true;
+    }
+  }
+
+  return false;
+}
 
 async function collectTestFiles(): Promise<string[]> {
   const packagesDir = join(REPO_ROOT, 'packages');
@@ -55,6 +94,11 @@ async function countTestCases(): Promise<number> {
     const source = await readFile(file, 'utf8');
     expect(source, `${file} uses dynamic test generation; the static count is no longer exact`)
       .not.toMatch(DYNAMIC_TEST);
+
+      expect(
+        testsInsideLoop(source),
+        `${file} declares tests inside a loop; the static count is no longer exact`,
+      ).toBe(false);
     total += source.match(TEST_CASE)?.length ?? 0;
   }
 
