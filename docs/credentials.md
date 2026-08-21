@@ -185,6 +185,8 @@ RBA 明文要求**所有加班應為自願**。這一項我們原本完全沒有
 
 設計要點：這張憑證存在的唯一理由是引入一個**工廠控制不了的資料源**。工廠控制不了銀行、銀行控制不了打卡系統，於是造假從「單方說謊」變成「兩個利益相反的機構共謀」。M7 對帳模組比對它與工時憑證：入帳金額大於申報工時應得，代表有工時沒被記錄（`DISCREPANCY_OVERPAID`）——這是「省略式造假」的指紋。對帳邏輯與結果碼見 [`packages/reconciliation`](../packages/reconciliation)。
 
+**這張憑證證明的是「錢進去了」，不是「勞工拿到了」。** 若存摺與印章被仲介保管，錢可以入帳後隨即被領走——入帳憑證仍然為真，交叉對帳仍然平衡，而勞工實際上一毛也沒拿到。這是本專案明確的偵測邊界，寫在 [README 的系統邊界](../README.md#系統邊界這個原型還不是什麼)。
+
 **隱私約束**：M7 的輸出只能是結果碼，永遠不得回傳 `depositedAmountTWD`、`totalHours`、`overtimeHours` 或推算出的預期薪資。此約束由 `packages/reconciliation/test/reconcile.privacy.test.ts` 守門。
 
 ---
