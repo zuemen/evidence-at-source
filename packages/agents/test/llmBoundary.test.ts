@@ -159,7 +159,7 @@ describe('a language model may explain a decision and may never make one', () =>
     });
 
     const facts = {
-      feeWithinLegalCap: false,
+      zeroRecruitmentFeePaid: false,
       passportHeldByWorker: true,
       nativeLanguageVersionProvided: true,
     };

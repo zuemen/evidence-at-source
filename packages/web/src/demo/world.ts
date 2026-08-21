@@ -94,7 +94,7 @@ type WalletCredentialType = Exclude<
 
 /** The single public claim each credential contributes to a verifier. */
 const HEADLINE_CLAIM: Record<WalletCredentialType, string> = {
-  RecruitmentFeeCredential: 'feeWithinLegalCap',
+  RecruitmentFeeCredential: 'zeroRecruitmentFeePaid',
   DocumentCustodyCredential: 'passportHeldByWorker',
   ContractConsentCredential: 'nativeLanguageVersionProvided',
   WorkingHoursCredential: 'withinRBALimit',
@@ -103,10 +103,14 @@ const HEADLINE_CLAIM: Record<WalletCredentialType, string> = {
 const CLAIMS: Record<WalletCredentialType, Record<string, unknown>> = {
   RecruitmentFeeCredential: {
     workerDID: WORKER_DID,
-    feeWithinLegalCap: true,
-    currency: 'TWD',
-    contractPeriod: '2026-08-01/2029-07-31',
-    feeAmount: 48000,
+    // Employer Pays: the worker paid nothing, so the reimbursement clauses
+    // never engage. feeAmount is 0 because there is no fee to hide.
+    zeroRecruitmentFeePaid: true,
+    feesReimbursedByEmployer: false,
+    reimbursedWithin90Days: false,
+    withinTaiwanLegalCap: true,
+    standardVersion: 'RBA-CoC-8.0',
+    feeAmount: 0,
     paymentSchedule: '12 monthly instalments',
     lenderName: 'Synthetic Lender Co.',
   },
@@ -1033,7 +1037,7 @@ export async function createDemoWorld(): Promise<DemoWorld> {
           refusedWith === null
             ? createBankAgent().assess(
                 {
-                  feeWithinLegalCap: disclosed['feeWithinLegalCap'] as boolean | undefined,
+                  zeroRecruitmentFeePaid: disclosed['zeroRecruitmentFeePaid'] as boolean | undefined,
                   passportHeldByWorker: disclosed['passportHeldByWorker'] as boolean | undefined,
                   nativeLanguageVersionProvided: disclosed['nativeLanguageVersionProvided'] as
                     | boolean
@@ -1344,7 +1348,7 @@ export async function createDemoWorld(): Promise<DemoWorld> {
       const probe = createBrandAgent([]);
       const items = [
         'workingHoursWithinLimit',
-        'recruitmentFeeWithinLegalCap',
+        'zeroRecruitmentFeePaid',
         'passportHeldByWorker',
         'dormitoryLivingConditions',
         'fireSafetyConditions',

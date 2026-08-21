@@ -41,6 +41,8 @@ export interface CohortRequest {
   readonly expectedFacilityId?: string;
   /** Resolves a credential's `verifiedBy` to a body that is really an auditor. */
   readonly auditors?: AuditorDirectory;
+  /** Compliance standards the asking mandate covers. */
+  readonly standards?: readonly string[];
 }
 
 export interface CohortResult {
@@ -68,6 +70,7 @@ export async function buildCohortEvidence(request: CohortRequest): Promise<Cohor
         ? {}
         : { expectedFacilityId: request.expectedFacilityId }),
       ...(request.auditors === undefined ? {} : { auditors: request.auditors }),
+      ...(request.standards === undefined ? {} : { standards: request.standards }),
     });
 
     if (!decision.ok) {

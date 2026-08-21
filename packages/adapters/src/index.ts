@@ -54,8 +54,15 @@ export interface AdapterConfig {
    * where it can be audited, not in a constant nobody reviews.
    */
   readonly rbaMonthlyHourLimit: number;
-  /** Statutory cap on recruitment fees, in the currency the agency bills in. */
+  /**
+   * The local statutory ceiling, in the currency the agency bills in.
+   *
+   * It only ever produces `withinTaiwanLegalCap`. Employer Pays is not a
+   * comparison against this or any other number.
+   */
   readonly recruitmentFeeLegalCap: number;
+  /** Standard version stamped onto fee credentials. Defaults to RBA-CoC-8.0. */
+  readonly recruitmentFeeStandard?: string;
 }
 
 export type AdapterRejection =
@@ -153,15 +160,30 @@ export function adaptSourceEvent(event: SourceEvent, config: AdapterConfig): Ada
     }
 
     case 'agency-billing': {
-      if (!requireFields(f, ['feeAmount', 'currency', 'contractPeriod'])) {
+      // `currency` and `contractPeriod` are no longer required: they stopped
+      // being credential fields when the criteria split, and demanding source
+      // fields that flow nowhere invites someone to start publishing them.
+      if (!requireFields(f, ['feeAmount'])) {
         return { kind: 'REJECTED', reason: 'SOURCE_FIELD_MISSING' };
       }
 
+      // Two standards, computed separately from the same billing event.
+      //
+      // The local ceiling is a comparison against a number. Employer Pays is
+      // not: it asks whether the worker paid anything at all, and if they did,
+      // whether the employer repaid them inside ninety days. A billing feed
+      // knows the first and only sometimes the second, so the reimbursement
+      // limbs come from the source or default to false — an unreported
+      // reimbursement is one that has not been shown to have happened.
+      const paid = Number(f['feeAmount']);
+
       return issue('RecruitmentFeeCredential', {
         workerDID,
-        feeWithinLegalCap: Number(f['feeAmount']) <= config.recruitmentFeeLegalCap,
-        currency: f['currency'],
-        contractPeriod: f['contractPeriod'],
+        zeroRecruitmentFeePaid: paid === 0,
+        feesReimbursedByEmployer: f['feesReimbursedByEmployer'] === true,
+        reimbursedWithin90Days: f['reimbursedWithin90Days'] === true,
+        withinTaiwanLegalCap: paid <= config.recruitmentFeeLegalCap,
+        standardVersion: config.recruitmentFeeStandard ?? 'RBA-CoC-8.0',
         feeAmount: f['feeAmount'],
         paymentSchedule: f['paymentSchedule'],
         lenderName: f['lenderName'],

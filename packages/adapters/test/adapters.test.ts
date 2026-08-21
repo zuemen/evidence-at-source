@@ -135,12 +135,16 @@ describe('source adapters map events into claims, and refuse everything else', (
     );
     if (outcome.kind !== 'ISSUE') throw new Error('expected an issuable outcome');
 
-    expect(outcome.claims['feeWithinLegalCap']).toBe(true);
+    // NT$48,000 sits inside the local ceiling and is a plain Employer Pays
+    // breach. The old single boolean reported `true` here, and a brand
+    // auditing to RBA would have read that as compliance.
+    expect(outcome.claims['zeroRecruitmentFeePaid']).toBe(false);
+    expect(outcome.claims['withinTaiwanLegalCap']).toBe(true);
 
     const issuer = await createIssuer('did:web:agency.example');
     const credential = await issuer.issue(outcome.type, outcome.claims);
     const verified = await verifyPresentation(
-      await presentCredential(credential, ['feeWithinLegalCap']),
+      await presentCredential(credential, ['zeroRecruitmentFeePaid']),
       issuer.publicKey,
     );
 

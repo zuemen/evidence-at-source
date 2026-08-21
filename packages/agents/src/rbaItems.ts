@@ -14,7 +14,8 @@ export const RBA_ITEM_CLASSIFICATION: Readonly<Record<string, RbaItemClass>> = {
   // Answerable: a signed, counter-signed conclusion carries the whole fact.
   workingHoursWithinLimit: 'CREDENTIAL_ANSWERABLE',
   passportHeldByWorker: 'CREDENTIAL_ANSWERABLE',
-  recruitmentFeeWithinLegalCap: 'CREDENTIAL_ANSWERABLE',
+  // Employer Pays, not a local fee ceiling — see docs/credentials.md.
+  zeroRecruitmentFeePaid: 'CREDENTIAL_ANSWERABLE',
   contractNativeLanguageProvided: 'CREDENTIAL_ANSWERABLE',
   // On-site only: no boolean can honestly stand in for walking the floor.
   fireSafetyConditions: 'REQUIRES_ON_SITE',

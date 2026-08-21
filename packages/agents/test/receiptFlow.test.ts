@@ -50,7 +50,7 @@ describe('a verification leaves a receipt that a challenger can check alone', ()
     log.record({
       verifierDid: 'did:web:bank.example',
       subjectCredentialHash: CREDENTIAL_HASH,
-      verifiedItems: ['feeWithinLegalCap'],
+      verifiedItems: ['zeroRecruitmentFeePaid'],
       result: 'PASS',
       verifiedAt: '2026-08-06T00:01:00.000Z',
     });

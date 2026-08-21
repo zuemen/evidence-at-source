@@ -83,3 +83,8 @@ export type {
 
 export { POLICY_HISTORY, POLICY_VERSION, currentPolicy, policyAt } from './policyVersion.js';
 export type { PolicyParameters } from './policyVersion.js';
+
+export { CLAIM_STANDARD, claimWithinStandards } from './delegation.js';
+
+export { meetsEmployerPays } from './recruitmentFee.js';
+export type { RecruitmentFeeFacts } from './recruitmentFee.js';

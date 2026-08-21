@@ -8,6 +8,7 @@
 
 import {
   base64urlToUtf8,
+  claimWithinStandards,
   credentialHash,
   meetsMinimumTier,
   verifyDevicePresence,
@@ -56,6 +57,15 @@ export interface CredentialLayerInput {
    * an unresolvable endorsement is refused rather than ignored.
    */
   readonly auditors?: AuditorDirectory;
+  /**
+   * Compliance standards the asking mandate covers, from the delegation.
+   *
+   * Absent means unrestricted. Where present, a required claim belonging to
+   * another standard is refused rather than answered: handing an RBA auditor a
+   * verdict computed under Taiwan's fee ceiling would be answering a question
+   * it did not ask, in a form it would read as compliance.
+   */
+  readonly standards?: readonly string[];
 }
 
 export interface IdentityBindingCheck {
@@ -208,6 +218,13 @@ export async function checkCredentialLayer(
   }
 
   for (const claim of input.requiredClaims) {
+    // Checked before disclosure: whether an agent may ask under this ruleset is
+    // prior to whether the worker disclosed the field. Reversing them would let
+    // an out-of-scope query learn which fields exist.
+    if (!claimWithinStandards(claim, input.standards)) {
+      return { ok: false, reason: 'STANDARD_NOT_IN_SCOPE' };
+    }
+
     if (!(claim in payload)) {
       return { ok: false, reason: 'CLAIM_NOT_DISCLOSED' };
     }

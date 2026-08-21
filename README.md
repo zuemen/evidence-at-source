@@ -79,7 +79,7 @@
 | 這是本人，而且簽的時候人在現場 | `ResidencyCredential`（`identityAnchor`、`holderDid`、`deviceCredentialId`、`permitValidUntil`） | `checkCredentialLayer` 的 `identity` 分支：`statusOf` → `WORKER_IDENTITY_UNBOUND`／`RESIDENCY_PERMIT_EXPIRED`；`verifyDevicePresence` → `USER_PRESENCE_NOT_VERIFIED`／`DEVICE_CREDENTIAL_MISMATCH` ⚠️ |
 | 這份證據沒有被雇主事後改過 | 勞工反簽（`attestation`） | `verifyPairing` → `ATTESTATION_HASH_MISMATCH`／`MISSING_WORKER_ATTESTATION` |
 | 簽發這份證據的機構有資格 | 簽發方的 vLEI Legal Entity 鏈 | `isChainVerifiedKey` → `ISSUER_VLEI_MISSING`；`requireIssuerSigningKey` → `ISSUER_VLEI_CHAIN_INVALID`／`ISSUER_VLEI_REVOKED` |
-| 仲介費未超收 | `RecruitmentFeeCredential.feeWithinLegalCap`（布林；`feeAmount` 在 `_sd` 內，永遠不出現） | `createBankAgent().assess` 的 `REQUIRED_FACTS` → `POLICY_CHECK_FAILED`（揭露了但不合格）／`CLAIM_NOT_DISCLOSED`（根本沒揭露） |
+| **勞工沒有為了這份工作付錢**（RBA Employer Pays） | `RecruitmentFeeCredential.zeroRecruitmentFeePaid`（布林；`feeAmount` 在 `_sd` 內，永遠不出現）。已支付者看 `feesReimbursedByEmployer` ＋ `reimbursedWithin90Days` | `createBankAgent().assess` 的 `REQUIRED_FACTS` → `POLICY_CHECK_FAILED`（揭露了但不合格）／`CLAIM_NOT_DISCLOSED`（根本沒揭露） |
 | 護照在勞工自己手上 | `DocumentCustodyCredential.passportHeldByWorker` | 同上 |
 | 契約有母語版本 | `ContractConsentCredential.nativeLanguageVersionProvided` | 同上 |
 | 憑證此刻仍然有效 | 撤銷登錄簿 ＋ 憑證的 `exp` | `CREDENTIAL_REVOKED`／`CREDENTIAL_EXPIRED` |
@@ -115,7 +115,7 @@
 |---|---|
 | `workingHoursWithinLimit` | `fireSafetyConditions` |
 | `passportHeldByWorker` | `dormitoryLivingConditions` |
-| `recruitmentFeeWithinLegalCap` | `machineGuardingSafety` |
+| `zeroRecruitmentFeePaid` | `machineGuardingSafety` |
 | `contractNativeLanguageProvided` | `hazardousChemicalHandling` |
 | | `grievanceMechanismEffectiveness` |
 
@@ -159,7 +159,7 @@ GLEIF 的原則：
 
 | Seat | 收到 | 未收到 |
 |---|---|---|
-| **銀行 Agent A** | `feeWithinLegalCap`、`currency`、`contractPeriod`、`passportHeldByWorker`、`documentType`、`nativeLanguageVersionProvided`、`language`、`consentTimestamp`、`recommendation`、`reasons`、`requiresHumanReview`、`riskFlags` | `feeAmount`、`paymentSchedule`、`lenderName`、`documentHash`、`custodyLocation`、`salaryAmount`、`contractDocumentHash` |
+| **銀行 Agent A** | `zeroRecruitmentFeePaid`、`feesReimbursedByEmployer`、`reimbursedWithin90Days`、`withinTaiwanLegalCap`、`standardVersion`、`passportHeldByWorker`、`documentType`、`nativeLanguageVersionProvided`、`language`、`consentTimestamp`、`recommendation`、`reasons`、`requiresHumanReview`、`riskFlags` | `feeAmount`、`paymentSchedule`、`lenderName`、`documentHash`、`custodyLocation`、`salaryAmount`、`contractDocumentHash` |
 | **品牌 Agent B** | `disclosure`、`metric`、`cohort`、`cohortSize`、`rate`、`compliant`、`thresholds` | `totalHours`、`overtimeHours`、`commitmentSalt`、`withinRBALimit`、`periodStart`、`valueCommitment`、`workerDID` |
 
 ### 兩個 Seat 的差別是種類，不是程度
@@ -287,7 +287,7 @@ flowchart TD
 
 | 憑證 | 簽發者 | 需勞工反簽 | 公開欄位（可揭露） | 隱藏欄位（選擇性揭露） |
 |---|---|---|---|---|
-| `RecruitmentFeeCredential` | 仲介公司 | 是 | `feeWithinLegalCap`、`currency`、`contractPeriod` | `feeAmount`、`paymentSchedule`、`lenderName` |
+| `RecruitmentFeeCredential` | 仲介公司 | 是 | `zeroRecruitmentFeePaid`、`withinTaiwanLegalCap`、`standardVersion` 等 | `feeAmount`、`paymentSchedule`、`lenderName` |
 | `DocumentCustodyCredential` | 雇主／工廠 | 是 | `passportHeldByWorker`、`documentType` | `documentHash`、`custodyLocation` |
 | `ContractConsentCredential` | 仲介公司 | 是 | `nativeLanguageVersionProvided`、`language`、`consentTimestamp` | `salaryAmount`、`contractDocumentHash` |
 | `WorkingHoursCredential` | 工廠打卡系統 | 是 | `withinRBALimit`、`periodStart`、`valueCommitment` | `totalHours`、`overtimeHours`、`commitmentSalt` |
@@ -447,7 +447,7 @@ flowchart TD
 
 > **命題細節註記**：以上兩表對照的是**完整命題文字**（背景與痛點、核心可信問題、方向提示），逐題編號回答。工作坊（8/15 線上、8/22 線下）若補充或修訂命題，本表隨之更新。
 
-**紅線註記**：`RecruitmentFeeCredential` 的 `feeWithinLegalCap` 判準所依據的「法定上限」數字仍在查證清單（`docs/research/outline.yaml`），憑證結構不依賴該數字，但對外主張前應完成查證。
+**紅線註記**：`RecruitmentFeeCredential` 的 `zeroRecruitmentFeePaid` 判準所依據的「法定上限」數字仍在查證清單（`docs/research/outline.yaml`），憑證結構不依賴該數字，但對外主張前應完成查證。
 
 ## 執行 PoC
 
@@ -518,7 +518,7 @@ npx vite preview --port 4173          # 本機預覽靜態站
 
 ```bash
 npm install      # 於 repo 根目錄，安裝 workspace 依賴
-npm test         # vitest，目前 501 個測試全綠
+npm test         # vitest，目前 524 個測試全綠
 npm run typecheck
 ```
 
@@ -630,7 +630,7 @@ Agent A 的能力邊界也寫在型別裡：`BankAssessment.requiresHumanReview`
 | 交件 | 位置 |
 |---|---|
 | 挑戰命題 | **Track 05（主賽道）＋ Track 06（加分題）**——主辦載明命題 06 為 Track 01 延伸的加分題、可與其他命題同時挑戰，本作品同時交付兩軌，對照見上 |
-| 程式碼 | 本 repo（CI 每次 push 跑 501 tests + `demo:vlei` 閘門） |
+| 程式碼 | 本 repo（CI 每次 push 跑 524 tests + `demo:vlei` 閘門） |
 | 簡報 | <https://zuemen.github.io/evidence-at-source/slides.html>（←→ 翻頁） |
 | Demo | <https://zuemen.github.io/evidence-at-source/>（免安裝）＋[講稿](docs/demo-video-script.md) |
 | 治理／信任設計說明 | [`docs/governance-memo.md`](docs/governance-memo.md)（六信任點逐點＋證據） |

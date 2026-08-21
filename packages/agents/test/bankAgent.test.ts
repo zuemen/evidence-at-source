@@ -6,7 +6,7 @@ describe('Agent A — bank verifier', () => {
     const agent = createBankAgent();
 
     const assessment = agent.assess({
-      feeWithinLegalCap: true,
+      zeroRecruitmentFeePaid: true,
       passportHeldByWorker: true,
       nativeLanguageVersionProvided: true,
     });
@@ -20,7 +20,7 @@ describe('Agent A — bank verifier', () => {
     const agent = createBankAgent();
 
     const assessment = agent.assess({
-      feeWithinLegalCap: true,
+      zeroRecruitmentFeePaid: true,
       passportHeldByWorker: true,
     });
 
@@ -33,7 +33,7 @@ describe('Agent A — bank verifier', () => {
     const agent = createBankAgent();
 
     const assessment = agent.assess({
-      feeWithinLegalCap: false,
+      zeroRecruitmentFeePaid: false,
       passportHeldByWorker: true,
       nativeLanguageVersionProvided: true,
     });
@@ -50,7 +50,7 @@ describe('Agent A — bank verifier', () => {
       nativeLanguageVersionProvided: true,
     });
     const failedPolicy = agent.assess({
-      feeWithinLegalCap: false,
+      zeroRecruitmentFeePaid: false,
       passportHeldByWorker: true,
       nativeLanguageVersionProvided: true,
     });

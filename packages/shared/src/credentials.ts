@@ -26,8 +26,32 @@ export interface DisclosureSchema {
 }
 
 const SCHEMAS: Record<CredentialType, DisclosureSchema> = {
+  /**
+   * Two standards, kept apart on purpose.
+   *
+   * This credential used to publish one boolean, `feeWithinLegalCap`, against
+   * Taiwan's statutory monthly service-fee ceiling. That is a real legal test.
+   * It is not the test the verifier applies.
+   *
+   * RBA Code of Conduct 8.0 uses Employer Pays: workers shall not be required
+   * to pay recruitment fees at all, and anything already paid must be
+   * reimbursed within 90 days of employment starting. A factory can sit
+   * comfortably inside Taiwan's ceiling and be in plain breach of RBA — a
+   * worker who paid NT$30,000 that was never reimbursed passes one and fails
+   * the other.
+   *
+   * A brand auditing against RBA that receives `feeWithinLegalCap: true` reads
+   * it as compliance. That is not an imprecise answer, it is an answer to a
+   * different question, so the criteria are split and each names its standard.
+   */
   RecruitmentFeeCredential: {
-    public: ['feeWithinLegalCap', 'currency', 'contractPeriod'],
+    public: [
+      'zeroRecruitmentFeePaid',
+      'feesReimbursedByEmployer',
+      'reimbursedWithin90Days',
+      'withinTaiwanLegalCap',
+      'standardVersion',
+    ],
     hidden: ['feeAmount', 'paymentSchedule', 'lenderName'],
   },
   /**

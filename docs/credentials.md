@@ -36,16 +36,41 @@
 
 | 欄位 | 型別 | 歸屬 | 說明 |
 |---|---|---|---|
-| `feeWithinLegalCap` | boolean | 公開 | 本筆費用是否在法定上限內。**這是驗證方唯一需要的答案** |
-| `currency` | string | 公開 | 幣別，例 `TWD` |
-| `contractPeriod` | string | 公開 | 契約期間，例 `2026-08-01/2029-07-31` |
+| `zeroRecruitmentFeePaid` | boolean | 公開 | **勞工支付的招募費用為零**（RBA Employer Pays） |
+| `feesReimbursedByEmployer` | boolean | 公開 | 若曾支付，雇主是否已償還 |
+| `reimbursedWithin90Days` | boolean | 公開 | 償還是否在就業開始後 90 天內完成 |
+| `withinTaiwanLegalCap` | boolean | 公開 | 是否在台灣法定服務費上限內 |
+| `standardVersion` | string | 公開 | 判準版本，例 `RBA-CoC-8.0` |
 | `feeAmount` | number | 隱藏 | 實際收取金額 |
 | `paymentSchedule` | string | 隱藏 | 分期方式 |
 | `lenderName` | string | 隱藏 | 若為借貸支付，貸方名稱 |
 | 勞工母國的原始借據影像 | — | 不入憑證 | 只存勞工裝置，必要時由勞工自行出示 |
 | 勞工家庭成員資訊 | — | 不入憑證 | 不收集 |
 
-設計要點：銀行的 Agent A 需要知道的是「這位申請人是否背著超過法定上限的仲介債務」——那是 `feeWithinLegalCap`，一個布林值。**實際金額不是它的業務。**
+### 為什麼這裡有兩套判準，而且不能混用
+
+這張憑證原本只有一個公開欄位 `feeWithinLegalCap`——**依據台灣法定服務費上限**（第一年每月 1,800 元、第二年 1,700、第三年 1,500）。那是一個真實存在的法規判準，但**它不是驗證方在用的那一個**。
+
+RBA Code of Conduct 8.0 採 **Employer Pays Principle**：
+
+> Workers shall not be required to pay employers' agents or sub-agents' recruitment fees or other related fees for their employment.
+
+對齊 Leadership Group for Responsible Recruitment 的表述：**沒有勞工應該為了一份工作付錢**。已支付的費用須償還勞工，**最遲不得晚於就業開始後 90 天**。
+
+兩套標準的通過條件根本不同：
+
+| 標準 | 判準 | 通過條件 |
+|---|---|---|
+| 台灣法規 | 服務費有上限 | 未超過上限即合法 |
+| RBA CoC 8.0 | Employer Pays | **勞工支付金額為零** |
+
+**一間工廠可以完全符合台灣法規，同時完全違反 RBA。** 勞工付了三萬元、金額在法定上限內、雇主未償還——台灣法規下沒有問題，RBA 下是明確違規。
+
+而套用 RBA 準則的品牌 Agent 拿到 `feeWithinLegalCap: true`，會讀成「這家合規」。**那個答案回答的是另一個問題。** 這不是精確度不足，是答錯題。
+
+所以判準拆開，各自標明所屬標準，並由 `standardVersion` 記錄版本。驗證方只能查詢自己授權範圍內的標準——查詢範圍外的判準回 `STANDARD_NOT_IN_SCOPE`：一個依 RBA 稽核的品牌**沒有立場**問台灣法定上限，那不是它的準則。
+
+設計要點：驗證方需要知道的仍然是布林值。**實際金額不是任何人的業務。**
 
 ---
 

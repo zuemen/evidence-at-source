@@ -44,7 +44,7 @@ describe('cross-institution application monitor (題05 Q3)', () => {
 
     const assessment = agent.assess(
       {
-        feeWithinLegalCap: true,
+        zeroRecruitmentFeePaid: true,
         passportHeldByWorker: true,
         nativeLanguageVersionProvided: true,
       },
@@ -58,7 +58,7 @@ describe('cross-institution application monitor (題05 Q3)', () => {
   test('no risk signal means no flags, and the agent still exposes only assess', () => {
     const agent = createBankAgent();
 
-    expect(agent.assess({ feeWithinLegalCap: true }).riskFlags).toEqual([]);
+    expect(agent.assess({ zeroRecruitmentFeePaid: true }).riskFlags).toEqual([]);
     expect(Object.keys(agent)).toEqual(['assess']);
   });
 });
@@ -142,7 +142,7 @@ describe('the frequency signal is a burst detector, not a life history (題05 Q3
 
     const assessment = createBankAgent().assess(
       {
-        feeWithinLegalCap: true,
+        zeroRecruitmentFeePaid: true,
         passportHeldByWorker: true,
         nativeLanguageVersionProvided: true,
       },

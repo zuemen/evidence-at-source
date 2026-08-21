@@ -33,6 +33,49 @@ export interface DelegationClaims {
   readonly purpose: string;
   /** Optional: the minimum issuer tier this agent's principal will accept (題06 Q1). */
   readonly minimumIssuerTier?: IssuerTier;
+  /**
+   * Compliance standards this agent audits against, e.g. `['RBA-CoC-8.0']`.
+   *
+   * Scope answers "which credential types", this answers "under whose rules".
+   * They are different questions: a brand auditing to RBA has no standing to
+   * ask whether a fee sat inside Taiwan's statutory ceiling, because that is
+   * not its criterion and the answer would mean nothing to it — or worse,
+   * would be read as compliance with a standard it never tested.
+   *
+   * Absent means unrestricted, which is the right default for a verifier that
+   * has not declared one: narrowing an unstated scope would silently refuse
+   * queries nobody meant to forbid.
+   */
+  readonly standards?: readonly string[];
   readonly iat: number;
   readonly exp: number;
+}
+
+/** Standards a claim belongs to. A claim not listed here is standard-neutral. */
+export const CLAIM_STANDARD: Readonly<Record<string, string>> = {
+  zeroRecruitmentFeePaid: 'RBA-CoC-8.0',
+  feesReimbursedByEmployer: 'RBA-CoC-8.0',
+  reimbursedWithin90Days: 'RBA-CoC-8.0',
+  withinTaiwanLegalCap: 'TW-ESA',
+  withinRBAWeeklyLimit: 'RBA-CoC-8.0',
+  overtimeVoluntary: 'RBA-CoC-8.0',
+  restDayCompliant: 'RBA-CoC-8.0',
+  withinLocalMonthlyLimit: 'TW-LSA',
+};
+
+/**
+ * Whether a mandate covers the standard a claim belongs to.
+ *
+ * Standard-neutral claims (identity, custody, consent) are always in scope —
+ * they are facts rather than judgements under a ruleset.
+ */
+export function claimWithinStandards(
+  claim: string,
+  standards: readonly string[] | undefined,
+): boolean {
+  if (standards === undefined) return true;
+
+  const required = CLAIM_STANDARD[claim];
+
+  return required === undefined || standards.includes(required);
 }

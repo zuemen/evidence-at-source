@@ -78,6 +78,10 @@ export const REASON_CODES = [
   'QUERY_REPLAY_DETECTED',
   // The queried RBA item cannot be answered by a credential (題06 Q3).
   'REQUIRES_ONSITE_AUDIT',
+  // The claim belongs to a compliance standard this agent's mandate does not
+  // cover. A brand auditing to RBA has no standing to ask about Taiwan's
+  // statutory fee ceiling — different question, different ruleset.
+  'STANDARD_NOT_IN_SCOPE',
   // Small-facility fallbacks. A pool of two facilities is not anonymity: a
   // participant subtracts their own numbers and recovers the other's.
   'POOL_TOO_FEW_FACILITIES',

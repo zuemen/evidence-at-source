@@ -7,13 +7,24 @@
  * future code path can produce an assessment that claims to be final.
  */
 
-import type { ReasonCode } from '@eas/shared';
+import { meetsEmployerPays, type ReasonCode } from '@eas/shared';
 
 export type Recommendation = 'APPROVE_PENDING_HUMAN_REVIEW' | 'DECLINE_PENDING_HUMAN_REVIEW';
 
 /** Conclusions the worker chose to disclose. Absent means "not disclosed". */
 export interface DisclosedFacts {
-  readonly feeWithinLegalCap?: boolean;
+  /**
+   * RBA Employer Pays: the worker paid nothing for the job.
+   *
+   * This replaced `feeWithinLegalCap`, which tested Taiwan's statutory service
+   * fee ceiling — a real rule, and not the one anyone here audits against. A
+   * worker carrying NT$30,000 of unreimbursed recruitment debt passed that
+   * check, which is precisely the debt bondage the assessment exists to see.
+   */
+  readonly zeroRecruitmentFeePaid?: boolean;
+  /** Reimbursement limb of Employer Pays: paid, then repaid within 90 days. */
+  readonly feesReimbursedByEmployer?: boolean;
+  readonly reimbursedWithin90Days?: boolean;
   readonly passportHeldByWorker?: boolean;
   readonly nativeLanguageVersionProvided?: boolean;
 }
@@ -37,7 +48,7 @@ export interface BankAgent {
 }
 
 const REQUIRED_FACTS = [
-  'feeWithinLegalCap',
+  'zeroRecruitmentFeePaid',
   'passportHeldByWorker',
   'nativeLanguageVersionProvided',
 ] as const satisfies readonly (keyof DisclosedFacts)[];
@@ -47,10 +58,20 @@ export function createBankAgent(): BankAgent {
     assess(facts, risk) {
       const reasons: ReasonCode[] = [];
 
+      // Employer Pays has two limbs: nothing paid, or paid and reimbursed
+      // within 90 days. Reading only the first would decline a worker whose
+      // employer did exactly what the standard asks.
+      const feeFacts: DisclosedFacts = {
+        ...facts,
+        ...(facts.zeroRecruitmentFeePaid === undefined
+          ? {}
+          : { zeroRecruitmentFeePaid: meetsEmployerPays(facts) }),
+      };
+
       for (const fact of REQUIRED_FACTS) {
-        if (facts[fact] === undefined) {
+        if (feeFacts[fact] === undefined) {
           reasons.push('CLAIM_NOT_DISCLOSED');
-        } else if (facts[fact] === false) {
+        } else if (feeFacts[fact] === false) {
           // Disclosed and failing is a different situation from never disclosed,
           // and a human reviewer needs to be able to tell them apart. Neither
           // code carries the underlying value.
