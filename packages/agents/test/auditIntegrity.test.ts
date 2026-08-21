@@ -176,6 +176,10 @@ describe('the audit trail is evidence, not a list its holder can edit (é¡Œ05 Q4ï
       'reviewerOorSaid',
       'seq',
       'at',
+      // The policy version the decision was made under. Not a worker field:
+      // it names which thresholds applied, so a refusal stays reproducible
+      // after a threshold moves.
+      'policyVersion',
       'prev',
     ]);
   });

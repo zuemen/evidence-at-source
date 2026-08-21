@@ -177,3 +177,6 @@ export type { AttestationRecord, CoercionSignals } from './coercion.js';
 
 export { SEAT_SCOPE, delegationScopeMatches, disclosureDesign } from './disclosureDesign.js';
 export type { Seat, SeatDisclosure } from './disclosureDesign.js';
+
+export { createReplayGuard } from './replay.js';
+export type { ReplayGuard, ReplayGuardOptions } from './replay.js';

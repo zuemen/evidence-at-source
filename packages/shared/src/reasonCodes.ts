@@ -71,6 +71,11 @@ export const REASON_CODES = [
   'DIFFERENCING_ATTACK_DETECTED',
   // An agent has spent its per-period allowance of answered queries.
   'QUERY_BUDGET_EXCEEDED',
+  // This exact query id has already been answered inside the replay window.
+  // Protection lives here rather than on the credential: a delegation grants a
+  // period of asking, and a single-use nonce on it would mean a fresh
+  // authorization per question. See docs/replay-protection.md.
+  'QUERY_REPLAY_DETECTED',
   // The queried RBA item cannot be answered by a credential (題06 Q3).
   'REQUIRES_ONSITE_AUDIT',
   // Small-facility fallbacks. A pool of two facilities is not anonymity: a

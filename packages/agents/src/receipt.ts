@@ -13,7 +13,7 @@
  */
 
 import { SignJWT, jwtVerify, importJWK, type JWK } from 'jose';
-import type { PrivateJwk, PublicJwk } from '@eas/shared';
+import { POLICY_VERSION, type PrivateJwk, type PublicJwk } from '@eas/shared';
 
 export const RECEIPT_TYP = 'verification-receipt+jwt';
 
@@ -26,6 +26,15 @@ export interface VerificationReceipt {
   readonly verifiedItems: readonly string[];
   readonly result: VerificationResult;
   readonly verifiedAt: string;
+  /**
+   * The policy version in force when this was decided.
+   *
+   * Without it a receipt is unreadable once a threshold moves: "refused, cohort
+   * too small" does not say where the bar was that day, and 83% means different
+   * things under a k of 20 and a k of 5. Defaults to the current policy so a
+   * caller cannot omit it by forgetting.
+   */
+  readonly policyVersion?: string;
 }
 
 export async function issueVerificationReceipt(
@@ -39,6 +48,7 @@ export async function issueVerificationReceipt(
     verifiedItems: [...receipt.verifiedItems],
     result: receipt.result,
     verifiedAt: receipt.verifiedAt,
+    policyVersion: receipt.policyVersion ?? POLICY_VERSION,
   })
     .setProtectedHeader({ alg: 'ES256', typ: RECEIPT_TYP })
     .setIssuer(receipt.verifierDid)

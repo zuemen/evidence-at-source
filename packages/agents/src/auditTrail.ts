@@ -25,7 +25,8 @@
  * what makes a missing tail noticeable to the other side.
  */
 
-import { credentialHash, type ReasonCode } from '@eas/shared';
+import {
+  POLICY_VERSION, credentialHash, type ReasonCode } from '@eas/shared';
 import { SignJWT, jwtVerify, importJWK, type JWK } from 'jose';
 import type { PrivateJwk, PublicJwk } from '@eas/shared';
 import { isChainVerifiedKey, type IssuerSigningKey } from './vleiBridge.js';
@@ -60,6 +61,12 @@ export interface AuditEntry {
   readonly reviewerOorSaid: string | null;
   /** Digest of the previous entry's signed form. Genesis for the first. */
   readonly prev: string;
+  /**
+   * The policy version this decision was made under — GLEIF's audit record
+   * names it alongside evidence refs, decision and grant, and for good reason:
+   * a refusal is only reproducible if the numbers behind it can be recovered.
+   */
+  readonly policyVersion: string;
 }
 
 export interface SealedAuditEntry {
@@ -69,9 +76,13 @@ export interface SealedAuditEntry {
 }
 
 export interface AuditTrail {
-  record(entry: Omit<AuditEntry, 'seq' | 'at' | 'prev' | 'reviewerOorSaid'> & {
-    readonly reviewerOorSaid?: string | null;
-  }): AuditEntry;
+  record(
+    entry: Omit<AuditEntry, 'seq' | 'at' | 'prev' | 'reviewerOorSaid' | 'policyVersion'> & {
+      readonly reviewerOorSaid?: string | null;
+      /** Defaults to the current policy: a caller cannot omit it by forgetting. */
+      readonly policyVersion?: string;
+    },
+  ): AuditEntry;
   entries(): readonly AuditEntry[];
   /** The trail in the form another party can check. */
   export(): Promise<readonly SealedAuditEntry[]>;
@@ -111,6 +122,7 @@ function digestOf(entry: AuditEntry): string {
       entry.basis.delegationHash ?? '',
       entry.basis.ecrSaid ?? '',
       entry.reviewerOorSaid ?? '',
+      entry.policyVersion,
       entry.prev,
     ].join('|'),
   );
@@ -127,6 +139,7 @@ export function createAuditTrail(options: AuditTrailOptions = {}): AuditTrail {
         reviewerOorSaid: entry.reviewerOorSaid ?? null,
         seq: log.length + 1,
         at: new Date().toISOString(),
+        policyVersion: entry.policyVersion ?? POLICY_VERSION,
         prev: previous === undefined ? AUDIT_GENESIS : digestOf(previous),
       };
       log.push(full);

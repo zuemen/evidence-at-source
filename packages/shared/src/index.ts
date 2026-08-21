@@ -80,3 +80,6 @@ export type {
   RecoveryResult,
   VerifyRecoveryInput,
 } from './recovery.js';
+
+export { POLICY_HISTORY, POLICY_VERSION, currentPolicy, policyAt } from './policyVersion.js';
+export type { PolicyParameters } from './policyVersion.js';
