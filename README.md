@@ -72,11 +72,13 @@
 | **憑什麼說它代表這家機構？** | 設定檔裡的公鑰名單 | GLEIF vLEI 憑證鏈上的 ECR 角色，L0 每次查詢重驗全鏈；**連機構的可信層級也由 QVI 寫在鏈上**，自己報高就 `ISSUER_TIER_MISMATCH` |
 | **它能做什麼、不能做什麼？** | prompt 約束＋條件判斷 | 不該有的能力**函式不存在**（grep 得到就破功）；個體查詢在型別層就無法被寫進授權 |
 | **誰能在什麼時候停掉它？** | 改設定、重新部署 | 六條撤銷路徑即時生效且**完全不快取**——失效是鏈的結果，不是誰去同步了名單 |
-| **事後誰查得動它？** | 一份持有者可以編輯的日誌 | 雜湊鏈接＋簽章的稽核軌跡，**挑戰方拿鏈上公鑰就能獨立重驗**，持有者不是唯一的裁判 |
+| **事後誰查得動它？** | 一份持有者可以編輯的日誌 | 雜湊鏈接＋簽章的稽核軌跡，**挑戰方拿鏈上公鑰就能獨立重驗**，持有者不是唯一的裁判；再加上外部檢查點，連**把尾巴剪掉**也會被反證（[`auditAnchor.ts`](packages/agents/src/auditAnchor.ts)） |
 
 **而最關鍵的一條：Agent 永遠不做決定。** 它只產生「建議＋原因碼」，交給一個**同樣掛在鏈上、同樣可撤銷**的自然人覆核（OOR 職務憑證）。系統裡唯一能拍板的角色，是一個離職之後就簽不動的人——而且他的職務憑證 SAID 記在稽核軌跡的封緘之內，事後補記不進去。
 
-六信任點逐點對照與可執行證據見 [`docs/governance-memo.md`](docs/governance-memo.md)。
+六信任點逐點對照與可執行證據見 [`docs/governance-memo.md`](docs/governance-memo.md)；
+GLEIF 三支柱（Mandate／Workload／Transaction）的逐項自我對照——含做不到的那幾層——見
+[`docs/gleif-three-pillars.md`](docs/gleif-three-pillars.md)。
 
 ## 從動作往回推：這個 Agent 該不該做這件事
 
@@ -561,7 +563,7 @@ npx vite preview --port 4173          # 本機預覽靜態站
 
 ```bash
 npm install      # 於 repo 根目錄，安裝 workspace 依賴
-npm test         # vitest，目前 572 個測試全綠
+npm test         # vitest，目前 579 個測試全綠
 npm run typecheck
 ```
 
@@ -676,7 +678,7 @@ Agent A 的能力邊界也寫在型別裡：`BankAssessment.requiresHumanReview`
 | 交件 | 位置 |
 |---|---|
 | 挑戰命題 | **Track 05（主賽道）＋ Track 06（加分題）**——主辦載明命題 06 為 Track 01 延伸的加分題、可與其他命題同時挑戰，本作品同時交付兩軌，對照見上 |
-| 程式碼 | 本 repo（CI 每次 push 跑 572 tests + `demo:vlei` 閘門） |
+| 程式碼 | 本 repo（CI 每次 push 跑 579 tests + `demo:vlei` 閘門） |
 | 簡報 | <https://zuemen.github.io/evidence-at-source/slides.html>（←→ 翻頁） |
 | Demo | <https://zuemen.github.io/evidence-at-source/>（免安裝）＋[講稿](docs/demo-video-script.md) |
 | 治理／信任設計說明 | [`docs/governance-memo.md`](docs/governance-memo.md)（六信任點逐點＋證據） |

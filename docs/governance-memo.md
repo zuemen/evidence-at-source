@@ -55,7 +55,7 @@ Agent A 只能讀已揭露結論、產生「建議＋原因碼」交人類覆核
 能不能問」（拒個體查詢、k-匿名、差分攻擊偵測、查詢預算）。**L0 失敗時勞工資料零讀取**
 ——結構保證，測試以 spy 佐證。順序不可顛倒：先驗料再驗人的話，未授權的 Agent 會在
 被拒絕之前就已經讀到資料。
-**證據**：`runAuthorizedGate` 回呼設計；`packages/agents/test/` 51 個測試檔。
+**證據**：`runAuthorizedGate` 回呼設計；`packages/agents/test/` 52 個測試檔。
 
 ## 5. Audit Log — 行動、決策與授權依據如何記錄？
 
@@ -66,7 +66,11 @@ SAID），以及**人類覆核者的職務憑證 SAID**（Agent 的建議與人�
 對不上 `CHAIN_BROKEN`；抽掉中間一筆 → `SEQUENCE_BROKEN`），**每筆以機構法人憑證公布
 的金鑰封緘**（改了就 `SEAL_INVALID`，而且事後補記「某某主管批准過」也補不進去）。
 `verifyAuditTrail` 設計成**給挑戰方跑的**：NGO 只釘 GLEIF root 就能從鏈根驗到每一筆決策，
-不必相信持有者。誠實限制：雜湊鏈**證明不了尾端沒被截掉**，所以驗證結果會回報驗了幾筆。
+不必相信持有者。誠實限制：雜湊鏈**證明不了尾端沒被截掉**，所以驗證結果會回報驗了幾筆——
+而**外部檢查點**補上了這一段：週期性把軌跡頭部摘要發布到持有者改不動的地方，之後任何
+比檢查點短或同位置摘要不符的軌跡就不只是未驗證，而是被反證（`TAIL_TRUNCATED`／
+`ANCHOR_MISMATCH`，見 `packages/agents/src/auditAnchor.ts`）。它同樣有邊界並且回報邊界：
+最後一次檢查點之後的那段仍未受保護，`checkpointGap` 就是這個洞的大小。
 
 對外另有可獨立驗簽的查驗收據（何時驗了哪些項目，只含項目名與憑證雜湊）；查驗日誌
 反向索引使撤銷可通知所有曾驗證者。對帳的零知識版本已接上真實電路（circom ＋ Groth16），
@@ -87,7 +91,7 @@ SAID），以及**人類覆核者的職務憑證 SAID**（Agent 的建議與人�
 
 ---
 
-**總驗證**：GitHub Actions 每次 push 跑 572 個測試＋`npm run demo:vlei`（17 步主張，
+**總驗證**：GitHub Actions 每次 push 跑 579 個測試＋`npm run demo:vlei`（17 步主張，
 exit code 0 即全數成立）＋**瀏覽器煙霧測試**（實際載入建置站，頁面未渲染／主控台有錯／
 水平溢出／觸控目標不足即失敗）；線上 demo <https://zuemen.github.io/evidence-at-source/>，
 全部合成資料、無後端、私鑰不離開瀏覽器。

@@ -150,7 +150,26 @@ export type { ProxyingMonitor, ProxyingRisk } from './proxyingMonitor.js';
 export { RBA_ITEM_CLASSIFICATION, classifyRbaItem } from './rbaItems.js';
 export type { RbaItemClass } from './rbaItems.js';
 
-export { AUDIT_ENTRY_TYP, AUDIT_GENESIS, createAuditTrail, verifyAuditTrail } from './auditTrail.js';
+export {
+  AUDIT_ENTRY_TYP,
+  AUDIT_GENESIS,
+  createAuditTrail,
+  entryDigest,
+  verifyAuditTrail,
+} from './auditTrail.js';
+
+export {
+  checkpointFor,
+  createLocalAnchorLog,
+  verifyAgainstCheckpoints,
+} from './auditAnchor.js';
+export type {
+  AnchorFailure,
+  AnchorPublisher,
+  AnchorReceipt,
+  AnchorVerification,
+  AuditCheckpoint,
+} from './auditAnchor.js';
 export type {
   AuditBasis,
   AuditEntry,

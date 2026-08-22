@@ -108,8 +108,12 @@ export type AuditVerifierKey = IssuerSigningKey;
  * Hand-built rather than JSON.stringify of the whole object: key order in an
  * object literal is not a stable part of the format, and a chain whose digests
  * depend on it would break the day someone reorders a field.
+ *
+ * Exported because a checkpoint published outside this system commits to one
+ * of these digests, and whoever holds that checkpoint has to be able to
+ * recompute it — see auditAnchor.ts.
  */
-function digestOf(entry: AuditEntry): string {
+export function entryDigest(entry: AuditEntry): string {
   return credentialHash(
     [
       entry.seq,
@@ -140,7 +144,7 @@ export function createAuditTrail(options: AuditTrailOptions = {}): AuditTrail {
         seq: log.length + 1,
         at: new Date().toISOString(),
         policyVersion: entry.policyVersion ?? POLICY_VERSION,
-        prev: previous === undefined ? AUDIT_GENESIS : digestOf(previous),
+        prev: previous === undefined ? AUDIT_GENESIS : entryDigest(previous),
       };
       log.push(full);
 
@@ -158,7 +162,7 @@ export function createAuditTrail(options: AuditTrailOptions = {}): AuditTrail {
       return Promise.all(
         log.map(async (entry) => ({
           entry,
-          seal: await new SignJWT({ digest: digestOf(entry), seq: entry.seq })
+          seal: await new SignJWT({ digest: entryDigest(entry), seq: entry.seq })
             .setProtectedHeader({ alg: 'ES256', typ: AUDIT_ENTRY_TYP })
             .setIssuer(verifierDid ?? 'did:web:verifier.example')
             .sign(key),
@@ -219,7 +223,7 @@ export async function verifyAuditTrail(
       try {
         const key = await importJWK(verifierPublicKey as JWK, 'ES256');
         const { payload } = await jwtVerify(seal, key);
-        if (payload['digest'] !== digestOf(entry)) {
+        if (payload['digest'] !== entryDigest(entry)) {
           return { ok: false, reason: 'SEAL_INVALID', atSeq: entry.seq };
         }
       } catch {
@@ -227,7 +231,7 @@ export async function verifyAuditTrail(
       }
     }
 
-    expectedPrev = digestOf(entry);
+    expectedPrev = entryDigest(entry);
   }
 
   return { ok: true, verifiedEntries: exported.length, sealed };
