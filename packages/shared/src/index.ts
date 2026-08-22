@@ -54,6 +54,9 @@ export {
   stubAssertionVerifier,
   verifyDevicePresence,
 } from './identity.js';
+export { createRelyingPartyVerifier } from './relyingParty.js';
+export type { RelyingPartyConfig } from './relyingParty.js';
+
 export type {
   AssertionVerifier,
   DeviceAssertion,

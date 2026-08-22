@@ -38,13 +38,31 @@ export function isWebAuthnAvailable(): boolean {
   );
 }
 
+export interface RegisteredDevice {
+  readonly credentialId: string;
+  /**
+   * The credential's public key, JWK — what a relying party needs to check any
+   * later assertion.
+   *
+   * Null where the browser will not hand it over (`getPublicKey` is recent, and
+   * an authenticator may use an algorithm outside the P-256 profile the
+   * verifier implements). Null means the same thing everywhere in this file:
+   * presence cannot later be established, so the gate will refuse.
+   */
+  readonly publicKeyJwk: JsonWebKey | null;
+}
+
 /**
  * Registers this device as the worker's authenticator.
  *
  * `residentKey` and `userVerification: 'required'` together are what make the
  * result mean "this person", rather than "someone holding this phone".
+ *
+ * The public key comes back with the credential id because presence is a claim
+ * someone else has to check: the wallet cannot verify its own assertions, and a
+ * relying party that never received a key can only take the browser's word.
  */
-export async function registerDevice(workerDid: string): Promise<string | null> {
+export async function registerDevice(workerDid: string): Promise<RegisteredDevice | null> {
   if (!isWebAuthnAvailable()) return null;
 
   try {
@@ -70,8 +88,43 @@ export async function registerDevice(workerDid: string): Promise<string | null> 
         timeout: 60_000,
       },
     })) as PublicKeyCredential | null;
+    if (credential === null) return null;
 
-    return credential === null ? null : bytesToBase64url(new Uint8Array(credential.rawId));
+    return {
+      credentialId: bytesToBase64url(new Uint8Array(credential.rawId)),
+      publicKeyJwk: await extractPublicKey(credential),
+    };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Pulls the credential's public key out of the registration response as a JWK.
+ *
+ * SPKI rather than the COSE key that also travels in the attestation object:
+ * `getPublicKey()` gives it in a form WebCrypto imports directly, which keeps a
+ * CBOR decoder out of the wallet. An older browser returns null here, and the
+ * caller treats that as "no verifiable presence" rather than falling back to
+ * something weaker.
+ */
+async function extractPublicKey(credential: PublicKeyCredential): Promise<JsonWebKey | null> {
+  const response = credential.response as AuthenticatorAttestationResponse;
+  if (typeof response.getPublicKey !== 'function') return null;
+
+  const spki = response.getPublicKey();
+  if (spki === null) return null;
+
+  try {
+    const key = await crypto.subtle.importKey(
+      'spki',
+      spki,
+      { name: 'ECDSA', namedCurve: 'P-256' },
+      true,
+      ['verify'],
+    );
+
+    return await crypto.subtle.exportKey('jwk', key);
   } catch {
     return null;
   }
@@ -110,6 +163,11 @@ export async function assertPresence(
       challenge: bytesToBase64url(challenge),
       userVerified: (flags & 0b0000_0100) !== 0,
       signature: bytesToBase64url(new Uint8Array(response.signature)),
+      // Carried through unchanged so the relying party checks what the device
+      // signed rather than this function's reading of it. The `userVerified`
+      // field above is a convenience for the UI; these two are the evidence.
+      authenticatorData: bytesToBase64url(authenticatorData),
+      clientDataJSON: bytesToBase64url(new Uint8Array(response.clientDataJSON)),
     };
   } catch {
     return null;

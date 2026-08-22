@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { api, type DemoPayload } from './api.js';
 import { assertPresence, registerDevice } from './wallet/webauthn.js';
+import { createRelyingPartyVerifier, type PublicJwk } from '@eas/shared';
 import type { ZkProofResult } from './demo/world.js';
 import { WalletView } from './views/WalletView.js';
 import { ConsoleView } from './views/ConsoleView.js';
@@ -205,19 +206,45 @@ export function App(): JSX.Element {
           onVerifyDevice={() => {
             setPresence('正在向這台裝置的驗證器請求生物辨識…');
             void (async () => {
-              const credentialId = await registerDevice(payload.identity.holderDid);
-              if (credentialId === null) {
+              const device = await registerDevice(payload.identity.holderDid);
+              if (device === null) {
                 setPresence(
                   '這台裝置沒有可用的驗證器（或你取消了）。閘門因此拒絕——沒有在場證明就不算通過，' +
                     '這正是 fail-closed 的意思。',
                 );
                 return;
               }
-              const assertion = await assertPresence(credentialId);
+
+              const challenge = crypto.getRandomValues(new Uint8Array(32));
+              const assertion = await assertPresence(device.credentialId, challenge);
+              if (assertion === null) {
+                setPresence('驗證器沒有回應（或你取消了），閘門一律拒絕。');
+                return;
+              }
+
+              if (device.publicKeyJwk === null) {
+                setPresence(
+                  '這個瀏覽器不交出憑證公鑰，驗證方就無從查驗簽章——閘門拒絕。' +
+                    '「裝置說它驗過了」不是證據，能被別人重算的簽章才是。',
+                );
+                return;
+              }
+
+              // The check that used to be missing: the assertion is verified
+              // against the key registered a moment ago, the challenge this
+              // page issued, and this origin — not against the wallet's own
+              // description of what the authenticator did.
+              const verified = await createRelyingPartyVerifier({
+                credentialPublicKey: device.publicKeyJwk as PublicJwk,
+                rpId: window.location.hostname,
+                expectedOrigin: window.location.origin,
+                expectedChallenge: assertion.challenge,
+              })(assertion);
+
               setPresence(
-                assertion !== null && assertion.userVerified
-                  ? `驗證器回報已完成使用者驗證（userVerified: true），credentialId 前綴 ${credentialId.slice(0, 12)}…。私鑰留在安全元件裡，這個瀏覽器拿不到它。`
-                  : '驗證器沒有回報使用者驗證，閘門一律拒絕。',
+                verified
+                  ? `驗證方已獨立驗過這張斷言的簽章：challenge 是本頁發的、origin 是本站、rpIdHash 相符、UV 旗標讀自 authenticatorData（credentialId 前綴 ${device.credentialId.slice(0, 12)}…）。私鑰留在安全元件裡，這個瀏覽器拿不到它。`
+                  : '簽章沒有通過驗證方的查驗，閘門拒絕——這一步不看裝置怎麼說，只看它簽了什麼。',
               );
             })();
           }}

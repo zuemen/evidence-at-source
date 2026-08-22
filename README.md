@@ -452,7 +452,7 @@ flowchart TD
 | **Q3 Policy Gate**：什麼異常模式該被自動攔截 | 命題舉的例子逐字實作：同一身分**在 14 天窗內**申辦超過門檻即亮 `MULTIPLE_APPLICATIONS`。三個性質是刻意的——①**只計次不記去向**（`record` 根本沒有「哪家機構」這個參數，不是不給而是沒收集）；②**有時間窗**，因為命題問的是「短時間內」，而永遠累加的計數器最終會標記每一位久留的移工，一個人人都會觸發的訊號等於沒有訊號；③**只提示不攔截**——`requiresHumanReview` 是字面型別 `true`，完全合規但觸發旗標的申請人仍得到「建議核准＋旗標」，沒有任何自動拒絕 | [`packages/agents/test/applicationMonitor.test.ts`](packages/agents/test/applicationMonitor.test.ts)（含窗邊界與「無從得知去向」）；稽核台「風險旗標」面板 |
 | **Q4 Audit Log／Expiry**：被盜用或離境能否即時撤銷 | 三條撤銷路徑＋主體連動撤銷（離境即全部憑證同時失效，其他勞工不受影響）＋vLEI 上游撤銷級聯；憑證帶 `exp`，在留許可過期回 `RESIDENCY_PERMIT_EXPIRED`（與「從未綁定」是不同的原因碼） | [`packages/agents/test/revocationPaths.test.ts`](packages/agents/test/revocationPaths.test.ts)；稽核台 RevokeDemo |
 
-**方向提示對照**：命題建議「整合自然人憑證或行動身分識別（如 FIDO 生物辨識）與移工的入境身份資料，建立一人一憑證、不可轉讓的驗證機制」——`ResidencyCredential`（入境身份資料）＋`deviceAssertion`（FIDO 形狀）＋註冊表的一錨一錢包，正是這三件事。**誠實界限**：assertion 驗證器是注入式的，正式部署接真 WebAuthn；本 repo 的測試接合成驗證器，且**沒有預設值**——缺驗證器一律 fail-closed。
+**方向提示對照**：命題建議「整合自然人憑證或行動身分識別（如 FIDO 生物辨識）與移工的入境身份資料，建立一人一憑證、不可轉讓的驗證機制」——`ResidencyCredential`（入境身份資料）＋`deviceAssertion`（FIDO 形狀）＋註冊表的一錨一錢包，正是這三件事。**誠實界限**：assertion 驗證器是注入式的且**沒有預設值**——缺驗證器一律 fail-closed。瀏覽器接真 WebAuthn，`createRelyingPartyVerifier` 真的重算簽章（見邊界表），測試以合成驗證器覆蓋各種偽造情形。
 
 其餘支撐機制：
 
@@ -561,7 +561,7 @@ npx vite preview --port 4173          # 本機預覽靜態站
 
 ```bash
 npm install      # 於 repo 根目錄，安裝 workspace 依賴
-npm test         # vitest，目前 559 個測試全綠
+npm test         # vitest，目前 572 個測試全綠
 npm run typecheck
 ```
 
@@ -676,7 +676,7 @@ Agent A 的能力邊界也寫在型別裡：`BankAssessment.requiresHumanReview`
 | 交件 | 位置 |
 |---|---|
 | 挑戰命題 | **Track 05（主賽道）＋ Track 06（加分題）**——主辦載明命題 06 為 Track 01 延伸的加分題、可與其他命題同時挑戰，本作品同時交付兩軌，對照見上 |
-| 程式碼 | 本 repo（CI 每次 push 跑 559 tests + `demo:vlei` 閘門） |
+| 程式碼 | 本 repo（CI 每次 push 跑 572 tests + `demo:vlei` 閘門） |
 | 簡報 | <https://zuemen.github.io/evidence-at-source/slides.html>（←→ 翻頁） |
 | Demo | <https://zuemen.github.io/evidence-at-source/>（免安裝）＋[講稿](docs/demo-video-script.md) |
 | 治理／信任設計說明 | [`docs/governance-memo.md`](docs/governance-memo.md)（六信任點逐點＋證據） |
@@ -700,7 +700,7 @@ Agent A 的能力邊界也寫在型別裡：`BankAssessment.requiresHumanReview`
 
 | 邊界 | 現況 | 要補什麼 |
 |---|---|---|
-| **生物辨識綁定** | 兩側都已實作：閘門檢查 assertion／`userVerified`／裝置比對／fail-closed，前端 `packages/web/src/wallet/webauthn.ts` 用真的 `navigator.credentials` 產生 assertion，私鑰留在安全元件。**未做的是 relying-party 伺服器端驗簽**——demo 沒有後端，所以簽章本身沒有被密碼學驗證，只驗了 UV 旗標與裝置比對 | 正式部署要有 RP server 保存公鑰並驗 assertion 簽章 |
+| **生物辨識綁定** | 三側都已實作：閘門檢查 assertion／`userVerified`／裝置比對／fail-closed；前端 `packages/web/src/wallet/webauthn.ts` 用真的 `navigator.credentials` 產生 assertion，私鑰留在安全元件；**relying-party 驗簽已補上**（[`relyingParty.ts`](packages/shared/src/relyingParty.ts)）——重算 `authenticatorData ‖ SHA-256(clientDataJSON)` 上的 ES256 簽章，並檢查 `type` 為 `webauthn.get`、challenge 是本方發的、origin 相符、rpIdHash 相符、UV 旗標讀自簽名資料而非外層 JSON。**剩下的邊界**：這段驗證跑在瀏覽器內（demo 無後端），所以它證明的是「這張斷言驗得過」，不是「某台伺服器獨立驗過並留存」；且公鑰信任錨仍是註冊當下的註冊表 | 正式部署把同一個 verifier 放到 RP 伺服器，公鑰改由註冊表持久化保存 |
 | **勞工端金鑰遺失與輪替** | 未實作。機構層已有 KERI pre-rotation，勞工層沒有 | 勞工層的輪替流程與既有憑證的重新反簽 |
 | **ZK 可信設定** | 單方 demo 等級儀式 | 多方儀式或改用 universal setup，見 [`docs/zk-reconciliation.md`](docs/zk-reconciliation.md) |
 | **與真實系統的介接** | 介接**邊界**已定型並有測試（[`packages/adapters`](packages/adapters)），但**沒有接上任何真實系統**——沒有聯徵、沒有移民署、沒有任何工廠打卡機 | P1 試點的第一件工程工作；憑證結構與閘門本身不需要改 |

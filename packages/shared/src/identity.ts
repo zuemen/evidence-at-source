@@ -45,6 +45,19 @@ export interface DeviceAssertion {
   /** The authenticator's user-verification flag. False is always a rejection. */
   readonly userVerified: boolean;
   readonly signature: string;
+  /**
+   * The authenticator's own signed output, base64url — rpIdHash, flags, counter.
+   *
+   * Optional in the type and required in practice by any verifier that checks
+   * signatures: `createRelyingPartyVerifier` refuses an assertion without it,
+   * because the fields above are the wallet's description of what happened and
+   * this is the part the device actually signed. Optional rather than required
+   * so that the four work credentials, counter-signed long before any bank is
+   * involved, are not forced to carry authenticator output they never had.
+   */
+  readonly authenticatorData?: string;
+  /** The client data the browser bound to the ceremony, base64url. */
+  readonly clientDataJSON?: string;
 }
 
 export type AssertionVerifier = (assertion: DeviceAssertion) => boolean | Promise<boolean>;
