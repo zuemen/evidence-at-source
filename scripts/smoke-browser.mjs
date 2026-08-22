@@ -48,12 +48,35 @@ async function waitForServer(timeoutMs = 30_000) {
  * Passed as a function rather than a string — page.evaluate treats a string as
  * an expression, so a stringified arrow just evaluates to a function object and
  * every check silently passes.
+ *
+ * One exemption, and it is the standard's own rather than a convenience: WCAG
+ * 2.2 SC 2.5.8 does not apply the minimum to a target that sits inline inside a
+ * sentence, because enlarging it would break the line it lives in. A licence
+ * note linking to THIRD-PARTY-LICENSES.md mid-paragraph is exactly that case.
+ * The exemption is narrow on purpose — an inline element whose parent holds no
+ * other text is a control someone made look like a link, and stays measured.
  */
 function findSmallTargets(minimum) {
   const tooSmall = [];
+  const isInlineInSentence = (el) => {
+    if (el.tagName !== 'A') return false;
+    if (getComputedStyle(el).display !== 'inline') return false;
+    const parent = el.parentElement;
+    if (parent === null) return false;
+
+    const surrounding = [...parent.childNodes]
+      .filter((node) => node !== el)
+      .map((node) => node.textContent ?? '')
+      .join('')
+      .trim();
+
+    return surrounding.length > 0;
+  };
+
   for (const el of document.querySelectorAll('button, a[href], input, select')) {
     const rect = el.getBoundingClientRect();
     if (rect.width === 0 || rect.height === 0) continue;
+    if (isInlineInSentence(el)) continue;
 
     const after = getComputedStyle(el, '::after');
     let grow = 0;
