@@ -79,39 +79,11 @@ Agent B 代表品牌，它能做的只有：回答「這批供應商在這個週
 
 原因碼必須語意自明——讀到就知道為什麼被拒，不需要查表。
 
-**目前已定義的原因碼**（新增前先確認是否已有涵蓋的）：
-
-| 原因碼 | 層 |
-|---|---|
-| `AGENT_DELEGATION_MISSING` | L0 |
-| `AGENT_DELEGATION_INVALID` | L0 |
-| `AGENT_DELEGATION_EXPIRED` | L0 |
-| `AGENT_DELEGATION_REVOKED` | L0 |
-| `QUERY_TYPE_NOT_IN_SCOPE` | L0 |
-| `CREDENTIAL_TYPE_NOT_IN_SCOPE` | L0 |
-| `AGENT_VLEI_MISSING` | L0 |
-| `AGENT_VLEI_CHAIN_INVALID` | L0 |
-| `AGENT_VLEI_REVOKED` | L0 |
-| `AGENT_VLEI_BINDING_MISMATCH` | L0 |
-| `ISSUER_VLEI_CHAIN_INVALID` | L1 |
-| `ISSUER_VLEI_REVOKED` | L1 |
-| `INVALID_ISSUER_SIGNATURE` | L1 |
-| `MISSING_WORKER_ATTESTATION` | L1 |
-| `ATTESTATION_HASH_MISMATCH` | L1 |
-| `CREDENTIAL_REVOKED` | L1 |
-| `CREDENTIAL_EXPIRED` | L1 |
-| `CLAIM_NOT_DISCLOSED` | L1 |
-| `ISSUER_TIER_BELOW_THRESHOLD` | L1 |
-| `CREDENTIAL_FACILITY_MISMATCH` | L1 |
-| `POLICY_CHECK_FAILED` | L1 |
-| `INDIVIDUAL_QUERY_REJECTED` | L2 |
-| `AGGREGATE_BELOW_K_ANONYMITY` | L2 |
-| `DIFFERENCING_ATTACK_DETECTED` | L2 |
-| `QUERY_BUDGET_EXCEEDED` | L2 |
-| `REQUIRES_ONSITE_AUDIT` | L2 |
-| `PROOF_INVALID` | ZK 綁定 |
-| `PROOF_BINDING_MISMATCH` | ZK 綁定 |
-| `PROOF_SUBJECT_MISMATCH` | ZK 綁定 |
+**原因碼的單一事實來源是 `packages/shared/src/reasonCodes.ts`**——新增前先讀該檔，
+確認是否已有涵蓋的碼。這裡刻意不再維護一份對照表：上一份表在原因碼長到 54 枚時
+只列了 29 枚，而一份會過期的表比沒有表更糟——讀的人以為自己看到了全部。
+該檔內每一枚碼旁都有註解說明它與相鄰碼的差異（例如 `POLICY_CHECK_FAILED` 與
+`CLAIM_NOT_DISCLOSED` 為何要分開），那些註解就是本節原本想承載的內容。
 
 ---
 
@@ -141,7 +113,7 @@ Agent B 代表品牌，它能做的只有：回答「這批供應商在這個週
 
 理由：這兩個情境分別對應「工廠無法單方造假」與「品牌拿不到員工明細」，是整個專案的兩根支柱。**其餘功能再完整，這兩個跑不起來就沒有故事。**
 
-T1–T7 的完整定義見 `docs/BUILD-SPEC-開發規格書.md`。實作排程：
+T1–T7 的完整定義以測試為準（`packages/agents/test/` 的 scenario 測試），命題對照見 README〈命題對照〉。實作排程：
 
 | 階段 | 範圍 | 完成標準 |
 |---|---|---|

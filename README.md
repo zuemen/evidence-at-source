@@ -306,7 +306,7 @@ flowchart TD
 | `ContractConsentCredential` | 仲介公司 | 是 | `nativeLanguageVersionProvided`、`language`、`consentTimestamp` | `salaryAmount`、`contractDocumentHash` |
 | `WorkingHoursCredential` | 工廠打卡系統 | 是 | `withinRBALimit`、`periodStart`、`valueCommitment` | `totalHours`、`overtimeHours`、`commitmentSalt` |
 
-這四張講的是「關於這個人的事」。另有兩張講別的事，作用不同所以不併在上表：`SalaryDepositCredential`（銀行簽發，用途是引入一個工廠控制不了的資料源做交叉對帳）與 `ResidencyCredential`（移民署簽發，用途是證明**這個錢包就是這個人**——見下方機制 4）。
+這四張講的是「關於這個人的事」。另有三張講別的事，作用不同所以不併在上表：`SalaryDepositCredential`（銀行簽發，用途是引入一個工廠控制不了的資料源做交叉對帳）、`ResidencyCredential`（移民署簽發，用途是證明**這個錢包就是這個人**——見下方機制 4）、`SelfReportedHoursCredential`（勞工自簽，用途是讓「工廠整段漏報」可被偵測——見 [`docs/self-reported-hours.md`](docs/self-reported-hours.md)）。
 
 完整欄位定義（含「不入憑證」的項目）見 [`docs/credentials.md`](docs/credentials.md)。
 
@@ -659,7 +659,7 @@ Agent A 的能力邊界也寫在型別裡：`BankAssessment.requiresHumanReview`
 | 文件 | 內容 |
 |---|---|
 | [`CLAUDE.md`](CLAUDE.md) | 施工守則：三條不可違反原則 |
-| [`docs/credentials.md`](docs/credentials.md) | 四張憑證的完整欄位表 |
+| [`docs/credentials.md`](docs/credentials.md) | 全部七張憑證的完整欄位表 |
 | [`docs/vlei.md`](docs/vlei.md) | vLEI 機構信任層：信任鏈、schema profiles、明文簡化 |
 | [`docs/vlei-defense.md`](docs/vlei-defense.md) | vLEI 技術防禦 Q&A：每個回答附可執行證據 |
 | [`docs/governance-memo.md`](docs/governance-memo.md) | 治理／信任設計說明：六信任點逐點＋證據（必交件） |
