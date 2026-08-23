@@ -1,4 +1,5 @@
 import type { AttackDemoState, IntegrityDemoState } from '../demo/world.js';
+import { Reason } from './gloss.js';
 
 interface Props {
   readonly attack: AttackDemoState;
@@ -126,10 +127,10 @@ export function AttackIntegrityView({ attack, integrity, busy, onReset }: Props)
           <p className="note" style={{ margin: '0.9rem 0 0.3rem' }}>
             <strong>② 規則守衛抓到的違規</strong>（純規則，不呼叫模型）
           </p>
-          <ul style={{ margin: 0, paddingLeft: '1.2rem' }}>
+          <ul className="reason-list" style={{ margin: 0 }}>
             {attack.t8.explain.violations.map((v) => (
-              <li key={v} style={{ fontFamily: 'var(--mono)', fontSize: '0.74rem', color: 'var(--rust)' }}>
-                {v}
+              <li key={v}>
+                <Reason code={v} />
               </li>
             ))}
           </ul>
@@ -191,8 +192,7 @@ export function AttackIntegrityView({ attack, integrity, busy, onReset }: Props)
                     className="note"
                     style={{ margin: '0.4rem 0 0', color: 'var(--rust)', fontSize: '0.76rem' }}
                   >
-                    DENIED — {step.reason}
-                    <br />
+                    <Reason code={step.reason ?? 'DENIED'} />
                     {step.explanation}
                     <br />
                     已記錄於審計鏈 #{step.auditRef}

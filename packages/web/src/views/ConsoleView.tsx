@@ -11,6 +11,7 @@ import type {
   ZkProofResult,
 } from '../demo/world.js';
 import { TrustChainPanel } from './TrustChainPanel.js';
+import { Act, Field, Reason } from './gloss.js';
 
 interface Props {
   readonly snapshot: DemoSnapshot;
@@ -158,6 +159,12 @@ export function ConsoleView({
         <strong>拿不到任何原始數字</strong>。可以按紅色的「模擬」按鈕看撤銷當下會發生什麼。
       </p>
 
+      <Act
+        n={1}
+        title="誰在查？——先驗查驗者自己"
+        lead="任何 Agent 開口之前，先驗它的機構身分與授權。信任是一條可以撤銷的憑證鏈，不是一份設定檔名單。"
+      />
+
       <TrustChainPanel
         vlei={vlei}
         busy={busy}
@@ -183,6 +190,12 @@ export function ConsoleView({
         </button>
       </div>
 
+      <Act
+        n={2}
+        title="同一批證據，兩種答案"
+        lead="銀行問的是一個人（他能不能開戶），品牌問的是一群人（這條產線合不合規）。兩邊都只拿到結論——實際數字那個欄位，密碼學上不存在。"
+      />
+
       <div className="split">
         <div className="split-pane">
           <h2>建議核准，待人類覆核</h2>
@@ -196,7 +209,9 @@ export function ConsoleView({
                 拒絕
               </p>
               <ul className="reason-list">
-                <li>{split.bank.refusedWith}</li>
+                <li>
+                  <Reason code={split.bank.refusedWith as string} />
+                </li>
               </ul>
               <p className="note">
                 {bankRefusedAtL0
@@ -219,16 +234,16 @@ export function ConsoleView({
               <div style={{ marginTop: '1.4rem' }}>
                 {Object.entries(split.bank.disclosed).map(([key, value]) => (
                   <div className="claim-row" key={key}>
-                    <span className="name">{key}</span>
+                    <Field name={key} />
                     <span className="value">{String(value)}</span>
                   </div>
                 ))}
                 <div className="claim-row">
-                  <span className="name">feeAmount</span>
+                  <Field name="feeAmount" />
                   <span className="redacted" role="img" aria-label="此欄位未揭露" />
                 </div>
                 <div className="claim-row">
-                  <span className="name">salaryAmount</span>
+                  <Field name="salaryAmount" />
                   <span className="redacted" role="img" aria-label="此欄位未揭露" />
                 </div>
               </div>
@@ -236,7 +251,9 @@ export function ConsoleView({
               {split.bank.assessment !== null && split.bank.assessment.reasons.length > 0 && (
                 <ul className="reason-list">
                   {split.bank.assessment.reasons.map((reason, i) => (
-                    <li key={`${reason}-${i}`}>{reason}</li>
+                    <li key={`${reason}-${i}`}>
+                      <Reason code={reason} />
+                    </li>
                   ))}
                 </ul>
               )}
@@ -290,7 +307,9 @@ export function ConsoleView({
                 拒絕
               </p>
               <ul className="reason-list">
-                <li>{split.brand.refusedWith}</li>
+                <li>
+                  <Reason code={split.brand.refusedWith as string} />
+                </li>
               </ul>
               <p className="note">L0 授權層就攔下了，Agent 一個勞工欄位都沒讀到。</p>
             </>
@@ -302,7 +321,7 @@ export function ConsoleView({
               <div style={{ marginTop: '1.4rem' }}>
                 {brandAnswer.disclosure === 'rate' ? (
                   <div className="claim-row">
-                    <span className="name">workingHoursComplianceRate</span>
+                    <Field name="workingHoursComplianceRate" />
                     <span className="value">{(brandAnswer.rate * 100).toFixed(0)}%</span>
                   </div>
                 ) : (
@@ -318,7 +337,7 @@ export function ConsoleView({
                   </div>
                 )}
                 <div className="claim-row">
-                  <span className="name">cohortSize</span>
+                  <Field name="cohortSize" />
                   <span className="value">{brandAnswer.cohortSize}</span>
                 </div>
                 <div className="claim-row">
@@ -326,7 +345,7 @@ export function ConsoleView({
                   <span className="redacted" role="img" aria-label="此欄位未揭露" />
                 </div>
                 <div className="claim-row">
-                  <span className="name">totalHours</span>
+                  <Field name="totalHours" />
                   <span className="redacted" role="img" aria-label="此欄位未揭露" />
                 </div>
               </div>
@@ -337,7 +356,9 @@ export function ConsoleView({
                 拒答
               </p>
               <ul className="reason-list">
-                <li>{brandAnswer.reason}</li>
+                <li>
+                  <Reason code={brandAnswer.reason} />
+                </li>
               </ul>
             </>
           )}
@@ -346,11 +367,13 @@ export function ConsoleView({
             <p className="note" style={{ marginTop: '1.4rem' }}>
               個體查詢的回應：
               <br />
-              <code style={{ fontFamily: 'var(--mono)', color: 'var(--rust)' }}>
-                {split.brand.individualQuery?.ok === false
-                  ? split.brand.individualQuery.reason
-                  : 'UNEXPECTED'}
-              </code>
+              <Reason
+                code={
+                  split.brand.individualQuery?.ok === false
+                    ? split.brand.individualQuery.reason
+                    : 'UNEXPECTED'
+                }
+              />
             </p>
           )}
 
@@ -362,8 +385,8 @@ export function ConsoleView({
             </ul>
           )}
 
-          <div style={{ marginTop: '1.4rem' }}>
-            <h3>RBA 項目：憑證能答的與不能答的</h3>
+          <details className="aside-panel" style={{ marginTop: '1.4rem' }}>
+            <summary>RBA 項目：憑證能答的與不能答的（{rbaItems.length} 項）</summary>
             <p className="note" style={{ margin: '0 0 0.5rem' }}>
               系統明說自己不能取代什麼。未列在分類表上的項目回 CLAIM_NOT_DISCLOSED，而不是默默作答。
             </p>
@@ -371,13 +394,23 @@ export function ConsoleView({
               {rbaItems.map((row) => (
                 <li key={row.item}>
                   <code style={{ fontFamily: 'var(--mono)' }}>{row.item}</code> —{' '}
-                  {row.verdict === 'CREDENTIAL_ANSWERABLE' ? '憑證可答' : row.verdict}
+                  {row.verdict === 'CREDENTIAL_ANSWERABLE'
+                    ? '憑證可答'
+                    : row.verdict === 'REQUIRES_ONSITE_AUDIT'
+                      ? '必須實地查核（憑證答不了）'
+                      : row.verdict}
                 </li>
               ))}
             </ul>
-          </div>
+          </details>
         </div>
       </div>
+
+      <Act
+        n={3}
+        title="出事的時候——每一種失效都當場演給你看"
+        lead="撤銷、除名、離職、竄改、剪尾巴：每一個紅色按鈕都是一種攻擊。失效是鏈的結果，不是誰去同步了名單。"
+      />
 
       {audit.length > 0 && (
         <details className="audit-panel">
@@ -389,7 +422,7 @@ export function ConsoleView({
                   {entry.layer} {entry.decision}
                 </span>{' '}
                 #{entry.seq} · {entry.agentRole} · {entry.action}
-                {entry.reason !== null && <> · {entry.reason}</>}
+                {entry.reason !== null && <> · <Reason code={entry.reason} /></>}
                 {entry.basis.ecrSaid !== null && (
                   <span className="audit-basis"> · ECR {entry.basis.ecrSaid.slice(0, 12)}…</span>
                 )}
@@ -661,8 +694,8 @@ export function ConsoleView({
         )}
       </div>
 
-      <div className="panel" style={{ marginTop: '1rem' }}>
-        <h3 style={{ margin: '0 0 0.4rem' }}>Disclosure Design：兩個 Seat 各自看到什麼</h3>
+      <details className="aside-panel">
+        <summary>附錄 · Disclosure Design：兩個 Seat 各自看到什麼（由 schema 推導）</summary>
         <p className="note" style={{ margin: '0 0 0.6rem' }}>
           這張表由憑證 schema 的公開／隱藏定義推導，與簽發方產生 SD-JWT{' '}
           <code>_sd</code> 摘要用的是同一份來源。
@@ -700,7 +733,7 @@ export function ConsoleView({
           身分在匯總之前就消失了，Agent 手上只有一串沒有識別資訊的布林值。「列出回報超時的勞工」
           對它來說不是會被拒絕的查詢，是<strong>沒有資料可以回答</strong>的查詢。
         </p>
-      </div>
+      </details>
 
       <p className="footnote">
         每個 Agent 各自持有機構簽發的授權憑證（<strong>L0</strong>）。閘門順序是

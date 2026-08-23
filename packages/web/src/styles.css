@@ -920,7 +920,7 @@ code {
 
 .disclosure-design th,
 .disclosure-design td {
-  border: 1px solid var(--border, #d5d5d5);
+  border: 1px solid var(--line);
   padding: 0.45rem 0.55rem;
   text-align: left;
   vertical-align: top;
@@ -935,7 +935,8 @@ code {
   margin: 0.1rem 0.25rem 0.1rem 0;
   padding: 0.05rem 0.3rem;
   border-radius: 3px;
-  background: rgba(0, 0, 0, 0.06);
+  background: var(--paper-raised);
+  font-size: 0.72rem;
 }
 
 /* Withheld fields are struck through: the point is that they are absent, not
@@ -943,4 +944,135 @@ code {
 .disclosure-design code.withheld {
   text-decoration: line-through;
   opacity: 0.75;
+}
+
+
+/* ── the plain-language layer ─────────────────────────────
+   Glossed field names, glossed reason codes, and numbered act
+   dividers. The identifiers stay on screen — the page must show
+   exactly what a grep of the repo finds — but they stop being
+   the only thing a first-time reader gets. */
+
+.field-name {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.field-gloss {
+  font-family: var(--serif);
+  font-size: 0.84rem;
+  color: var(--text-dim);
+  letter-spacing: 0;
+}
+
+.field-id {
+  font-size: 0.64rem;
+  color: var(--text-faint);
+  overflow-wrap: anywhere;
+}
+
+.reason {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.reason-code {
+  color: var(--rust);
+  font-size: 0.74rem;
+  overflow-wrap: anywhere;
+}
+
+.reason-gloss {
+  font-family: var(--serif);
+  font-size: 0.82rem;
+  color: var(--text-dim);
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.reason-list li {
+  line-height: 1.5;
+}
+
+/* Act dividers: the console's spine. Oversized numeral, quiet rule. */
+.act-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 1.1rem;
+  margin: 3rem 0 1.2rem;
+  padding-top: 1.6rem;
+  border-top: 1px solid var(--line);
+}
+
+.act-header:first-of-type {
+  margin-top: 1.5rem;
+}
+
+.act-n {
+  font-family: var(--mono);
+  font-size: 2.4rem;
+  font-weight: 300;
+  line-height: 1;
+  color: var(--jade);
+  opacity: 0.85;
+  min-width: 1.4ch;
+}
+
+.act-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin: 0 0 0.25rem;
+  letter-spacing: -0.01em;
+}
+
+.act-lead {
+  margin: 0;
+  color: var(--text-dim);
+  font-size: 0.9rem;
+  line-height: 1.65;
+  max-width: 64ch;
+}
+
+/* Wallet card headers: the story first, the type name kept underneath. */
+.card .card-story {
+  margin: 0 0 1rem;
+  color: var(--text-dim);
+  font-size: 0.84rem;
+  line-height: 1.6;
+}
+
+.card h3 .card-type {
+  display: block;
+  font-size: 0.64rem;
+  font-weight: 400;
+  color: var(--text-faint);
+  letter-spacing: 0.02em;
+  margin-top: 0.2rem;
+}
+
+/* Secondary detail folded away rather than stacked into the wall. */
+details.aside-panel {
+  margin-top: 1.1rem;
+  border: 1px solid var(--line);
+  background: var(--paper);
+  padding: 1.05rem 1.4rem;
+}
+
+details.aside-panel summary {
+  cursor: pointer;
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  color: var(--text-dim);
+}
+
+details.aside-panel summary:hover {
+  color: var(--text);
+}
+
+details.aside-panel[open] summary {
+  margin-bottom: 0.8rem;
 }

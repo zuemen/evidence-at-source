@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { AllowedQueryType } from '@eas/shared';
 import type { DemoSnapshot } from '../demo/world.js';
 import type { WalletDelegationView } from '../wallet/reviewDelegation.js';
+import { CREDENTIAL_META, Field, ISSUER_GLOSS, REASON_GLOSS, Reason } from './gloss.js';
 
 interface Props {
   readonly snapshot: DemoSnapshot;
@@ -11,24 +12,6 @@ interface Props {
   readonly onAttestAll: () => void;
   readonly onReset: () => void;
 }
-
-const CREDENTIAL_LABELS: Record<string, string> = {
-  RecruitmentFeeCredential: '仲介費憑證',
-  DocumentCustodyCredential: '證件保管憑證',
-  ContractConsentCredential: '契約同意憑證',
-  WorkingHoursCredential: '工時憑證',
-};
-
-const REFUSAL_LABELS: Record<string, string> = {
-  AGENT_DELEGATION_MISSING: '此 Agent 未持有任何授權憑證',
-  AGENT_DELEGATION_INVALID: '此 Agent 的授權簽章與其 vLEI 法人公鑰不符',
-  AGENT_DELEGATION_EXPIRED: '此 Agent 的授權已過期',
-  AGENT_DELEGATION_REVOKED: '此 Agent 的授權已被機構撤銷',
-  AGENT_VLEI_MISSING: '此 Agent 未出示 vLEI 授權鏈',
-  AGENT_VLEI_CHAIN_INVALID: '此 Agent 的 vLEI 信任鏈驗證失敗——簽章、內容或信任根不成立',
-  AGENT_VLEI_REVOKED: '此 Agent 的 vLEI 信任鏈上有憑證已被撤銷',
-  AGENT_VLEI_BINDING_MISMATCH: '授權憑證與 vLEI 鏈指向不同的 Agent 或機構',
-};
 
 function ShieldCheck(): JSX.Element {
   return (
@@ -80,17 +63,19 @@ function DelegationCard({ review }: { review: WalletDelegationView }): JSX.Eleme
           拒絕出示
         </p>
         <p className="note">
-          {REFUSAL_LABELS[review.reason] ?? review.reason}。錢包不提供出示按鈕——
+          {REASON_GLOSS[review.reason] ?? review.reason}。錢包不提供出示按鈕——
           在確認 Agent 有正當授權之前，你的任何憑證都不會被讀取。
         </p>
         <ul className="reason-list">
-          <li>{review.reason}</li>
+          <li>
+            <Reason code={review.reason} />
+          </li>
         </ul>
       </article>
     );
   }
 
-  const scopeLabels = review.scope.map((t) => CREDENTIAL_LABELS[t] ?? t).join('、');
+  const scopeLabels = review.scope.map((t) => CREDENTIAL_META[t]?.label ?? t).join('、');
 
   return (
     <article className="card" data-state="pending" style={{ marginBottom: '1.6rem' }}>
@@ -212,21 +197,30 @@ export function WalletView({
               }
               style={{ animationDelay: `${index * 60}ms`, opacity: outOfScope ? 0.55 : 1 }}
             >
-              <h3>{credential.type}</h3>
-              <p className="issuer">{credential.issuer}</p>
+              <h3>
+                {CREDENTIAL_META[credential.type]?.label ?? credential.type}
+                <span className="card-type">{credential.type}</span>
+              </h3>
+              <p className="issuer">
+                簽發：{ISSUER_GLOSS[credential.issuer] ?? credential.issuer} ·{' '}
+                {credential.issuer}
+              </p>
+              {CREDENTIAL_META[credential.type]?.story !== undefined && (
+                <p className="card-story">{CREDENTIAL_META[credential.type]?.story}</p>
+              )}
 
               {credential.publicFields.map((field) => (
                 <div className="claim-row" key={field}>
-                  <span className="name">{field}</span>
+                  <Field name={field} />
                   <span className="value">
-                    {field === credential.headlineClaim ? 'true' : '已揭露'}
+                    {field === credential.headlineClaim ? 'true ✓' : '已揭露'}
                   </span>
                 </div>
               ))}
 
               {credential.hiddenFields.map((field) => (
                 <div className="claim-row" key={field}>
-                  <span className="name">{field}</span>
+                  <Field name={field} />
                   <span
                     className="redacted"
                     role="img"
