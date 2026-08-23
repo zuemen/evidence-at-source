@@ -399,6 +399,57 @@ export function ConsoleView({
         </details>
       )}
 
+      {/* The one thing a hash chain cannot do — demonstrated rather than described.
+          Hidden on an empty trail: truncating nothing proves nothing. */}
+      {governance.tailTruncation.anchoredAt > 1 && (
+      <article
+        className="card"
+        data-state="pending"
+        data-tour-anchor="tail-truncation"
+        style={{ marginTop: '1rem' }}
+      >
+        <h3>把尾巴剪掉——鏈驗證抓不到，檢查點抓得到</h3>
+        <p className="issuer">
+          雜湊鏈能證明「中間沒被改」，證明不了「後面沒被剪掉」
+        </p>
+
+        <div className="claim-row">
+          <span className="name">檢查點發布時，軌跡長度</span>
+          <span className="value">{governance.tailTruncation.anchoredAt} 筆</span>
+        </div>
+        <div className="claim-row">
+          <span className="name">持有者交出的長度</span>
+          <span className="value" style={{ color: 'var(--rust)' }}>
+            {governance.tailTruncation.truncatedTo} 筆（少一筆）
+          </span>
+        </div>
+        <div className="claim-row">
+          <span className="name">① 雜湊鏈驗證這份被剪過的軌跡</span>
+          <span className="value" style={{ color: 'var(--amber)' }}>
+            {governance.tailTruncation.chainStillVerifies ? '通過 ✓（抓不到）' : '失敗'}
+          </span>
+        </div>
+        <div className="claim-row">
+          <span className="name">② 對照外部檢查點</span>
+          <span className="value" style={{ color: 'var(--rust)' }}>
+            {governance.tailTruncation.anchorFailure ?? '通過'}
+          </span>
+        </div>
+
+        <p className="note" style={{ marginTop: '1rem' }}>
+          被截斷的鏈<strong>仍然是一條有效的鏈</strong>——所以①理所當然通過。要抓到它，
+          必須有一個持有者改不動的外部紀錄：<code>TAIL_TRUNCATED</code> 不是「未驗證」，
+          <strong>是被反證</strong>。
+        </p>
+        <p className="note" style={{ marginTop: '0.5rem', opacity: 0.75 }}>
+          誠實標註：檢查點<strong>之後</strong>錄的條目仍可被丟掉——這個窗口的大小由
+          <code>checkpointGap</code> 主動回報，目前為 {governance.tailTruncation.unprotectedWindow} 筆。
+          demo 用的 <code>createLocalAnchorLog</code> <strong>不提供任何獨立性</strong>
+          （同一個程序同時持有軌跡與檢查點），命名帶 Local 就是為此；真正的錨定是部署要填的接縫。
+        </p>
+      </article>
+      )}
+
       <div className="panel">
         <p className="kind">Audit · 盡職調查</p>
         <h3>查驗收據（被質疑時可出示）</h3>

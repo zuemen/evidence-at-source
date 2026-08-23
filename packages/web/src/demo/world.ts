@@ -41,7 +41,10 @@ import {
 import {
   buildCohortEvidence,
   checkCredentialLayer,
+  checkpointFor,
   createAuditTrail,
+  createLocalAnchorLog,
+  verifyAgainstCheckpoints,
   createVerificationLog,
   issueVerificationReceipt,
   verifyReceipt,
@@ -323,6 +326,27 @@ export interface GovernanceState {
     readonly sealed: boolean;
     readonly verifiedEntries: number;
     readonly failure: string | null;
+  };
+  /**
+   * The one thing a hash chain cannot do, and what covers it.
+   *
+   * Chaining catches an altered or removed entry in the middle. It cannot
+   * catch a holder who publishes a shorter prefix — every entry intact, the
+   * embarrassing ones simply absent. So this runs the demonstration in the
+   * open: truncate the trail, re-verify it (it passes), then check it against
+   * a checkpoint published while it was longer (it does not).
+   */
+  readonly tailTruncation: {
+    /** How long the trail was when the checkpoint was published. */
+    readonly anchoredAt: number;
+    /** How long the holder claims it is. */
+    readonly truncatedTo: number;
+    /** Chain verification of the truncated trail — passes. That is the point. */
+    readonly chainStillVerifies: boolean;
+    /** The checkpoint's verdict on the same trail. */
+    readonly anchorFailure: string | null;
+    /** Entries recorded since the last checkpoint: the window still unprotected. */
+    readonly unprotectedWindow: number;
   };
 }
 
@@ -1380,10 +1404,22 @@ export async function createDemoWorld(): Promise<DemoWorld> {
     async governanceState() {
       const standing = auditors.standing(AUDITOR_DID);
       const reviewer = resolveReviewerAuthority(reviewerOor, eco.trust, REVIEWER_ROLE);
+      const exported = await audit.export();
       const integrity = await verifyAuditTrail(
-        await audit.export(),
+        exported,
         requireIssuerKey(bank) as unknown as PublicJwk,
       );
+
+      // The tail-truncation demonstration, run live rather than described.
+      // A checkpoint is published at the trail's current head, the holder then
+      // hands over everything but the last entry, and the two verifications
+      // disagree — which is the whole reason the checkpoint exists.
+      const anchorLog = createLocalAnchorLog();
+      const checkpoint = checkpointFor(exported);
+      if (checkpoint !== null) await anchorLog.publish(checkpoint);
+      const truncated = exported.slice(0, Math.max(0, exported.length - 1));
+      const chainOnTruncated = await verifyAuditTrail(truncated);
+      const againstCheckpoint = verifyAgainstCheckpoints(truncated, anchorLog.checkpoints());
 
       return {
         workingHoursChainTier: chainTierOf(requireIssuerKey(factory)) ?? 'SELF_DECLARED',
@@ -1397,6 +1433,13 @@ export async function createDemoWorld(): Promise<DemoWorld> {
           sealed: integrity.ok ? integrity.sealed : false,
           verifiedEntries: integrity.ok ? integrity.verifiedEntries : 0,
           failure: integrity.ok ? null : integrity.reason,
+        },
+        tailTruncation: {
+          anchoredAt: checkpoint?.seq ?? 0,
+          truncatedTo: truncated.length,
+          chainStillVerifies: chainOnTruncated.ok,
+          anchorFailure: againstCheckpoint.ok ? null : againstCheckpoint.reason,
+          unprotectedWindow: againstCheckpoint.ok ? againstCheckpoint.checkpointGap : 0,
         },
       };
     },
