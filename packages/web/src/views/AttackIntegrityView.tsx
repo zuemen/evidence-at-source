@@ -91,6 +91,77 @@ export function AttackIntegrityView({ attack, integrity, busy, onReset }: Props)
             <strong>判斷路徑上沒有任何 LLM</strong>，注入的是資料，不是指令。一個守門測試掃描所有原始碼、
             確認沒有檔案 import LLM client。
           </p>
+
+          <hr style={{ border: 'none', borderTop: '1px solid var(--line)', margin: '1.1rem 0' }} />
+
+          <h3 style={{ fontSize: '0.95rem' }}>那如果模型真的讀到了呢？</h3>
+          <p className="issuer">
+            系統裡唯一允許模型存在的位置：把<strong>已經作成的判定</strong>寫成人話
+          </p>
+
+          <div className="claim-row">
+            <span className="name">閘門的判定（模型不能更動）</span>
+            <span className="value" style={{ color: 'var(--rust)' }}>
+              {attack.t8.explain.recommendation}
+            </span>
+          </div>
+
+          <p className="note" style={{ margin: '0.9rem 0 0.3rem' }}>
+            <strong>① 模型在注入影響下寫出的草稿</strong>
+          </p>
+          <div
+            style={{
+              fontFamily: 'var(--mono)',
+              fontSize: '0.72rem',
+              color: 'var(--rust)',
+              background: 'var(--paper-raised)',
+              border: '1px dashed var(--rust)',
+              padding: '0.7rem',
+              wordBreak: 'break-word',
+            }}
+          >
+            {attack.t8.explain.modelDraft}
+          </div>
+
+          <p className="note" style={{ margin: '0.9rem 0 0.3rem' }}>
+            <strong>② 規則守衛抓到的違規</strong>（純規則，不呼叫模型）
+          </p>
+          <ul style={{ margin: 0, paddingLeft: '1.2rem' }}>
+            {attack.t8.explain.violations.map((v) => (
+              <li key={v} style={{ fontFamily: 'var(--mono)', fontSize: '0.74rem', color: 'var(--rust)' }}>
+                {v}
+              </li>
+            ))}
+          </ul>
+
+          <p className="note" style={{ margin: '0.9rem 0 0.3rem' }}>
+            <strong>③ 覆核者實際看到的內容</strong>
+            {attack.t8.explain.source === 'offline' ? '（草稿已丟棄，改用確定性樣板）' : ''}
+          </p>
+          <div
+            style={{
+              fontFamily: 'var(--mono)',
+              fontSize: '0.72rem',
+              color: 'var(--jade)',
+              background: 'var(--paper-raised)',
+              border: '1px solid var(--jade)',
+              padding: '0.7rem',
+              wordBreak: 'break-word',
+            }}
+          >
+            {attack.t8.explain.shown}
+          </div>
+
+          <p className="note" style={{ marginTop: '1rem' }}>
+            注入確實改變了模型寫的字——<strong>但改變不了送到人眼前的判定</strong>。
+            守衛是純規則：會被同一個注入說服的守衛，等於沒有守衛。
+          </p>
+          <p className="note" style={{ marginTop: '0.5rem', opacity: 0.75 }}>
+            誠實標註：①的模型輸出是<strong>預錄樣本</strong>——這個 demo 是靜態站、沒有 API key，
+            也必須能在斷網的會場運作。②③是<strong>當場真的執行</strong>
+            <code>checkExplanation</code> 與 <code>guardExplainer</code> 的結果。真實模型接線見
+            <code>packages/explain/src/claude.ts</code>。
+          </p>
         </article>
 
         {/* T9 — differencing attack */}

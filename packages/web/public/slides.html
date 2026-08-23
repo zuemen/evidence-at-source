@@ -208,6 +208,7 @@
     <tr><th>銀行</th><td>四項事實一次出示、只拿布林；離境即撤銷級聯——<strong>開戶之後才有東西可以評估</strong></td></tr>
   </table>
   <p class="bar jade">MGPay 用 PCODE 2566 解開戶（通路與 KYC），我們證明<strong>關於這個人的事實</strong>——那些不在他們手上，在雇主與工廠手上。<strong>互補，不是競爭。</strong></p>
+  <p class="bar amber"><strong>我們還沒驗證的：</strong>單位經濟的兩個假設——每次稽核工廠端文件準備約 15 人天、導入後可降至三分之一——目前<strong>標註為 <code>[假設]</code></strong>寫在 <code>docs/adoption-path.md</code>，尚未經任何真實利害關係人證實。<strong>這是我們今天最想問各位的問題。</strong></p>
 </section>
 
 <!-- 12 ────────────────────────────────────────── 5:00 -->
@@ -215,7 +216,7 @@
   <p class="kicker">可信度</p>
   <h2>不要相信我們說的任何一句話</h2>
   <ul>
-    <li><strong>579 個測試</strong>，GitHub Actions 每次 push 全跑，CI 綠。</li>
+    <li><strong>582 個測試</strong>，GitHub Actions 每次 push 全跑，CI 綠。</li>
     <li><code>node poc/dual-signature.mjs</code> → 篡改後配對 <strong>false</strong>　·　<code>node poc/selective-disclosure.mjs</code> → <code>totalHours present? false</code></li>
     <li><code>npm run verify:external</code> → <strong class="jade">9/9 vectors passed</strong>——這支 verifier <strong>不依賴我們任何一行程式碼</strong>。</li>
   </ul>

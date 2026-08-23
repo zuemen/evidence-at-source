@@ -91,7 +91,7 @@ SAID），以及**人類覆核者的職務憑證 SAID**（Agent 的建議與人�
 
 ---
 
-**總驗證**：GitHub Actions 每次 push 跑 579 個測試＋`npm run demo:vlei`（17 步主張，
+**總驗證**：GitHub Actions 每次 push 跑 582 個測試＋`npm run demo:vlei`（17 步主張，
 exit code 0 即全數成立）＋**瀏覽器煙霧測試**（實際載入建置站，頁面未渲染／主控台有錯／
 水平溢出／觸控目標不足即失敗）；線上 demo <https://zuemen.github.io/evidence-at-source/>，
 全部合成資料、無後端、私鑰不離開瀏覽器。

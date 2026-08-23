@@ -112,6 +112,10 @@ export default defineConfig({
       '@eas/integrity': r('../integrity/src/index.ts'),
       '@eas/reconciliation': r('../reconciliation/src/index.ts'),
       '@eas/vlei': r('../vlei/src/index.ts'),
+      // The explain package's entry point deliberately does not reference the
+      // Anthropic SDK — the model binding lives in a separate module — so this
+      // alias cannot drag a Node-only dependency into the browser bundle.
+      '@eas/explain': r('../explain/src/index.ts'),
       // circomlibjs declares no browser export condition, so a bundler resolves
       // its Node entry — a barrel that also pulls in eddsa, pedersen and evmasm.
       // Those reference Buffer, which does not exist in a browser, and the
