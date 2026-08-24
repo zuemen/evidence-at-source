@@ -50,6 +50,21 @@
     border-left:3px solid var(--amber); padding-left:1.2rem; }
   .src { font-family:var(--mono); font-size:clamp(.7rem,1.2vw,.85rem); color:var(--dim); }
   .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:1.2rem 2rem; }
+  .trust-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:.8rem; }
+  .trust-card { border:1px solid var(--line); border-radius:8px; padding:.75rem .9rem;
+    background:rgba(255,255,255,.018); min-height:7rem; }
+  .trust-card b { display:block; color:var(--jade); font-family:var(--mono);
+    font-size:clamp(.72rem,1.15vw,.9rem); letter-spacing:.06em; margin-bottom:.35rem; }
+  .trust-card span { color:var(--text); font-size:clamp(.9rem,1.45vw,1.08rem); line-height:1.55; }
+  .shot-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:.8rem; margin-top:1rem; }
+  .shot-grid figure { margin:0; border:1px solid var(--line); border-radius:6px;
+    overflow:hidden; background:#0e1311; }
+  .shot-grid img { display:block; width:100%; height:15vh; min-height:115px; object-fit:cover; }
+  .shot-grid .beat1 { object-position:center 82%; }
+  .shot-grid .beat2 { object-fit:contain; }
+  .shot-grid .beat3 { object-position:center; }
+  .shot-grid figcaption { padding:.55rem .7rem; color:var(--text); font-family:var(--mono);
+    font-size:clamp(.65rem,1vw,.78rem); line-height:1.45; }
   @media (max-width:820px){ .grid2 { grid-template-columns:1fr; } }
   @media (prefers-reduced-motion: no-preference) {
     section.active { animation: rise .35s ease-out; }
@@ -142,29 +157,30 @@
     <ul>
       <li>①「工時表可以事後重製」→ 工廠把 186 改寫成 150（簽章是真的）→ <strong class="rust">反簽配對當場斷掉，被閘門剔除</strong></li>
       <li>②「移工訪談可能有串證之虞」→ 品牌問「是哪幾個人」→ <strong class="rust">被拒絕，而且這個函式在程式碼裡不存在</strong></li>
-      <li>③「稽核當天才生出來」→ 我們自己剪掉稽核紀錄的尾巴 → 鏈驗證照樣通過 → <strong class="rust">外部檢查點反證 TAIL_TRUNCATED</strong></li>
+      <li>③「合規證明能否持續可驗證」→ 我們自己剪掉稽核紀錄的尾巴 → 鏈驗證照樣通過 → <strong class="rust">外部檢查點反證 TAIL_TRUNCATED</strong></li>
     </ul>
-    <div style="display:flex;gap:.8rem;margin-top:1rem">
-      <img src="./shots/beat1.png" alt="第一段落點：竄改後的憑證被閘門剔除" style="width:33%;border:1px solid var(--line)" />
-      <img src="./shots/beat2.png" alt="第二段落點：個體查詢被拒絕" style="width:33%;border:1px solid var(--line)" />
-      <img src="./shots/beat3.png" alt="第三段落點：尾端截斷被檢查點反證" style="width:33%;border:1px solid var(--line)" />
+    <div class="shot-grid" aria-label="影片失效時的三段結果備援">
+      <figure><img class="beat1" src="./shots/beat1.png" alt="竄改後的憑證被閘門剔除" /><figcaption>① ATTESTATION_HASH_MISMATCH<br />簽章是真的，配對是死的</figcaption></figure>
+      <figure><img class="beat2" src="./shots/beat2.png" alt="個體查詢被拒絕" /><figcaption>② INDIVIDUAL_QUERY_REJECTED<br />指向個人的查詢，一律拒絕</figcaption></figure>
+      <figure><img class="beat3" src="./shots/beat3.png" alt="尾端截斷被檢查點反證" /><figcaption>③ TAIL_TRUNCATED<br />鏈驗證抓不到，外部檢查點抓得到</figcaption></figure>
     </div>
   </div>
   <p class="bar rust">影片跑完，<strong>吸一口氣</strong>，才講下一張第一句。</p>
 </section>
 
-<!-- 8 ── 3:20–4:05 ─────────────────────────────── 一把鑰匙 -->
+<!-- 8 ── 3:20–4:05 ─────────────────────────────── 治理／信任設計 -->
 <section>
-  <p class="kicker">我們的做法</p>
-  <h2>讓他手上，有一把只有他能用的鑰匙</h2>
-  <table>
-    <tr><th>① 各簽一次</th><td>事情發生的<strong>當下</strong>，簽發的一方跟他各簽一次。之後任何人要改動一個數字，<strong>兩邊就對不起來</strong></td></tr>
-    <tr><th>② 兩本帳</th><td>不只看工廠那一份。薪水進帳戶的紀錄在<strong>銀行</strong>手上，<strong class="rust">工廠改不動</strong></td></tr>
-    <tr><th>③ 問不到人</th><td>可以問「有沒有超時」「比例多少」，<strong>不能問「是哪幾個人」</strong>——這個功能不是被擋掉的，<strong class="rust">它在程式碼裡不存在</strong>，評審可以自己搜尋</td></tr>
-    <tr><th>④ 分等級</th><td>政府機關、第三方稽核、自己聲明，<strong>在系統裡是不同的重量</strong>——一間真的乾淨的仲介，終於有方法讓客戶看得出來</td></tr>
-  </table>
-  <p class="bar jade"><strong>人不在，憑證就不在。</strong>（命題 05）　·　
-    <strong>每一次查驗，留下一張不含個資的收據。</strong>（命題 06）</p>
+  <p class="kicker">治理／信任設計 · 主辦六信任點</p>
+  <h2>不是相信 Agent，而是逐層限制它</h2>
+  <div class="trust-grid">
+    <div class="trust-card"><b>PRINCIPAL</b><span>vLEI 的法人鏈＋ECR 角色憑證，證明 Agent 代表誰。</span></div>
+    <div class="trust-card"><b>AUTHORIZATION</b><span>機構委任給上限；勞工同意給下限；皆有期限與 nonce。</span></div>
+    <div class="trust-card"><b>TOOL / ACTION</b><span>只提供布林與匯總；個體查詢、核准與付款函式不存在。</span></div>
+    <div class="trust-card"><b>POLICY GATE</b><span>L0 授權 → L1 憑證 → L2 提問；前層失敗就零資料讀取。</span></div>
+    <div class="trust-card"><b>AUDIT LOG</b><span>簽章收據＋雜湊鏈＋外部檢查點，挑戰方可獨立重驗。</span></div>
+    <div class="trust-card"><b>EXPIRY / REVOCATION</b><span>到期、離境與上游撤銷立即級聯；查驗時完全不快取。</span></div>
+  </div>
+  <p class="bar amber"><strong>AI 只把既有判定寫成人話。</strong>若草稿矛盾、洩漏未揭露數值或宣稱已核准，規則守衛丟棄草稿並改用確定性樣板。<strong>AI 不能推翻密碼學。</strong></p>
 </section>
 
 <!-- 9 ── 4:05–4:20 ─────────────────────────────── 政策時機（新增） -->
@@ -220,6 +236,7 @@
   <p class="src">—— 一位入行近二十年的人力仲介業者，《報導者》2020/11</p>
   <h1 style="margin-top:1.5rem">尊嚴的前提，<br />是<span class="jade">能被證明</span>。</h1>
   <p class="huge">我們做那個證明。</p>
+  <p class="bar jade"><strong>第一個試點：</strong>一個 RBA 品牌 × 一間誠實仲介 × 一條產線。</p>
   <p class="src" style="margin-top:1rem">evidence-at-source-web.vercel.app　·　<strong>588 個測試</strong>，CI 每次 push 全跑　·
     本站建置產物含 GPL-3.0 元件，詳見 THIRD-PARTY-LICENSES.md</p>
 </section>

@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<style>
+  :root { color-scheme:dark; --ink:#0b0e0d; --text:#f1ede5; --dim:#9ca69f;
+    --jade:#62c5a5; --rust:#ef7867; }
+  * { box-sizing:border-box; }
+  html,body { margin:0; width:100%; height:100%; overflow:hidden; background:var(--ink);
+    color:var(--text); font-family:"Noto Serif TC","Microsoft JhengHei",serif; }
+  #stage { position:fixed; inset:0; background:var(--ink); }
+  #title { position:absolute; inset:0; display:grid; place-content:center; text-align:center;
+    padding:8vw; opacity:0; transition:opacity .25s ease; }
+  #title.show { opacity:1; }
+  #title .number { color:var(--jade); font:500 24px/1.2 Consolas,monospace; letter-spacing:.24em; }
+  #title h1 { margin:24px 0 16px; font-size:64px; line-height:1.25; }
+  #title p { margin:8px 0; color:var(--dim); font-size:30px; line-height:1.5; }
+  #title code { display:inline-block; margin-top:18px; padding:10px 18px; border:1px solid var(--rust);
+    color:var(--rust); font:500 27px/1.2 Consolas,monospace; }
+  #video-wrap { position:absolute; inset:0; opacity:0; transition:opacity .2s ease; background:#080b0a; }
+  #video-wrap.show { opacity:1; }
+  video { width:100%; height:100%; object-fit:contain; }
+  #badge { position:absolute; left:34px; top:28px; padding:10px 16px; background:rgba(11,14,13,.9);
+    border:1px solid rgba(98,197,165,.55); color:var(--text); font:500 19px/1.2 Consolas,monospace;
+    letter-spacing:.08em; }
+  #end { position:absolute; inset:0; display:grid; place-content:center; text-align:center;
+    opacity:0; background:var(--ink); transition:opacity .2s ease; }
+  #end.show { opacity:1; }
+  #end h1 { margin:0; font-size:58px; }
+  #end p { color:var(--jade); font:500 25px/1.5 Consolas,monospace; }
+</style>
+</head>
+<body>
+<main id="stage">
+  <section id="title"><div class="number"></div><h1></h1><p></p><code></code></section>
+  <section id="video-wrap"><video id="video" muted playsinline></video><div id="badge"></div></section>
+  <section id="end"><h1>三種造假，三個可驗證的拒絕</h1><p>Evidence at Source · 證據前置</p></section>
+</main>
+<script>
+  window.playSegment = async (segment, url) => {
+    const title = document.querySelector('#title');
+    const wrap = document.querySelector('#video-wrap');
+    const video = document.querySelector('#video');
+    title.querySelector('.number').textContent = 'DEMO ' + segment.number + ' / 03';
+    title.querySelector('h1').textContent = segment.quote;
+    title.querySelector('p').textContent = segment.promise;
+    title.querySelector('code').textContent = segment.code;
+    document.querySelector('#badge').textContent = segment.number + ' / 03 · ' + segment.code;
+    title.classList.add('show');
+    await new Promise((resolve) => setTimeout(resolve, 2500));
+    title.classList.remove('show');
+    await new Promise((resolve) => setTimeout(resolve, 250));
+    video.src = url;
+    await new Promise((resolve, reject) => {
+      video.addEventListener('loadedmetadata', resolve, { once:true });
+      video.addEventListener('error', () => reject(new Error(video.error?.message || 'media error')), { once:true });
+      video.load();
+    });
+    wrap.classList.add('show');
+    await video.play();
+    await new Promise((resolve) => {
+      const timer = setInterval(() => {
+        if (video.currentTime >= segment.stopAt || video.ended) {
+          clearInterval(timer);
+          video.pause();
+          resolve();
+        }
+      }, 50);
+    });
+    wrap.classList.remove('show');
+    await new Promise((resolve) => setTimeout(resolve, 250));
+  };
+  window.showEnd = async () => {
+    const end = document.querySelector('#end');
+    end.classList.add('show');
+    await new Promise((resolve) => setTimeout(resolve, 1800));
+  };
+</script>
+</body>
+</html>
