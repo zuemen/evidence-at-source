@@ -203,8 +203,9 @@ export function AttackIntegrityView({ attack, integrity, busy, onReset }: Props)
           </div>
 
           <p className="note" style={{ marginTop: '1rem' }}>
-            前兩個查詢各自都通過 k-匿名（門檻 {attack.t9.kAnonymity}）。第三個雖然母體也够大，
-            但它與第一個查詢<strong>只差 3 人</strong>——兩次結果相減即可回推到那 3 人，於是被擋下。
+            前兩個查詢各自都通過 k-匿名（門檻 {attack.t9.kAnonymity}）。第三個雖然母體也夠大，
+            但它與第一個查詢<strong>只差 {attack.t9.overlapGap} 人</strong>——兩次結果相減即可回推到那{' '}
+            {attack.t9.overlapGap} 人，於是被擋下。
           </p>
         </article>
 

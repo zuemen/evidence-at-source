@@ -306,6 +306,8 @@ export interface AttackDemoState {
   };
   readonly t9: {
     readonly kAnonymity: number;
+    /** How many people subtracting the narrowing query from the broad one would isolate. */
+    readonly overlapGap: number;
     readonly steps: readonly T9Step[];
   };
 }
@@ -918,17 +920,25 @@ export async function createDemoWorld(): Promise<DemoWorld> {
       const week4 = { start: '2026-01-22', end: '2026-01-28' };
       const nov = { start: '2026-11-01', end: '2026-11-30' };
 
+      // The rosters are named once and measured, never restated: a literal
+      // beside the label is how a panel ends up claiming a cohort size the
+      // query never had.
+      const rosterA = ids(30, 'a');
+      const rosterB = ids(30, 'b');
+      const rosterAWeek4 = ids(25, 'a');
+      const rosterANov = ids(29, 'a');
+
       const v1 = session.submit({
         cohort: 'factory-a',
         window: 'jan-oct',
         range: janOct,
-        recordIds: ids(30, 'a'),
+        recordIds: rosterA,
       });
       const v2 = session.submit({
         cohort: 'factory-b',
         window: 'jan-oct',
         range: janOct,
-        recordIds: ids(30, 'b'),
+        recordIds: rosterB,
       });
       // Subset of v1 (a0..a24) inside the same period: the difference from v1 is
       // 5 records, below k — subtracting the two answers would isolate five people.
@@ -936,7 +946,7 @@ export async function createDemoWorld(): Promise<DemoWorld> {
         cohort: 'factory-a',
         window: 'week-4',
         range: week4,
-        recordIds: ids(25, 'a'),
+        recordIds: rosterAWeek4,
       });
       // The same near-identical roster, but a period that provably does not
       // overlap: November's hours are not October's, so subtracting the two says
@@ -947,7 +957,7 @@ export async function createDemoWorld(): Promise<DemoWorld> {
         cohort: 'factory-a',
         window: 'nov',
         range: nov,
-        recordIds: ids(29, 'a'),
+        recordIds: rosterANov,
       });
 
       const toStep = (label: string, cohortSize: number, v: typeof v1): T9Step => ({
@@ -961,11 +971,14 @@ export async function createDemoWorld(): Promise<DemoWorld> {
 
       return {
         kAnonymity: K,
+        // The gap the guard actually refuses: what subtracting v3 from v1 would
+        // isolate. Derived, so the panel's sentence stays true if a roster moves.
+        overlapGap: rosterA.length - rosterAWeek4.length,
         steps: [
-          toStep('工廠 A・全期合規率', 15, v1),
-          toStep('工廠 B・全期合規率', 15, v2),
-          toStep('工廠 A・僅第 4 週（＝全期 − 前面幾週）', 12, v3),
-          toStep('工廠 A・十一月（不重疊的下一期，1 人離職）', 29, v4),
+          toStep('工廠 A・全期合規率', rosterA.length, v1),
+          toStep('工廠 B・全期合規率', rosterB.length, v2),
+          toStep('工廠 A・僅第 4 週（＝全期 − 前面幾週）', rosterAWeek4.length, v3),
+          toStep('工廠 A・十一月（不重疊的下一期，1 人離職）', rosterANov.length, v4),
         ],
       };
     })(),

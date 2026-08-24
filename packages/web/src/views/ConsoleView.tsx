@@ -388,14 +388,21 @@ export function ConsoleView({
           )}
 
           {split.brand.rejected.length > 0 && (
-            <ul className="reason-list">
-              {split.brand.rejected.map((reason, i) => (
-                <li key={`${reason}-${i}`}>
-                  母體中有 1 份證據被閘門剔除：
-                  <Reason code={reason} />
-                </li>
-              ))}
-            </ul>
+            <>
+              {/* One entry per rejected submission, so the count is the list's
+                  own length — stating it per row read as a claim about the
+                  cohort rather than about this row. */}
+              <p className="note" style={{ marginTop: '1.4rem' }}>
+                母體中有 <strong>{split.brand.rejected.length}</strong> 份證據被閘門剔除：
+              </p>
+              <ul className="reason-list">
+                {split.brand.rejected.map((reason, i) => (
+                  <li key={`${reason}-${i}`}>
+                    <Reason code={reason} />
+                  </li>
+                ))}
+              </ul>
+            </>
           )}
 
           <details className="aside-panel" style={{ marginTop: '1.4rem' }}>
