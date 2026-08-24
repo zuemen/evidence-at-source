@@ -26,6 +26,12 @@ export function App(): JSX.Element {
 
   useEffect(() => {
     void api.state().then(setPayload);
+    // Projection mode (?stage=1): the recording is watched from the back of a
+    // room on the organiser's projector, not read at a desk. Type scales up
+    // and page furniture that only matters to a seated reader steps aside.
+    if (new URLSearchParams(window.location.search).has('stage')) {
+      document.documentElement.setAttribute('data-stage', '1');
+    }
   }, []);
 
   const run = useCallback(async (action: () => Promise<DemoPayload>) => {
@@ -202,6 +208,7 @@ export function App(): JSX.Element {
           onRevokeAuditor={() => void run(api.revokeAuditor)}
           onRevokeReviewer={() => void run(api.revokeReviewer)}
           onAttemptBrokerWallet={() => void run(api.attemptBrokerWallet)}
+          onTamperHours={() => void run(api.tamperWorkingHours)}
           presence={presence}
           onVerifyDevice={() => {
             setPresence('正在向這台裝置的驗證器請求生物辨識…');

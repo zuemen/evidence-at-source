@@ -91,6 +91,10 @@ export const api = {
     (await worldPromise).revokeQvi();
     return currentPayload();
   },
+  tamperWorkingHours: async () => {
+    await (await worldPromise).tamperWorkingHours();
+    return currentPayload();
+  },
   attemptBrokerWallet: async () => {
     (await worldPromise).attemptBrokerWallet();
     return currentPayload();

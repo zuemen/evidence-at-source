@@ -36,6 +36,7 @@ interface Props {
   readonly onRevokeAuditor: () => void;
   readonly onRevokeReviewer: () => void;
   readonly onAttemptBrokerWallet: () => void;
+  readonly onTamperHours: () => void;
   readonly presence: string | null;
   readonly onVerifyDevice: () => void;
   readonly zk: ZkProofResult | null;
@@ -132,6 +133,7 @@ export function ConsoleView({
   onRevokeAuditor,
   onRevokeReviewer,
   onAttemptBrokerWallet,
+  onTamperHours,
   presence,
   onVerifyDevice,
   zk,
@@ -177,6 +179,14 @@ export function ConsoleView({
           {snapshot.subjectRevoked ? '主體已撤銷' : `母體 ${snapshot.cohortSize} 人`}
         </span>
         <span style={{ flex: 1 }} />
+        <button
+          className="act"
+          data-danger="true"
+          onClick={onTamperHours}
+          disabled={busy || snapshot.credentials.some((c) => c.tampered)}
+        >
+          模擬工廠：事後改寫工時 186→150
+        </button>
         <button
           className="act"
           data-danger="true"
@@ -380,7 +390,10 @@ export function ConsoleView({
           {split.brand.rejected.length > 0 && (
             <ul className="reason-list">
               {split.brand.rejected.map((reason, i) => (
-                <li key={`${reason}-${i}`}>母體中有 1 份證據被閘門剔除：{reason}</li>
+                <li key={`${reason}-${i}`}>
+                  母體中有 1 份證據被閘門剔除：
+                  <Reason code={reason} />
+                </li>
               ))}
             </ul>
           )}

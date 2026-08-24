@@ -179,6 +179,8 @@ export interface CredentialCard {
   readonly publicFields: readonly string[];
   /** Fields the schema keeps behind selective disclosure, names only. */
   readonly hiddenFields: readonly string[];
+  /** The issuer re-signed after the counter-signature. The pairing is dead. */
+  readonly tampered: boolean;
 }
 
 export interface DemoSnapshot {
@@ -386,6 +388,15 @@ export interface DemoWorld {
   snapshot(): DemoSnapshot;
   attest(type: CredentialType): Promise<void>;
   attestAll(): Promise<void>;
+  /**
+   * The employer's classic move, performed live: re-issue the working-hours
+   * credential with 186 rewritten to 150 — a fresh, perfectly valid issuer
+   * signature — while the worker's counter-signature still points at the
+   * original. Nothing is deleted and nothing is forged; the record is simply
+   * "corrected" after the fact, which is exactly what a paper timesheet
+   * allows and this system does not.
+   */
+  tamperWorkingHours(): Promise<void>;
   revokeSubject(): void;
   revokeAgentDelegation(role: AgentRole): void;
   /** GLEIF-side revocation of the QVI credential: the whole chain collapses. */
@@ -456,8 +467,11 @@ interface HeldCredential {
   readonly type: WalletCredentialType;
   readonly issuer: VleiIssuer;
   readonly issuerName: string;
-  readonly credential: string;
+  /** Replaced when the tamper demo re-issues; the attestation is not. */
+  credential: string;
   attestation: string | null;
+  /** The issuer re-signed after the worker counter-signed. */
+  tampered: boolean;
 }
 
 interface CohortMember {
@@ -774,6 +788,7 @@ export async function createDemoWorld(): Promise<DemoWorld> {
       issuerName: issuerNames[which],
       credential: await issuer.issue(type, CLAIMS[type]),
       attestation: null,
+      tampered: false,
     });
   }
 
@@ -1005,6 +1020,7 @@ export async function createDemoWorld(): Promise<DemoWorld> {
             issuer: entry.issuerName,
             headlineClaim: HEADLINE_CLAIM[entry.type],
             attested: entry.attestation !== null,
+            tampered: entry.tampered,
             publicFields: schema.public,
             // A redacted block means "a fact about you the verifier cannot
             // see". The commitment salt is a cryptographic mask, not a fact
@@ -1026,6 +1042,21 @@ export async function createDemoWorld(): Promise<DemoWorld> {
         deviceFingerprint: DEVICE,
         deviceAssertion: demoDeviceAssertion(),
       });
+    },
+
+    async tamperWorkingHours() {
+      const entry = held.find((candidate) => candidate.type === 'WorkingHoursCredential');
+      if (entry === undefined) return;
+
+      // A fresh issuance with one number changed. The signature on this new
+      // credential is genuine — the factory holds its own key — which is the
+      // point: tampering is not forgery, and signature checks alone miss it.
+      entry.credential = await entry.issuer.issue('WorkingHoursCredential', {
+        ...CLAIMS.WorkingHoursCredential,
+        totalHours: 150,
+        overtimeHours: 6,
+      });
+      entry.tampered = true;
     },
 
     async attestAll() {

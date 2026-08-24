@@ -1076,3 +1076,40 @@ details.aside-panel summary:hover {
 details.aside-panel[open] summary {
   margin-bottom: 0.8rem;
 }
+
+
+/* ── projection mode (?stage=1) ───────────────────────────
+   The recording is watched on a projector from meters away.
+   Larger type, higher-contrast values, no page furniture that
+   only a seated reader needs. Everything else inherits. */
+
+html[data-stage='1'] {
+  font-size: 122%;
+}
+
+html[data-stage='1'] .site-footer,
+html[data-stage='1'] .footnote {
+  display: none;
+}
+
+html[data-stage='1'] .view-intro {
+  font-size: 1rem;
+}
+
+html[data-stage='1'] .claim-row {
+  font-size: 0.86rem;
+}
+
+html[data-stage='1'] .field-gloss {
+  font-size: 0.92rem;
+  color: var(--text);
+}
+
+html[data-stage='1'] .reason-gloss {
+  font-size: 0.9rem;
+  color: var(--text);
+}
+
+html[data-stage='1'] .verdict {
+  font-size: 1.7rem;
+}

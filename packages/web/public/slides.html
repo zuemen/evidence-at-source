@@ -140,10 +140,15 @@
   <div class="video">
     <p class="label">▶ 此頁播放錄影（75 秒）· 三段，每段先放一句命題方原句</p>
     <ul>
-      <li>①「工時表可以事後重製」→ 雇主把 186 改成 150 → <strong class="rust">配對當場斷掉</strong></li>
-      <li>②「移工訪談可能有串證之虞」→ 品牌問「是哪幾個人」→ <strong class="rust">被拒絕，而且函式不存在</strong></li>
-      <li>③「缺乏 100% 保證合規」→ 申報 150 ／ 入帳 186 → <strong class="rust">兩本帳對不起來</strong></li>
+      <li>①「工時表可以事後重製」→ 工廠把 186 改寫成 150（簽章是真的）→ <strong class="rust">反簽配對當場斷掉，被閘門剔除</strong></li>
+      <li>②「移工訪談可能有串證之虞」→ 品牌問「是哪幾個人」→ <strong class="rust">被拒絕，而且這個函式在程式碼裡不存在</strong></li>
+      <li>③「稽核當天才生出來」→ 我們自己剪掉稽核紀錄的尾巴 → 鏈驗證照樣通過 → <strong class="rust">外部檢查點反證 TAIL_TRUNCATED</strong></li>
     </ul>
+    <div style="display:flex;gap:.8rem;margin-top:1rem">
+      <img src="./shots/beat1.png" alt="第一段落點：竄改後的憑證被閘門剔除" style="width:33%;border:1px solid var(--line)" />
+      <img src="./shots/beat2.png" alt="第二段落點：個體查詢被拒絕" style="width:33%;border:1px solid var(--line)" />
+      <img src="./shots/beat3.png" alt="第三段落點：尾端截斷被檢查點反證" style="width:33%;border:1px solid var(--line)" />
+    </div>
   </div>
   <p class="bar rust">影片跑完，<strong>吸一口氣</strong>，才講下一張第一句。</p>
 </section>
@@ -215,7 +220,7 @@
   <p class="src">—— 一位入行近二十年的人力仲介業者，《報導者》2020/11</p>
   <h1 style="margin-top:1.5rem">尊嚴的前提，<br />是<span class="jade">能被證明</span>。</h1>
   <p class="huge">我們做那個證明。</p>
-  <p class="src" style="margin-top:1rem">evidence-at-source-web.vercel.app　·　<strong>585 個測試</strong>，CI 每次 push 全跑　·
+  <p class="src" style="margin-top:1rem">evidence-at-source-web.vercel.app　·　<strong>588 個測試</strong>，CI 每次 push 全跑　·
     本站建置產物含 GPL-3.0 元件，詳見 THIRD-PARTY-LICENSES.md</p>
 </section>
 

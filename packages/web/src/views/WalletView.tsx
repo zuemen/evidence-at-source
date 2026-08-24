@@ -201,10 +201,7 @@ export function WalletView({
                 {CREDENTIAL_META[credential.type]?.label ?? credential.type}
                 <span className="card-type">{credential.type}</span>
               </h3>
-              <p className="issuer">
-                簽發：{ISSUER_GLOSS[credential.issuer] ?? credential.issuer} ·{' '}
-                {credential.issuer}
-              </p>
+              <p className="issuer">簽發：{ISSUER_GLOSS[credential.issuer] ?? credential.issuer}</p>
               {CREDENTIAL_META[credential.type]?.story !== undefined && (
                 <p className="card-story">{CREDENTIAL_META[credential.type]?.story}</p>
               )}
@@ -231,7 +228,11 @@ export function WalletView({
               ))}
 
               <div style={{ marginTop: '1.2rem', display: 'flex', alignItems: 'center', gap: '0.7rem' }}>
-                {outOfScope ? (
+                {credential.tampered ? (
+                  <span className="badge" data-tone="bad">
+                    簽發方已事後重簽——反簽仍指向原版
+                  </span>
+                ) : outOfScope ? (
                   <span className="badge" data-tone="pending">
                     不在此次授權範圍
                   </span>

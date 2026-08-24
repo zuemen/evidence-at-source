@@ -11,6 +11,7 @@ interface DemoWorldLike {
   attestAll(): Promise<void>;
   revokeSubject(): void;
   revokeAgentDelegation(role: 'bank' | 'brand'): void;
+  tamperWorkingHours(): Promise<void>;
   delegationState(): Promise<unknown>;
   split(): Promise<unknown>;
   attackDemo(): unknown;
@@ -52,6 +53,8 @@ function demoApi(): Plugin {
                 await instance.attest(String(body['type']));
               } else if (route === '/attest-all') {
                 await instance.attestAll();
+              } else if (route === '/tamper-hours') {
+                await instance.tamperWorkingHours();
               } else if (route === '/revoke') {
                 instance.revokeSubject();
               } else if (route === '/revoke-agent') {
