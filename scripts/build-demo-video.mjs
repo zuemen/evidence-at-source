@@ -38,6 +38,7 @@ const segments = [
   },
   {
     file: '備段_AI被關在正確的位置.webm',
+    startAt: 4.0,
     stopAt: 22.0,
     number: '03',
     pain: '痛點：AI 可能被注入、洩漏資料或越權宣布核准',
@@ -124,7 +125,7 @@ await context.close();
 await browser.close();
 server.close();
 
-const finalPath = join(outputDir, 'Demo_75秒_三幕_1080p.webm');
+const finalPath = join(outputDir, 'Demo_69秒_三幕_1080p.webm');
 try {
   await rename(recorded, finalPath);
 } catch {

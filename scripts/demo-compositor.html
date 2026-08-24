@@ -146,6 +146,12 @@
       );
       video.load();
     });
+    if (segment.startAt) {
+      await new Promise((resolve) => {
+        video.addEventListener('seeked', resolve, { once: true });
+        video.currentTime = segment.startAt;
+      });
+    }
     wrap.classList.add('show');
     await video.play();
     await new Promise((resolve) => {
