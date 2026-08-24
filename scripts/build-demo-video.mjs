@@ -11,40 +11,54 @@ if (!sourceDir || !outputDir) {
   throw new Error('usage: node scripts/build-demo-video.mjs <source-dir> <output-dir>');
 }
 
+/**
+ * Every segment is a recording of the real React demo. Nothing is invented by
+ * the compositor: it only adds a title card that states what the following
+ * screen proves. Segment 03 retains the site's own disclosure that the model
+ * draft is a recorded test fixture while the two guard functions run live.
+ */
 const segments = [
   {
     file: '段1_工時被改寫_配對當場斷掉.webm',
     stopAt: 24.2,
     number: '01',
-    quote: '「工時表可以事後重製」',
-    promise: '簽章是真的，配對是死的',
+    pain: '痛點：工時紙本可以事後重製',
+    proof: '工廠把 186 改成 150；真簽章仍過，但勞工反簽配對立即斷裂',
     code: 'ATTESTATION_HASH_MISMATCH',
+    badge: '來源端雙簽正在查驗',
   },
   {
     file: '段2_問不到是哪幾個人_函式不存在.webm',
     stopAt: 15.0,
     number: '02',
-    quote: '「移工訪談可能有串證之虞」',
-    promise: '指向個人的查詢，一律拒絕',
+    pain: '痛點：稽核需要答案，不需要勞工名單',
+    proof: '品牌問「是哪幾個人」；Agent 拒絕，個體查詢函式根本不存在',
     code: 'INDIVIDUAL_QUERY_REJECTED',
+    badge: 'Policy Gate 正在限制提問',
   },
   {
-    file: '段3_剪掉稽核尾巴_被檢查點反證.webm',
-    stopAt: 23.6,
+    file: '備段_AI被關在正確的位置.webm',
+    stopAt: 22.0,
     number: '03',
-    quote: '「合規證明能否持續可驗證」',
-    promise: '鏈驗證抓不到，外部檢查點抓得到',
-    code: 'TAIL_TRUNCATED',
+    pain: '痛點：AI 可能被注入、洩漏資料或越權宣布核准',
+    proof: '模型草稿為預錄測試樣本；網站守衛當場執行，違規草稿被丟棄',
+    code: 'EXPLANATION_REJECTED',
+    badge: 'checkExplanation + guardExplainer 現場執行',
   },
 ];
 
-const media = new Map(segments.map((segment, index) => ['/media/' + index, join(sourceDir, segment.file)]));
+const media = new Map(
+  segments.map((segment, index) => ['/media/' + index, join(sourceDir, segment.file)]),
+);
 const scriptDir = dirname(fileURLToPath(import.meta.url));
 const compositor = await readFile(join(scriptDir, 'demo-compositor.html'), 'utf8');
 
 const server = createServer(async (request, response) => {
   if (request.url === '/') {
-    response.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
+    response.writeHead(200, {
+      'Content-Type': 'text/html; charset=utf-8',
+      'Cache-Control': 'no-store',
+    });
     response.end(compositor);
     return;
   }
@@ -66,7 +80,7 @@ const server = createServer(async (request, response) => {
       'Accept-Ranges': 'bytes',
       'Content-Type': 'video/webm',
       'Content-Length': end - start + 1,
-      'Content-Range': 'bytes ' + start + '-' + end + '/' + fileStat.size,
+      'Content-Range': `bytes ${start}-${end}/${fileStat.size}`,
     });
     createReadStream(file, { start, end }).pipe(response);
     return;
@@ -92,14 +106,15 @@ const browser = await chromium.launch({
 const context = await browser.newContext({
   viewport: { width: 1920, height: 1080 },
   recordVideo: { dir: captureDir, size: { width: 1920, height: 1080 } },
+  reducedMotion: 'reduce',
 });
 const page = await context.newPage();
-await page.goto('http://127.0.0.1:' + port + '/', { waitUntil: 'load' });
+await page.goto(`http://127.0.0.1:${port}/`, { waitUntil: 'load' });
 
 for (const [index, segment] of segments.entries()) {
   await page.evaluate(
     ({ item, mediaUrl }) => window.playSegment(item, mediaUrl),
-    { item: segment, mediaUrl: 'http://127.0.0.1:' + port + '/media/' + index },
+    { item: segment, mediaUrl: `http://127.0.0.1:${port}/media/${index}` },
   );
 }
 await page.evaluate(() => window.showEnd());

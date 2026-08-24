@@ -153,16 +153,16 @@
 <section>
   <p class="kicker">Demo · 錄影</p>
   <div class="video">
-    <p class="label">▶ 此頁播放錄影（75 秒）· 三段，每段先放一句命題方原句</p>
+    <p class="label">▶ 此頁播放錄影（約 75 秒）· 三個痛點，三個由網站實際執行的可驗證結果</p>
     <ul>
       <li>①「工時表可以事後重製」→ 工廠把 186 改寫成 150（簽章是真的）→ <strong class="rust">反簽配對當場斷掉，被閘門剔除</strong></li>
       <li>②「移工訪談可能有串證之虞」→ 品牌問「是哪幾個人」→ <strong class="rust">被拒絕，而且這個函式在程式碼裡不存在</strong></li>
-      <li>③「合規證明能否持續可驗證」→ 我們自己剪掉稽核紀錄的尾巴 → 鏈驗證照樣通過 → <strong class="rust">外部檢查點反證 TAIL_TRUNCATED</strong></li>
+      <li>③「AI 會不會被資料裡的指令騙走」→ 預錄模型草稿踩中矛盾／洩漏／越權三條規則 → <strong class="rust">網站守衛當場丟棄草稿，改用確定性樣板</strong></li>
     </ul>
     <div class="shot-grid" aria-label="影片失效時的三段結果備援">
       <figure><img class="beat1" src="./shots/beat1.png" alt="竄改後的憑證被閘門剔除" /><figcaption>① ATTESTATION_HASH_MISMATCH<br />簽章是真的，配對是死的</figcaption></figure>
       <figure><img class="beat2" src="./shots/beat2.png" alt="個體查詢被拒絕" /><figcaption>② INDIVIDUAL_QUERY_REJECTED<br />指向個人的查詢，一律拒絕</figcaption></figure>
-      <figure><img class="beat3" src="./shots/beat3.png" alt="尾端截斷被檢查點反證" /><figcaption>③ TAIL_TRUNCATED<br />鏈驗證抓不到，外部檢查點抓得到</figcaption></figure>
+      <figure><img class="beat3" src="./shots/beat3.png" alt="AI 解釋草稿被網站規則守衛拒絕" /><figcaption>③ EXPLANATION_REJECTED<br />模型能寫字，不能改判定</figcaption></figure>
     </div>
   </div>
   <p class="bar rust">影片跑完，<strong>吸一口氣</strong>，才講下一張第一句。</p>

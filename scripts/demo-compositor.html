@@ -3,57 +3,147 @@
 <head>
 <meta charset="utf-8">
 <style>
-  :root { color-scheme:dark; --ink:#0b0e0d; --text:#f1ede5; --dim:#9ca69f;
-    --jade:#62c5a5; --rust:#ef7867; }
-  * { box-sizing:border-box; }
-  html,body { margin:0; width:100%; height:100%; overflow:hidden; background:var(--ink);
-    color:var(--text); font-family:"Noto Serif TC","Microsoft JhengHei",serif; }
-  #stage { position:fixed; inset:0; background:var(--ink); }
-  #title { position:absolute; inset:0; display:grid; place-content:center; text-align:center;
-    padding:8vw; opacity:0; transition:opacity .25s ease; }
-  #title.show { opacity:1; }
-  #title .number { color:var(--jade); font:500 24px/1.2 Consolas,monospace; letter-spacing:.24em; }
-  #title h1 { margin:24px 0 16px; font-size:64px; line-height:1.25; }
-  #title p { margin:8px 0; color:var(--dim); font-size:30px; line-height:1.5; }
-  #title code { display:inline-block; margin-top:18px; padding:10px 18px; border:1px solid var(--rust);
-    color:var(--rust); font:500 27px/1.2 Consolas,monospace; }
-  #video-wrap { position:absolute; inset:0; opacity:0; transition:opacity .2s ease; background:#080b0a; }
-  #video-wrap.show { opacity:1; }
-  video { width:100%; height:100%; object-fit:contain; }
-  #badge { position:absolute; left:34px; top:28px; padding:10px 16px; background:rgba(11,14,13,.9);
-    border:1px solid rgba(98,197,165,.55); color:var(--text); font:500 19px/1.2 Consolas,monospace;
-    letter-spacing:.08em; }
-  #end { position:absolute; inset:0; display:grid; place-content:center; text-align:center;
-    opacity:0; background:var(--ink); transition:opacity .2s ease; }
-  #end.show { opacity:1; }
-  #end h1 { margin:0; font-size:58px; }
-  #end p { color:var(--jade); font:500 25px/1.5 Consolas,monospace; }
+  :root {
+    color-scheme: dark;
+    --ink: #0b0e0d;
+    --paper: #141917;
+    --text: #f1ede5;
+    --dim: #b7bdb8;
+    --jade: #62c5a5;
+    --rust: #ef7867;
+    --amber: #e2aa4d;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: var(--ink);
+    color: var(--text);
+    font-family: "Noto Serif TC", "Microsoft JhengHei", serif;
+  }
+  #stage { position: fixed; inset: 0; background: var(--ink); }
+  #title {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-content: center;
+    text-align: center;
+    padding: 7vw;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+  }
+  #title.show { opacity: 1; }
+  #title .number {
+    color: var(--jade);
+    font: 600 25px/1.2 Consolas, monospace;
+    letter-spacing: 0.22em;
+  }
+  #title h1 {
+    margin: 24px 0 14px;
+    font-size: 58px;
+    line-height: 1.25;
+  }
+  #title p {
+    max-width: 1500px;
+    margin: 8px auto;
+    color: var(--dim);
+    font-size: 30px;
+    line-height: 1.5;
+  }
+  #title code {
+    display: inline-block;
+    margin-top: 18px;
+    padding: 10px 18px;
+    border: 1px solid var(--rust);
+    color: var(--rust);
+    font: 600 27px/1.2 Consolas, monospace;
+  }
+  #video-wrap {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+    background: #080b0a;
+  }
+  #video-wrap.show { opacity: 1; }
+  video { width: 100%; height: 100%; object-fit: contain; }
+  #badge {
+    position: absolute;
+    left: 34px;
+    top: 28px;
+    padding: 11px 17px;
+    background: rgba(11, 14, 13, 0.94);
+    border: 1px solid rgba(98, 197, 165, 0.7);
+    color: var(--text);
+    font: 600 19px/1.2 Consolas, "Microsoft JhengHei", monospace;
+    letter-spacing: 0.04em;
+  }
+  #end {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-content: center;
+    text-align: center;
+    opacity: 0;
+    background: var(--ink);
+    transition: opacity 0.2s ease;
+  }
+  #end.show { opacity: 1; }
+  #end h1 { margin: 0 0 26px; font-size: 52px; line-height: 1.35; }
+  #end .flow {
+    color: var(--jade);
+    font: 600 25px/1.6 Consolas, "Microsoft JhengHei", monospace;
+  }
+  #end .boundary { margin-top: 18px; color: var(--amber); font-size: 25px; }
+  @media (prefers-reduced-motion: reduce) {
+    #title, #video-wrap, #end { transition: none; }
+  }
 </style>
 </head>
 <body>
 <main id="stage">
-  <section id="title"><div class="number"></div><h1></h1><p></p><code></code></section>
-  <section id="video-wrap"><video id="video" muted playsinline></video><div id="badge"></div></section>
-  <section id="end"><h1>三種造假，三個可驗證的拒絕</h1><p>Evidence at Source · 證據前置</p></section>
+  <section id="title">
+    <div class="number"></div>
+    <h1></h1>
+    <p></p>
+    <code></code>
+  </section>
+  <section id="video-wrap">
+    <video id="video" muted playsinline></video>
+    <div id="badge"></div>
+  </section>
+  <section id="end">
+    <h1>可驗證 AI，不是讓模型決定真相</h1>
+    <div class="flow">vLEI 身分 → Policy Gate → 可驗證證據 → AI 解釋 → 人類覆核</div>
+    <div class="boundary">模型可以寫字；不能改判定、不能多拿資料、不能替人核准。</div>
+  </section>
 </main>
 <script>
   window.playSegment = async (segment, url) => {
     const title = document.querySelector('#title');
     const wrap = document.querySelector('#video-wrap');
     const video = document.querySelector('#video');
-    title.querySelector('.number').textContent = 'DEMO ' + segment.number + ' / 03';
-    title.querySelector('h1').textContent = segment.quote;
-    title.querySelector('p').textContent = segment.promise;
+    title.querySelector('.number').textContent = `DEMO ${segment.number} / 03`;
+    title.querySelector('h1').textContent = segment.pain;
+    title.querySelector('p').textContent = segment.proof;
     title.querySelector('code').textContent = segment.code;
-    document.querySelector('#badge').textContent = segment.number + ' / 03 · ' + segment.code;
+    document.querySelector('#badge').textContent = `${segment.number} / 03 · ${segment.badge}`;
+
     title.classList.add('show');
-    await new Promise((resolve) => setTimeout(resolve, 2500));
+    await new Promise((resolve) => setTimeout(resolve, 2300));
     title.classList.remove('show');
-    await new Promise((resolve) => setTimeout(resolve, 250));
+    await new Promise((resolve) => setTimeout(resolve, 150));
+
     video.src = url;
     await new Promise((resolve, reject) => {
-      video.addEventListener('loadedmetadata', resolve, { once:true });
-      video.addEventListener('error', () => reject(new Error(video.error?.message || 'media error')), { once:true });
+      video.addEventListener('loadedmetadata', resolve, { once: true });
+      video.addEventListener(
+        'error',
+        () => reject(new Error(video.error?.message || 'media error')),
+        { once: true },
+      );
       video.load();
     });
     wrap.classList.add('show');
@@ -68,12 +158,13 @@
       }, 50);
     });
     wrap.classList.remove('show');
-    await new Promise((resolve) => setTimeout(resolve, 250));
+    await new Promise((resolve) => setTimeout(resolve, 150));
   };
+
   window.showEnd = async () => {
     const end = document.querySelector('#end');
     end.classList.add('show');
-    await new Promise((resolve) => setTimeout(resolve, 1800));
+    await new Promise((resolve) => setTimeout(resolve, 3200));
   };
 </script>
 </body>
