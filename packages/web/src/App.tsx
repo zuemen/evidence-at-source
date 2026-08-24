@@ -27,6 +27,13 @@ export function App(): JSX.Element {
    * DIRECTOR_BEATS.
    */
   const [beatList, setBeatList] = useState<readonly number[] | null>(null);
+  /**
+   * The landing moment. Five equally-weighted tabs told a first-time reader
+   * nothing about where to start, so the page opens with one sentence and one
+   * obvious button; it steps aside the moment a tour begins or the reader
+   * says they would rather look around.
+   */
+  const [startCueOff, setStartCueOff] = useState(false);
   const [zk, setZk] = useState<ZkProofResult | null>(null);
   const [zkBusy, setZkBusy] = useState(false);
   const [presence, setPresence] = useState<string | null>(null);
@@ -152,6 +159,31 @@ export function App(): JSX.Element {
           </button>
         </nav>
       </header>
+
+      {!directorOn && !startCueOff && (
+        <div className="start-cue">
+          <p className="start-cue-lead">
+            這是一個<strong>可以自己按</strong>的展示：左邊是勞工的錢包，中間是銀行與品牌的查驗台，
+            右邊是有人想造假時系統的反應。<strong>三個分頁都可以隨便點，不會壞。</strong>
+          </p>
+          <div className="start-cue-actions">
+            <button
+              className="start-cue-go"
+              onClick={() => {
+                const essential = [1, 4, 12] as const;
+                setBeatList(essential);
+                setDirectorOn(true);
+                void goToBeat(0, essential);
+              }}
+            >
+              沒時間的話，先看這 3 幕（約 60 秒）
+            </button>
+            <button className="start-cue-skip" onClick={() => setStartCueOff(true)}>
+              我自己逛
+            </button>
+          </div>
+        </div>
+      )}
 
       {directorOn && beat !== undefined && (
         <div className="director-bar">

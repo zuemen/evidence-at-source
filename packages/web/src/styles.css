@@ -384,6 +384,72 @@ button.act:disabled {
   color: var(--text-faint);
 }
 
+/* ── first-run start cue ──────────────────────────────── */
+
+/* Sits in the flow above the director bar and takes its place once a tour
+   starts, so the page never shows two competing instructions at once. */
+.start-cue {
+  border: 1px solid var(--line-bright);
+  background: var(--paper-raised);
+  padding: 1.15rem 1.35rem 1.25rem;
+  margin-bottom: 2rem;
+  animation: rise 0.4s cubic-bezier(0.2, 0.7, 0.3, 1) backwards;
+}
+
+.start-cue-lead {
+  margin: 0 0 0.95rem;
+  color: var(--text-dim);
+  font-size: 0.95rem;
+  line-height: 1.75;
+  max-width: 62ch;
+}
+
+.start-cue-lead strong {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.start-cue-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.start-cue-go,
+.start-cue-skip {
+  font-family: var(--mono);
+  font-size: 0.74rem;
+  letter-spacing: 0.1em;
+  padding: 0.66rem 1.15rem;
+  min-height: 44px;
+  cursor: pointer;
+  transition: background 0.18s, border-color 0.18s, color 0.18s;
+}
+
+.start-cue-go {
+  background: var(--jade);
+  color: var(--ink);
+  border: 1px solid var(--jade);
+  font-weight: 600;
+}
+
+.start-cue-go:hover {
+  background: transparent;
+  color: var(--jade);
+}
+
+.start-cue-skip {
+  background: transparent;
+  color: var(--text-faint);
+  border: 1px solid var(--line-bright);
+}
+
+.start-cue-skip:hover {
+  color: var(--text);
+  border-color: var(--line-bright);
+}
+
 /* ── director bar ─────────────────────────────────────── */
 
 .director-bar {
