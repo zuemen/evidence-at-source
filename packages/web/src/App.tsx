@@ -20,6 +20,13 @@ export function App(): JSX.Element {
   const [busy, setBusy] = useState(false);
   const [directorOn, setDirectorOn] = useState(false);
   const [beatIndex, setBeatIndex] = useState(0);
+  /**
+   * The 90-second path. Fifteen beats are complete but nobody finishes them
+   * on a first visit; three beats — seal, two answers, departure — tell the
+   * whole arc. null = full tour; a list = essential tour indices into
+   * DIRECTOR_BEATS.
+   */
+  const [beatList, setBeatList] = useState<readonly number[] | null>(null);
   const [zk, setZk] = useState<ZkProofResult | null>(null);
   const [zkBusy, setZkBusy] = useState(false);
   const [presence, setPresence] = useState<string | null>(null);
@@ -59,8 +66,8 @@ export function App(): JSX.Element {
   }, []);
 
   const goToBeat = useCallback(
-    async (index: number) => {
-      const beat = DIRECTOR_BEATS[index];
+    async (index: number, list: readonly number[] | null = beatList) => {
+      const beat = DIRECTOR_BEATS[list === null ? index : (list[index] ?? -1)];
       if (beat === undefined) return;
       setBusy(true);
       try {
@@ -71,10 +78,11 @@ export function App(): JSX.Element {
         setBusy(false);
       }
     },
-    [runActions],
+    [runActions, beatList],
   );
 
-  const beat = DIRECTOR_BEATS[beatIndex];
+  const beatCount = beatList === null ? DIRECTOR_BEATS.length : beatList.length;
+  const beat = DIRECTOR_BEATS[beatList === null ? beatIndex : (beatList[beatIndex] ?? -1)];
 
   return (
     <div className="shell">
@@ -100,14 +108,33 @@ export function App(): JSX.Element {
             攻防與完整性
           </button>
           <button
-            data-active={directorOn}
+            data-active={directorOn && beatList !== null}
+            data-tour-lite="true"
+            onClick={() => {
+              if (directorOn && beatList !== null) {
+                setDirectorOn(false);
+                setBeatList(null);
+              } else {
+                // Seal → two answers → departure: the arc in three beats.
+                const essential = [1, 4, 12] as const;
+                setBeatList(essential);
+                setDirectorOn(true);
+                void goToBeat(0, essential);
+              }
+            }}
+          >
+            精華 3 幕
+          </button>
+          <button
+            data-active={directorOn && beatList === null}
             data-tour="true"
             onClick={() => {
-              if (directorOn) {
+              if (directorOn && beatList === null) {
                 setDirectorOn(false);
               } else {
+                setBeatList(null);
                 setDirectorOn(true);
-                void goToBeat(0);
+                void goToBeat(0, null);
               }
             }}
           >
@@ -130,7 +157,8 @@ export function App(): JSX.Element {
         <div className="director-bar">
           <div className="director-meta">
             <span className="director-step">
-              幕 {beatIndex + 1} / {DIRECTOR_BEATS.length}
+              幕 {beatIndex + 1} / {beatCount}
+              {beatList !== null && '（精華）'}
             </span>
             <strong className="director-title">{beat.title}</strong>
           </div>
@@ -144,12 +172,12 @@ export function App(): JSX.Element {
               ← 上一幕
             </button>
             <div className="director-dots">
-              {DIRECTOR_BEATS.map((b, i) => (
+              {(beatList ?? DIRECTOR_BEATS.map((_, i) => i)).map((beatIdx, i) => (
                 <button
-                  key={b.id}
+                  key={DIRECTOR_BEATS[beatIdx]?.id ?? i}
                   className="director-dot"
                   data-active={i === beatIndex}
-                  aria-label={b.title}
+                  aria-label={DIRECTOR_BEATS[beatIdx]?.title ?? ''}
                   onClick={() => void goToBeat(i)}
                   disabled={busy}
                 />
@@ -158,7 +186,7 @@ export function App(): JSX.Element {
             <button
               className="act"
               onClick={() => void goToBeat(beatIndex + 1)}
-              disabled={busy || beatIndex === DIRECTOR_BEATS.length - 1}
+              disabled={busy || beatIndex === beatCount - 1}
             >
               下一幕 →
             </button>

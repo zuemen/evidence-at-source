@@ -7,6 +7,18 @@
 **專案狀態：Work in progress — hackathon prototype**
 2026 可信 AI 黑客松（Trustworthy AI Hackathon）參賽作品。
 
+**一句話**：事實發生當下**雙簽封存** → 勞工**選擇性揭露** → Agent 過**三層閘門** → 只拿到**布林值＋原因碼** → **人類覆核** → 進**可獨立重驗的稽核軌跡**；**離境即全鏈失效**。
+
+## 60 秒上手（三種深度，任選）
+
+| 你想 | 做這件事 | 需要安裝 |
+|---|---|---|
+| **先看會動的** | 開 <https://zuemen.github.io/evidence-at-source/>，按右上角「**一鍵導覽**」——15 幕自動演完整條故事，不用點任何別的東西 | 什麼都不用 |
+| **驗證核心主張**（3 分鐘） | `git clone` 後跑三行：<br>`cd poc` 後 `node dual-signature.mjs` → 篡改後配對 `false`（**改不動**）<br>`node selective-disclosure.mjs` → `totalHours present? false`（**拿不到**）<br>`npm run verify:external` → `9/9 vectors passed`（**不用信我們**——驗證器零依賴） | 只要 Node 22 |
+| **跑完整測試** | `npm ci && npm test` → 588 tests；`npm run demo:vlei` → 17 步信任鏈主張，exit 0 即全數成立 | Node 22 |
+
+導覽的每一幕都有旁白解釋你正在看什麼；按「下載逐字稿」可以把 15 幕的旁白帶走。
+
 > [!IMPORTANT]
 > **授權：原始碼 MIT，但網頁建置產物是 GPL-3.0。**
 > `packages/web/dist/` 打包了 GPL-3.0 的 `snarkjs` 與 `circomlibjs`（約 2.14 MB，

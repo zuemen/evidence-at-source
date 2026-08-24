@@ -673,13 +673,17 @@ code {
   font-weight: 600;
 }
 
-/* the guided-tour button is the primary entry point for first-time viewers */
-.tabs button[data-tour='true'] {
+/* the guided tours are the primary entry point for first-time viewers;
+   the 90-second essential cut sits first, the full 15-beat tour beside it */
+.tabs button[data-tour='true'],
+.tabs button[data-tour-lite='true'] {
   color: var(--jade);
 }
 
 .tabs button[data-tour='true']:hover,
-.tabs button[data-tour='true'][data-active='true'] {
+.tabs button[data-tour='true'][data-active='true'],
+.tabs button[data-tour-lite='true']:hover,
+.tabs button[data-tour-lite='true'][data-active='true'] {
   background: var(--jade);
   color: var(--ink);
 }
