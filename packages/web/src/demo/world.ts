@@ -34,9 +34,13 @@ import { createVleiIssuer, type Issuer, type VleiIssuer } from '@eas/issuer';
 import {
   AUDITOR_ROLE,
   bootstrapEcosystem,
+  createAid,
   exportChainArtifacts,
+  KelStore,
   verifyEcrChain,
+  verifyKel,
   verifyLeChain,
+  type VleiPresentation,
 } from '@eas/vlei';
 import {
   buildCohortEvidence,
@@ -256,6 +260,32 @@ export interface VleiState {
   readonly issuers: readonly VleiIssuerStanding[];
 }
 
+/**
+ * One check in the chain walk, shown as VeriClaim-style numbered steps.
+ *
+ * The statuses are derived from the chain verifier's failure code, not
+ * re-implemented: `verifyEcrChain` really does run every one of these on
+ * every hop, and the code it returns names the first check that failed.
+ * Mapping code -> step is therefore a rendering of what the engine did,
+ * not a parallel verifier that could drift from it.
+ */
+export interface VleiLabStep {
+  readonly label: string;
+  readonly status: 'pass' | 'fail' | 'skipped';
+  readonly detail: string;
+}
+
+export interface VleiLabResult {
+  readonly scenario: string;
+  readonly title: string;
+  /** What the scenario simulates, in one sentence. */
+  readonly setup: string;
+  readonly ok: boolean;
+  readonly code: string | null;
+  readonly headline: string;
+  readonly steps: readonly VleiLabStep[];
+}
+
 export interface T9Step {
   readonly label: string;
   readonly cohortSize: number;
@@ -404,6 +434,8 @@ export interface DemoWorld {
   /** GLEIF-side revocation of the QVI credential: the whole chain collapses. */
   revokeQvi(): void;
   vleiState(): VleiState;
+  /** Read-only what-if scenarios over the real chain verifier. */
+  vleiLab(scenario: 'foreign-root' | 'tamper' | 'rotation'): VleiLabResult;
   /** Portable bundle (credentials + KELs + TELs) for the agent's chain. */
   exportAgentBundle(role: AgentRole): string;
   /** Every gate decision so far: layer, verdict, reason, authorization basis. */
@@ -1111,6 +1143,131 @@ export async function createDemoWorld(): Promise<DemoWorld> {
 
     auditLog() {
       return audit.entries();
+    },
+
+    vleiLab(scenario) {
+      const STEP_LABELS = [
+        'SAID 自我定址重算（Blake3-256）',
+        '簽章對發行方 KEL 驗證（含信任根）',
+        'TEL 撤銷狀態查詢（fail-closed）',
+        'Schema 與角色一致性',
+        'LEI 一致性（ISO 17442 mod 97-10）',
+      ] as const;
+
+      /** Which numbered check a failure code names. See VleiLabStep's doc. */
+      const stepOf: Record<string, number> = {
+        SAID_MISMATCH: 0,
+        SIGNATURE_INVALID: 1,
+        ROOT_UNTRUSTED: 1,
+        CHAIN_ISSUER_MISMATCH: 1,
+        REGISTRY_UNKNOWN: 2,
+        REGISTRY_REVOKED: 2,
+        SCHEMA_UNKNOWN: 3,
+        SCHEMA_MISMATCH: 3,
+        ATTRIBUTE_INVALID: 3,
+        ROLE_MISMATCH: 3,
+        EDGE_MISSING: 3,
+        LEI_INVALID: 4,
+        LEI_MISMATCH: 4,
+      };
+
+      const walk = (p: VleiPresentation): { ok: boolean; code: string | null } => {
+        const verdict = verifyEcrChain(p, eco.trust);
+        return verdict.ok ? { ok: true, code: null } : { ok: false, code: verdict.failure };
+      };
+
+      const stepsFor = (ok: boolean, code: string | null, passDetails: readonly string[]): VleiLabStep[] => {
+        const failAt = ok ? -1 : (stepOf[code ?? ''] ?? 1);
+        return STEP_LABELS.map((label, i) => {
+          if (ok || i < failAt)
+            return { label, status: 'pass' as const, detail: passDetails[i] ?? '通過' };
+          if (i === failAt) return { label, status: 'fail' as const, detail: `${code} — 鏈驗證在此中止` };
+          return { label, status: 'skipped' as const, detail: '前一步已失敗，未執行' };
+        });
+      };
+
+      const PASS_DETAILS = [
+        '逐張重算 SAID，內容改一個字元即對不上',
+        '逐跳對簽發方當時的 key state 驗簽，根須為我方 GLEIF',
+        '逐張查發證登記；查不到不等於有效',
+        'ECR 角色與各層 schema 逐一比對',
+        '下游宣稱的 LEI 與上游一致且檢查碼合法',
+      ] as const;
+
+      if (scenario === 'foreign-root') {
+        // A complete, internally-valid ecosystem — someone else's. Its own
+        // maths all hold; the only thing wrong with it is who its root is.
+        const foreign = bootstrapEcosystem();
+        const fle = foreign.createLegalEntity({
+          legalName: 'Plausible Verification Ltd.',
+          didWeb: 'did:web:plausible.example',
+          leiTag: 'FAKEROOT',
+          signingJwk: {},
+        });
+        const p = fle.grantEcr('did:key:zImposterAgent');
+        const { ok, code } = walk(p);
+        return {
+          scenario,
+          title: '外來信任根冒充',
+          setup: '攻擊者自建一套完整的 KERI 生態（自己的 GLEIF、QVI、法人、ECR），每一張憑證的數學都是對的——唯一的問題是根不是我方認可的 GLEIF。',
+          ok,
+          code,
+          headline: ok
+            ? '意外：外來根被接受了（這不該發生）'
+            : '整條鏈自洽，但根不在信任清單——第二步就拒絕，後面連驗都不驗。',
+          steps: stepsFor(ok, code, PASS_DETAILS),
+        };
+      }
+
+      if (scenario === 'tamper') {
+        // Deep-copy the bank agent's real chain and change one field of the
+        // focus credential. Every signature in the copy is untouched.
+        const copy = JSON.parse(JSON.stringify(bankAgentVlei)) as {
+          focus: string;
+          credentials: Record<string, { acdc: { a?: Record<string, unknown> } } | undefined>;
+        };
+        const focus = copy.credentials[copy.focus];
+        if (focus?.acdc.a !== undefined) focus.acdc.a['role'] = 'super-admin';
+        const { ok, code } = walk(copy as unknown as VleiPresentation);
+        return {
+          scenario,
+          title: '憑證內容遭竄改',
+          setup: '複製銀行 Agent 的真實 ECR 鏈，只把角色欄位改成 super-admin——所有簽章原封不動。',
+          ok,
+          code,
+          headline: ok
+            ? '意外：竄改後仍通過（這不該發生）'
+            : '簽章都是真的，但內容變了一個字，SAID 重算就對不上——第一步即中止。',
+          steps: stepsFor(ok, code, PASS_DETAILS),
+        };
+      }
+
+      // rotation — the one healthy path: keys rotate, trust survives.
+      const kels = new KelStore();
+      const aid = createAid({ keyCount: 2, threshold: 2 });
+      kels.register(aid.kel);
+      const beforeOk = verifyKel(aid.kel);
+      aid.rotate();
+      aid.rotate();
+      const afterOk = verifyKel(aid.kel);
+      const events = aid.kel.map((e) => e.event.t).join(' → ');
+      const ok = beforeOk && afterOk;
+      return {
+        scenario,
+        title: '金鑰輪替（pre-rotation）',
+        setup: '建立 2-of-2 多簽 AID，連續輪替兩次金鑰。每次輪替的新金鑰，都必須是上一個事件裡逐位承諾過的那一把。',
+        ok,
+        code: ok ? null : 'KEL_INVALID',
+        headline: ok
+          ? `事件序 ${events}：輪替兩次後整條 KEL 仍驗證通過——金鑰換了，身分與信任不中斷。`
+          : '意外：輪替後 KEL 驗證失敗（這不該發生）',
+        steps: [
+          { label: 'inception 事件自我定址（AID = icp 的 SAID）', status: ok ? 'pass' : 'fail', detail: '身分由創世事件的內容決定，不由任何機構分配' },
+          { label: '每次輪替出示上一事件承諾的金鑰', status: ok ? 'pass' : 'fail', detail: '偷到現用私鑰也偽造不了下一次輪替——下一把的承諾早已公開' },
+          { label: '門檻簽章（2-of-2）逐事件驗證', status: ok ? 'pass' : 'fail', detail: '單一金鑰洩漏不足以偽造事件' },
+          { label: '輪替後整條 KEL 重新驗證', status: ok ? 'pass' : 'fail', detail: '金鑰已換兩輪，鏈上信任不中斷' },
+        ],
+      };
     },
 
     vleiState() {

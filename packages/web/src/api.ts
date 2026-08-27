@@ -108,6 +108,9 @@ export const api = {
     return currentPayload();
   },
   exportBundle: async (role: AgentRole) => (await worldPromise).exportAgentBundle(role),
+  /** Read-only what-if over the real chain verifier; never mutates shared state. */
+  vleiLab: async (scenario: 'foreign-root' | 'tamper' | 'rotation') =>
+    (await worldPromise).vleiLab(scenario),
   /**
    * Not part of DemoPayload: proving downloads 2.6 MB and takes a moment, so it
    * happens when a visitor asks for it rather than on every state refresh.

@@ -265,6 +265,7 @@ export function App(): JSX.Element {
           revocationNotices={payload.revocationNotices}
           identity={payload.identity}
           governance={payload.governance}
+          onVleiLab={(s) => api.vleiLab(s)}
           onRevokeAuditor={() => void run(api.revokeAuditor)}
           onRevokeReviewer={() => void run(api.revokeReviewer)}
           onAttemptBrokerWallet={() => void run(api.attemptBrokerWallet)}

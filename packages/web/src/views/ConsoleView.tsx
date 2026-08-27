@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { disclosureDesign } from '@eas/agents';
 import type {
   AgentAuthStatus,
@@ -6,6 +7,7 @@ import type {
   DemoSnapshot,
   SplitView,
   VleiState,
+  VleiLabResult,
   GovernanceState,
   IdentityState,
   ZkProofResult,
@@ -16,6 +18,7 @@ import { Act, Field, Reason } from './gloss.js';
 interface Props {
   readonly snapshot: DemoSnapshot;
   readonly split: SplitView;
+  readonly onVleiLab: (scenario: 'foreign-root' | 'tamper' | 'rotation') => Promise<VleiLabResult>;
   readonly agents: readonly AgentAuthStatus[];
   readonly vlei: VleiState;
   readonly audit: readonly AuditEntry[];
@@ -122,6 +125,7 @@ const DELEGATION_REASONS = new Set([
 export function ConsoleView({
   snapshot,
   split,
+  onVleiLab,
   agents,
   vlei,
   audit,
@@ -173,6 +177,8 @@ export function ConsoleView({
         onRevokeQvi={onRevokeQvi}
         onExportBundle={onExportBundle}
       />
+
+      <VleiLabPanel onRun={onVleiLab} busy={busy} />
 
       <div className="toolbar">
         <span className="badge" data-tone={snapshot.subjectRevoked ? 'bad' : 'ok'}>
@@ -762,5 +768,96 @@ export function ConsoleView({
         且勞工資料完全未被讀取——順序顛倒的話，未授權的 Agent 會在被拒絕前就先讀到勞工資料。
       </p>
     </section>
+  );
+}
+
+/**
+ * Read-only what-if scenarios over the live chain verifier.
+ *
+ * Every result on screen is the verdict `verifyEcrChain` / `verifyKel`
+ * returned a moment ago — the numbered steps render which check the engine
+ * stopped at, they are not a second implementation. Nothing here mutates the
+ * demo world, so a presenter can fire these mid-run without burning the
+ * irreversible buttons below.
+ */
+const LAB_SCENARIOS = [
+  {
+    id: 'rotation' as const,
+    name: '金鑰輪替不中斷信任',
+    tone: 'ok' as const,
+    hint: 'KERI pre-rotation：換鑰匙，不換身分',
+  },
+  {
+    id: 'foreign-root' as const,
+    name: '外來信任根冒充',
+    tone: 'bad' as const,
+    hint: '整套自建生態，數學全對——根不對',
+  },
+  {
+    id: 'tamper' as const,
+    name: '憑證內容遭竄改',
+    tone: 'bad' as const,
+    hint: '簽章原封不動，只改一個欄位',
+  },
+];
+
+function VleiLabPanel({
+  onRun,
+  busy,
+}: {
+  readonly onRun: (s: 'foreign-root' | 'tamper' | 'rotation') => Promise<VleiLabResult>;
+  readonly busy: boolean;
+}): JSX.Element {
+  const [result, setResult] = useState<VleiLabResult | null>(null);
+  const [running, setRunning] = useState(false);
+
+  return (
+    <div className="chain-panel" style={{ marginTop: '1.2rem' }}>
+      <h3 style={{ margin: '0 0 0.35rem' }}>vLEI 情境實驗室</h3>
+      <p className="act-lead" style={{ margin: '0 0 0.9rem' }}>
+        三個唯讀情境，當場跑真實的鏈驗證器——不影響下方任何狀態，可以隨便按。
+      </p>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.6rem' }}>
+        {LAB_SCENARIOS.map((sc) => (
+          <button
+            key={sc.id}
+            className="act"
+            data-danger={sc.tone === 'bad' ? 'true' : undefined}
+            data-active={result?.scenario === sc.id}
+            disabled={busy || running}
+            title={sc.hint}
+            onClick={() => {
+              setRunning(true);
+              void onRun(sc.id)
+                .then(setResult)
+                .finally(() => setRunning(false));
+            }}
+          >
+            {sc.name}
+          </button>
+        ))}
+      </div>
+
+      {result !== null && (
+        <div style={{ marginTop: '1rem' }}>
+          <p style={{ margin: '0 0 0.3rem' }}>
+            <strong>{result.title}</strong>
+            <span className="badge" data-tone={result.scenario === 'rotation' ? (result.ok ? 'ok' : 'bad') : result.ok ? 'bad' : 'ok'} style={{ marginLeft: '0.6rem' }}>
+              {result.code ?? 'VERIFIED'}
+            </span>
+          </p>
+          <p className="act-lead" style={{ margin: '0 0 0.6rem' }}>{result.setup}</p>
+          <ol className="reason-list" style={{ margin: 0, paddingLeft: '1.2rem' }}>
+            {result.steps.map((st, i) => (
+              <li key={i} style={{ opacity: st.status === 'skipped' ? 0.45 : 1 }}>
+                {st.status === 'pass' ? '✓' : st.status === 'fail' ? '✗' : '—'} {st.label}
+                <span className="reason-gloss">{st.detail}</span>
+              </li>
+            ))}
+          </ol>
+          <p style={{ margin: '0.6rem 0 0', fontWeight: 600 }}>{result.headline}</p>
+        </div>
+      )}
+    </div>
   );
 }
