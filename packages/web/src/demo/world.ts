@@ -64,6 +64,7 @@ import {
   verifyAuditTrail,
   type AuditVerification,
   requireIssuerSigningKey,
+  resolveIssuerSigningKey,
   verifyReconciliationProof,
   type IssuerSigningKey,
   runAuthorizedGate,
@@ -1048,6 +1049,178 @@ export async function createDemoWorld(): Promise<DemoWorld> {
       }
     : { index: 0, grade: 'D', components: { coverage: 0, consistency: 0 } };
 
+  /**
+   * The split view, before the upstream-revocation guard wraps it.
+   *
+   * `requireIssuerKey` throws by design — a caller that swallowed it would
+   * be back to trusting an unverified key. But "GLEIF revoked the QVI" is
+   * precisely what this console exists to show, so the throw is caught one
+   * level up and rendered as the cascade it is.
+   */
+  async function splitInner(): Promise<SplitView> {
+    // Agent A (bank): L0 first. If its delegation is revoked or invalid, the
+    // worker-reading callback never runs, so no worker field is read.
+    const bankResult = await runAuthorizedGate(bankL0, async () => {
+      const disclosed: Record<string, unknown> = {};
+      let refusedWith: ReasonCode | null = null;
+
+      for (const entry of held) {
+        if (entry.type === 'WorkingHoursCredential') continue;
+
+        const decision = await checkCredentialLayer({
+          presentation: await presentationFor(entry),
+          attestation: entry.attestation ?? '',
+          issuerPublicKey: requireIssuerKey(entry.issuer),
+          workerPublicKey: workerKeys.publicKey,
+          requiredClaims: [HEADLINE_CLAIM[entry.type]],
+          revocations,
+          // 題05 Q1/Q2 on the path that actually decides.
+          //
+          // This block existed, was tested, and was passed by nobody — so the
+          // broker holding the worker's phone, the case the whole mechanism
+          // was built for, sailed through the account-opening flow. A check
+          // that is never handed its argument protects no one.
+          identity: {
+            enrollments,
+            at: new Date(),
+            verifyAssertion: demoAssertionVerifier,
+          },
+        });
+
+        if (!decision.ok) {
+          refusedWith = decision.reason;
+          break;
+        }
+
+        disclosed[HEADLINE_CLAIM[entry.type]] = decision.payload[HEADLINE_CLAIM[entry.type]];
+      }
+
+      const assessment =
+        refusedWith === null
+          ? createBankAgent().assess(
+              {
+                zeroRecruitmentFeePaid: disclosed['zeroRecruitmentFeePaid'] as boolean | undefined,
+                passportHeldByWorker: disclosed['passportHeldByWorker'] as boolean | undefined,
+                nativeLanguageVersionProvided: disclosed['nativeLanguageVersionProvided'] as
+                  | boolean
+                  | undefined,
+              },
+              { flagged: applications.risk(WORKER_DID).flagged },
+            )
+          : null;
+
+      return { disclosed, assessment, refusedWith };
+    });
+
+    const bank = bankResult.ok
+      ? bankResult.worker
+      : { disclosed: {}, assessment: null, refusedWith: bankResult.reason };
+
+    audit.record({
+      agentRole: 'bank',
+      layer: bankResult.ok ? 'L1' : 'L0',
+      action: 'boolean:wallet-credentials',
+      decision: bankResult.ok && bank.refusedWith === null ? 'ALLOW' : 'DENY',
+      reason: bank.refusedWith,
+      basis: bankBasis,
+    });
+
+    // Agent B (brand): L0 first, same guarantee.
+    const brandResult = await runAuthorizedGate(brandL0, async (brandClaims) => {
+      const hours = held.find((entry) => entry.type === 'WorkingHoursCredential');
+      const submissions: Submission[] = others.map((member) => member.submission);
+      if (hours !== undefined && hours.attestation !== null) {
+        submissions.unshift({
+          presentation: await presentationFor(hours),
+          attestation: hours.attestation,
+          issuerPublicKey: requireIssuerKey(hours.issuer),
+          workerPublicKey: workerKeys.publicKey,
+        });
+      }
+
+      const { evidence, rejected } = await buildCohortEvidence({
+        cohort: COHORT,
+        metric: 'workingHoursComplianceRate',
+        claim: 'withinRBALimit',
+        submissions,
+        revocations,
+        // The brand's own mandate says what backing it will accept, and the
+        // directory is what turns "verified by SGS" from a string into a
+        // resolvable claim. Both used to stop at the gate's front door.
+        ...(brandClaims.minimumIssuerTier === undefined
+          ? {}
+          : { minimumIssuerTier: brandClaims.minimumIssuerTier }),
+        auditors,
+      });
+
+      const brandAgent = createBrandAgent([evidence]);
+
+      // 題06 Q4/Q5: the verification leaves something a challenger can check
+      // without being handed any access — item names and a hash, no values.
+      const hoursHash = hours === undefined ? null : credentialHash(await presentationFor(hours));
+      if (hoursHash !== null) {
+        const record = {
+          verifierDid: 'did:web:brand.example',
+          subjectCredentialHash: hoursHash,
+          verifiedItems: ['workingHoursWithinLimit'] as const,
+          result: (rejected.length === 0 ? 'PASS' : 'FAIL') as 'PASS' | 'FAIL',
+          verifiedAt: new Date().toISOString(),
+        };
+        verificationLog.record(record);
+        lastVerifiedHash = hoursHash;
+        issuedReceipts.push({
+          jwt: await issueVerificationReceipt(brandVerifierKeys.privateKey, record),
+          verifiedAt: record.verifiedAt,
+        });
+      }
+
+      return {
+        answer: brandAgent.answer({
+          kind: 'aggregate',
+          metric: 'workingHoursComplianceRate',
+          cohort: COHORT,
+        }),
+        rejected,
+        individualQuery: brandAgent.answer({ kind: 'individual', workerDID: WORKER_DID }),
+      };
+    });
+
+    const brand = brandResult.ok
+      ? { ...brandResult.worker, refusedWith: null, workingHoursIssuerTier: FACTORY_TIER }
+      : {
+          answer: null,
+          rejected: [] as ReasonCode[],
+          individualQuery: null,
+          refusedWith: brandResult.reason,
+          workingHoursIssuerTier: FACTORY_TIER,
+        };
+
+    audit.record({
+      agentRole: 'brand',
+      layer: brandResult.ok ? 'L2' : 'L0',
+      action: 'aggregate:workingHoursComplianceRate',
+      decision: brandResult.ok && brand.answer?.ok === true ? 'ALLOW' : 'DENY',
+      reason: brandResult.ok
+        ? brand.answer !== null && brand.answer.ok === false
+          ? brand.answer.reason
+          : null
+        : brandResult.reason,
+      basis: brandBasis,
+    });
+    if (brandResult.ok && brand.individualQuery !== null && brand.individualQuery.ok === false) {
+      audit.record({
+        agentRole: 'brand',
+        layer: 'L2',
+        action: `individual:${WORKER_DID}`,
+        decision: 'DENY',
+        reason: brand.individualQuery.reason,
+        basis: brandBasis,
+      });
+    }
+
+    return { bank, brand };
+  }
+
   return {
     snapshot() {
       return {
@@ -1312,167 +1485,29 @@ export async function createDemoWorld(): Promise<DemoWorld> {
     },
 
     async split() {
-      // Agent A (bank): L0 first. If its delegation is revoked or invalid, the
-      // worker-reading callback never runs, so no worker field is read.
-      const bankResult = await runAuthorizedGate(bankL0, async () => {
-        const disclosed: Record<string, unknown> = {};
-        let refusedWith: ReasonCode | null = null;
+      try {
+        return await splitInner();
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        if (!message.startsWith('issuer vLEI chain rejected')) throw error;
 
-        for (const entry of held) {
-          if (entry.type === 'WorkingHoursCredential') continue;
-
-          const decision = await checkCredentialLayer({
-            presentation: await presentationFor(entry),
-            attestation: entry.attestation ?? '',
-            issuerPublicKey: requireIssuerKey(entry.issuer),
-            workerPublicKey: workerKeys.publicKey,
-            requiredClaims: [HEADLINE_CLAIM[entry.type]],
-            revocations,
-            // 題05 Q1/Q2 on the path that actually decides.
-            //
-            // This block existed, was tested, and was passed by nobody — so the
-            // broker holding the worker's phone, the case the whole mechanism
-            // was built for, sailed through the account-opening flow. A check
-            // that is never handed its argument protects no one.
-            identity: {
-              enrollments,
-              at: new Date(),
-              verifyAssertion: demoAssertionVerifier,
-            },
-          });
-
-          if (!decision.ok) {
-            refusedWith = decision.reason;
-            break;
-          }
-
-          disclosed[HEADLINE_CLAIM[entry.type]] = decision.payload[HEADLINE_CLAIM[entry.type]];
-        }
-
-        const assessment =
-          refusedWith === null
-            ? createBankAgent().assess(
-                {
-                  zeroRecruitmentFeePaid: disclosed['zeroRecruitmentFeePaid'] as boolean | undefined,
-                  passportHeldByWorker: disclosed['passportHeldByWorker'] as boolean | undefined,
-                  nativeLanguageVersionProvided: disclosed['nativeLanguageVersionProvided'] as
-                    | boolean
-                    | undefined,
-                },
-                { flagged: applications.risk(WORKER_DID).flagged },
-              )
-            : null;
-
-        return { disclosed, assessment, refusedWith };
-      });
-
-      const bank = bankResult.ok
-        ? bankResult.worker
-        : { disclosed: {}, assessment: null, refusedWith: bankResult.reason };
-
-      audit.record({
-        agentRole: 'bank',
-        layer: bankResult.ok ? 'L1' : 'L0',
-        action: 'boolean:wallet-credentials',
-        decision: bankResult.ok && bank.refusedWith === null ? 'ALLOW' : 'DENY',
-        reason: bank.refusedWith,
-        basis: bankBasis,
-      });
-
-      // Agent B (brand): L0 first, same guarantee.
-      const brandResult = await runAuthorizedGate(brandL0, async (brandClaims) => {
-        const hours = held.find((entry) => entry.type === 'WorkingHoursCredential');
-        const submissions: Submission[] = others.map((member) => member.submission);
-        if (hours !== undefined && hours.attestation !== null) {
-          submissions.unshift({
-            presentation: await presentationFor(hours),
-            attestation: hours.attestation,
-            issuerPublicKey: requireIssuerKey(hours.issuer),
-            workerPublicKey: workerKeys.publicKey,
-          });
-        }
-
-        const { evidence, rejected } = await buildCohortEvidence({
-          cohort: COHORT,
-          metric: 'workingHoursComplianceRate',
-          claim: 'withinRBALimit',
-          submissions,
-          revocations,
-          // The brand's own mandate says what backing it will accept, and the
-          // directory is what turns "verified by SGS" from a string into a
-          // resolvable claim. Both used to stop at the gate's front door.
-          ...(brandClaims.minimumIssuerTier === undefined
-            ? {}
-            : { minimumIssuerTier: brandClaims.minimumIssuerTier }),
-          auditors,
-        });
-
-        const brandAgent = createBrandAgent([evidence]);
-
-        // 題06 Q4/Q5: the verification leaves something a challenger can check
-        // without being handed any access — item names and a hash, no values.
-        const hoursHash = hours === undefined ? null : credentialHash(await presentationFor(hours));
-        if (hoursHash !== null) {
-          const record = {
-            verifierDid: 'did:web:brand.example',
-            subjectCredentialHash: hoursHash,
-            verifiedItems: ['workingHoursWithinLimit'] as const,
-            result: (rejected.length === 0 ? 'PASS' : 'FAIL') as 'PASS' | 'FAIL',
-            verifiedAt: new Date().toISOString(),
-          };
-          verificationLog.record(record);
-          lastVerifiedHash = hoursHash;
-          issuedReceipts.push({
-            jwt: await issueVerificationReceipt(brandVerifierKeys.privateKey, record),
-            verifiedAt: record.verifiedAt,
-          });
-        }
+        // Upstream revocation reaches every panel at once. That is the
+        // property being demonstrated, so it is rendered, not thrown.
+        const code: ReasonCode = message.includes('ISSUER_VLEI_REVOKED')
+          ? 'ISSUER_VLEI_REVOKED'
+          : 'ISSUER_VLEI_CHAIN_INVALID';
 
         return {
-          answer: brandAgent.answer({
-            kind: 'aggregate',
-            metric: 'workingHoursComplianceRate',
-            cohort: COHORT,
-          }),
-          rejected,
-          individualQuery: brandAgent.answer({ kind: 'individual', workerDID: WORKER_DID }),
-        };
-      });
-
-      const brand = brandResult.ok
-        ? { ...brandResult.worker, refusedWith: null, workingHoursIssuerTier: FACTORY_TIER }
-        : {
+          bank: { disclosed: {}, assessment: null, refusedWith: code },
+          brand: {
             answer: null,
-            rejected: [] as ReasonCode[],
+            rejected: [],
             individualQuery: null,
-            refusedWith: brandResult.reason,
-            workingHoursIssuerTier: FACTORY_TIER,
-          };
-
-      audit.record({
-        agentRole: 'brand',
-        layer: brandResult.ok ? 'L2' : 'L0',
-        action: 'aggregate:workingHoursComplianceRate',
-        decision: brandResult.ok && brand.answer?.ok === true ? 'ALLOW' : 'DENY',
-        reason: brandResult.ok
-          ? brand.answer !== null && brand.answer.ok === false
-            ? brand.answer.reason
-            : null
-          : brandResult.reason,
-        basis: brandBasis,
-      });
-      if (brandResult.ok && brand.individualQuery !== null && brand.individualQuery.ok === false) {
-        audit.record({
-          agentRole: 'brand',
-          layer: 'L2',
-          action: `individual:${WORKER_DID}`,
-          decision: 'DENY',
-          reason: brand.individualQuery.reason,
-          basis: brandBasis,
-        });
+            refusedWith: code,
+            workingHoursIssuerTier: 'SELF_DECLARED',
+          },
+        };
       }
-
-      return { bank, brand };
     },
 
     async receipts() {
@@ -1606,10 +1641,18 @@ export async function createDemoWorld(): Promise<DemoWorld> {
       const standing = auditors.standing(AUDITOR_DID);
       const reviewer = resolveReviewerAuthority(reviewerOor, eco.trust, REVIEWER_ROLE);
       const exported = await audit.export();
-      const integrity = await verifyAuditTrail(
-        exported,
-        requireIssuerKey(bank) as unknown as PublicJwk,
-      );
+
+      /**
+       * Once GLEIF revokes the QVI, the bank's own chain no longer resolves —
+       * so there is no key to check the seals against. That is the cascade
+       * working, not an error, and the panel says which of the two it is: the
+       * chain of entries can still be walked, the seals simply cannot be
+       * attributed to an issuer anyone can still verify.
+       */
+      const sealKey = resolveIssuerSigningKey(bank.legalEntityPresentation(), eco.trust);
+      const integrity = sealKey.ok
+        ? await verifyAuditTrail(exported, sealKey.issuer.jwk as unknown as PublicJwk)
+        : await verifyAuditTrail(exported);
 
       // The tail-truncation demonstration, run live rather than described.
       // A checkpoint is published at the trail's current head, the holder then
@@ -1623,7 +1666,10 @@ export async function createDemoWorld(): Promise<DemoWorld> {
       const againstCheckpoint = verifyAgainstCheckpoints(truncated, anchorLog.checkpoints());
 
       return {
-        workingHoursChainTier: chainTierOf(requireIssuerKey(factory)) ?? 'SELF_DECLARED',
+        workingHoursChainTier: (() => {
+          const key = resolveIssuerSigningKey(factory.legalEntityPresentation(), eco.trust);
+          return (key.ok ? chainTierOf(key.issuer.jwk) : null) ?? 'SELF_DECLARED';
+        })(),
         auditor: { did: AUDITOR_DID, legalName: standing?.legalName ?? null },
         reviewer: {
           personLegalName: reviewer.ok ? reviewer.reviewer.personLegalName : null,

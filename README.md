@@ -15,7 +15,7 @@
 |---|---|---|
 | **先看會動的** | 開 <https://zuemen.github.io/evidence-at-source/>，按右上角「**一鍵導覽**」——15 幕自動演完整條故事，不用點任何別的東西 | 什麼都不用 |
 | **驗證核心主張**（3 分鐘） | `git clone` 後跑三行：<br>`cd poc` 後 `node dual-signature.mjs` → 篡改後配對 `false`（**改不動**）<br>`node selective-disclosure.mjs` → `totalHours present? false`（**拿不到**）<br>`npm run verify:external` → `9/9 vectors passed`（**不用信我們**——驗證器零依賴） | 只要 Node 22 |
-| **跑完整測試** | `npm ci && npm test` → 589 tests；`npm run demo:vlei` → 17 步信任鏈主張，exit 0 即全數成立 | Node 22 |
+| **跑完整測試** | `npm ci && npm test` → 592 tests；`npm run demo:vlei` → 17 步信任鏈主張，exit 0 即全數成立 | Node 22 |
 
 導覽的每一幕都有旁白解釋你正在看什麼；按「下載逐字稿」可以把 15 幕的旁白帶走。
 
@@ -581,7 +581,7 @@ npx vite preview --port 4173          # 本機預覽靜態站
 
 ```bash
 npm install      # 於 repo 根目錄，安裝 workspace 依賴
-npm test         # vitest，目前 589 個測試全綠
+npm test         # vitest，目前 592 個測試全綠
 npm run typecheck
 ```
 
@@ -696,7 +696,7 @@ Agent A 的能力邊界也寫在型別裡：`BankAssessment.requiresHumanReview`
 | 交件 | 位置 |
 |---|---|
 | 挑戰命題 | **Track 05（主賽道）＋ Track 06（加分題）**——主辦載明命題 06 為 Track 01 延伸的加分題、可與其他命題同時挑戰，本作品同時交付兩軌，對照見上 |
-| 程式碼 | 本 repo（CI 每次 push 跑 589 tests + `demo:vlei` 閘門） |
+| 程式碼 | 本 repo（CI 每次 push 跑 592 tests + `demo:vlei` 閘門） |
 | 簡報 | <https://zuemen.github.io/evidence-at-source/slides.html>（←→ 翻頁） |
 | Demo | <https://zuemen.github.io/evidence-at-source/>（免安裝）＋[講稿](docs/demo-video-script.md) |
 | 治理／信任設計說明 | [`docs/governance-memo.md`](docs/governance-memo.md)（六信任點逐點＋證據） |

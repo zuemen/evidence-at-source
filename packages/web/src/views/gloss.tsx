@@ -119,6 +119,8 @@ export const REASON_GLOSS: Record<string, string> = {
   CREDENTIAL_REVOKED: '憑證已被撤銷',
   CREDENTIAL_EXPIRED: '憑證已過期',
   INVALID_ISSUER_SIGNATURE: '簽發方簽章無效',
+  ISSUER_VLEI_REVOKED: '簽發方的 vLEI 鏈已被上游撤銷——整條連帶失效',
+  ISSUER_VLEI_CHAIN_INVALID: '簽發方的 vLEI 鏈驗證失敗',
   ISSUER_TIER_MISMATCH: '自稱的可信層級高於鏈上授予的層級',
   ISSUER_TIER_BELOW_THRESHOLD: '簽發方層級低於查驗方要求',
   AUDITOR_CHAIN_INVALID: '背書機構已無法在鏈上驗證為稽核機構',
