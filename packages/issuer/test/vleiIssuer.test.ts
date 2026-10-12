@@ -7,7 +7,7 @@ async function setup() {
   const eco = bootstrapEcosystem();
   const bank = await createVleiIssuer({
     didWeb: 'did:web:bank.example',
-    legalName: '國泰世華銀行',
+    legalName: '示範商業銀行',
     leiTag: 'BANKEXAMPLE',
     ecosystem: eco,
   });
@@ -34,7 +34,7 @@ describe('createVleiIssuer', () => {
     const { eco, bank } = await setup();
     const signed = await bank.issueDelegation({
       agentDid: 'did:key:zBankAgent',
-      principalName: '國泰世華銀行',
+      principalName: '示範商業銀行',
       allowedQueryTypes: ['boolean'],
       scope: ['DocumentCustodyCredential'],
       purpose: '開戶申請的身份與意願查驗',

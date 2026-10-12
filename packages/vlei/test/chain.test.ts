@@ -13,7 +13,7 @@ function bank(eco = bootstrapEcosystem()) {
   return {
     eco,
     le: eco.createLegalEntity({
-      legalName: '國泰世華銀行',
+      legalName: '示範商業銀行',
       didWeb: 'did:web:bank.example',
       leiTag: 'BANKEXAMPLE',
       signingJwk: JWK,
@@ -29,7 +29,7 @@ describe('vLEI trust chain', () => {
     expect(verdict.ok).toBe(true);
     if (verdict.ok) {
       expect(verdict.facts.didWeb).toBe('did:web:bank.example');
-      expect(verdict.facts.legalName).toBe('國泰世華銀行');
+      expect(verdict.facts.legalName).toBe('示範商業銀行');
       expect(verdict.facts.credentialSigningJwk).toEqual(JWK);
       expect(isValidLei(verdict.facts.lei)).toBe(true);
     }

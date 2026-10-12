@@ -22,7 +22,7 @@ async function world() {
   });
   const bank = await createVleiIssuer({
     didWeb: 'did:web:bank.example',
-    legalName: '國泰世華銀行',
+    legalName: '示範商業銀行',
     leiTag: 'BANKEXAMPLE',
     ecosystem: eco,
   });
@@ -45,7 +45,7 @@ async function world() {
 
   const delegation = await bank.issueDelegation({
     agentDid: AGENT_DID,
-    principalName: '國泰世華銀行',
+    principalName: '示範商業銀行',
     allowedQueryTypes: ['boolean'],
     scope: ['DocumentCustodyCredential'],
     purpose: '開戶申請的身份與意願查驗',

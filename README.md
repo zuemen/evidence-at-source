@@ -267,7 +267,7 @@ flowchart TD
     end
 
     subgraph PRIN["Principal 委託機構"]
-        P1["國泰世華銀行<br/>did:web:bank.example"]
+        P1["示範商業銀行<br/>did:web:bank.example"]
         P2["國際成衣品牌<br/>did:web:brand.example"]
     end
 

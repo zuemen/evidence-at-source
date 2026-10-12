@@ -85,7 +85,7 @@ describe('P3 — three revocation paths', () => {
     const dir = createRevocationDirectory();
     const delegation = await world.bank.issueDelegation({
       agentDid: AGENT_DID,
-      principalName: '國泰世華銀行',
+      principalName: '示範商業銀行',
       allowedQueryTypes: ['boolean'],
       scope: ['WorkingHoursCredential'],
       purpose: '查驗',

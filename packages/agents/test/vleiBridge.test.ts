@@ -8,7 +8,7 @@ const AGENT_DID = 'did:key:zBankAgent';
 function setup() {
   const eco = bootstrapEcosystem();
   const le = eco.createLegalEntity({
-    legalName: '國泰世華銀行',
+    legalName: '示範商業銀行',
     didWeb: 'did:web:bank.example',
     leiTag: 'BANKEXAMPLE',
     signingJwk: JWK,
@@ -25,7 +25,7 @@ describe('vleiBridge', () => {
     if (resolved.ok) {
       expect(resolved.authority.agentDid).toBe(AGENT_DID);
       expect(resolved.authority.principalDid).toBe('did:web:bank.example');
-      expect(resolved.authority.principalLegalName).toBe('國泰世華銀行');
+      expect(resolved.authority.principalLegalName).toBe('示範商業銀行');
       expect(resolved.authority.delegationJwk).toEqual(JWK);
     }
   });

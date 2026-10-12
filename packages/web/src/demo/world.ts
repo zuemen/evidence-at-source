@@ -611,7 +611,7 @@ export async function createDemoWorld(): Promise<DemoWorld> {
   const bankKeys = await generateKeyPair();
   const bank = await createVleiIssuer({
     didWeb: 'did:web:bank.example',
-    legalName: '國泰世華銀行',
+    legalName: '示範商業銀行',
     leiTag: 'BANKEXAMPLE',
     ecosystem: eco,
     options: { keyPair: bankKeys },
@@ -736,7 +736,7 @@ export async function createDemoWorld(): Promise<DemoWorld> {
 
   const bankDelegation = await bank.issueDelegation({
     agentDid: BANK_AGENT_DID,
-    principalName: '國泰世華銀行',
+    principalName: '示範商業銀行',
     allowedQueryTypes: ['boolean'],
     scope: ['RecruitmentFeeCredential', 'DocumentCustodyCredential', 'ContractConsentCredential'],
     purpose: '開戶申請的身份與意願查驗',
@@ -1472,7 +1472,7 @@ export async function createDemoWorld(): Promise<DemoWorld> {
     async delegationState() {
       return {
         agents: [
-          await agentStatus('bank', BANK_AGENT_DID, '國泰世華銀行', bankDelegation),
+          await agentStatus('bank', BANK_AGENT_DID, '示範商業銀行', bankDelegation),
           await agentStatus('brand', BRAND_AGENT_DID, '某國際成衣品牌', brandDelegation),
         ],
         walletReview: await reviewDelegationForWallet(bankDelegation, {

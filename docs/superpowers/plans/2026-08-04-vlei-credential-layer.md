@@ -1707,7 +1707,7 @@ function bank(eco = bootstrapEcosystem()) {
   return {
     eco,
     le: eco.createLegalEntity({
-      legalName: '國泰世華銀行',
+      legalName: '示範商業銀行',
       didWeb: 'did:web:bank.example',
       leiTag: 'BANKEXAMPLE',
       signingJwk: JWK,
@@ -1723,7 +1723,7 @@ describe('vLEI trust chain', () => {
     expect(verdict.ok).toBe(true);
     if (verdict.ok) {
       expect(verdict.facts.didWeb).toBe('did:web:bank.example');
-      expect(verdict.facts.legalName).toBe('國泰世華銀行');
+      expect(verdict.facts.legalName).toBe('示範商業銀行');
       expect(verdict.facts.credentialSigningJwk).toEqual(JWK);
       expect(isValidLei(verdict.facts.lei)).toBe(true);
     }
@@ -2301,7 +2301,7 @@ const AGENT_DID = 'did:key:zBankAgent';
 function setup() {
   const eco = bootstrapEcosystem();
   const le = eco.createLegalEntity({
-    legalName: '國泰世華銀行',
+    legalName: '示範商業銀行',
     didWeb: 'did:web:bank.example',
     leiTag: 'BANKEXAMPLE',
     signingJwk: JWK,
@@ -2318,7 +2318,7 @@ describe('vleiBridge', () => {
     if (resolved.ok) {
       expect(resolved.authority.agentDid).toBe(AGENT_DID);
       expect(resolved.authority.principalDid).toBe('did:web:bank.example');
-      expect(resolved.authority.principalLegalName).toBe('國泰世華銀行');
+      expect(resolved.authority.principalLegalName).toBe('示範商業銀行');
       expect(resolved.authority.delegationJwk).toEqual(JWK);
     }
   });
@@ -2527,7 +2527,7 @@ async function setup() {
   const eco = bootstrapEcosystem();
   const bank = await createVleiIssuer({
     didWeb: 'did:web:bank.example',
-    legalName: '國泰世華銀行',
+    legalName: '示範商業銀行',
     leiTag: 'BANKEXAMPLE',
     ecosystem: eco,
   });
@@ -2554,7 +2554,7 @@ describe('createVleiIssuer', () => {
     const { eco, bank } = await setup();
     const signed = await bank.issueDelegation({
       agentDid: 'did:key:zBankAgent',
-      principalName: '國泰世華銀行',
+      principalName: '示範商業銀行',
       allowedQueryTypes: ['boolean'],
       scope: ['DocumentCustodyCredential'],
       purpose: '開戶申請的身份與意願查驗',
@@ -2695,7 +2695,7 @@ export async function setupVleiWorld(): Promise<VleiTestWorld> {
   const eco = bootstrapEcosystem();
   const bank = await createVleiIssuer({
     didWeb: 'did:web:bank.example',
-    legalName: '國泰世華銀行',
+    legalName: '示範商業銀行',
     leiTag: 'BANKEXAMPLE',
     ecosystem: eco,
   });
@@ -2722,7 +2722,7 @@ async function setup() {
   ) {
     return world.bank.issueDelegation({
       agentDid: AGENT_DID,
-      principalName: '國泰世華銀行',
+      principalName: '示範商業銀行',
       allowedQueryTypes: ['boolean'],
       scope: ['DocumentCustodyCredential', 'WorkingHoursCredential'],
       purpose: '開戶申請的身份與意願查驗',
@@ -2786,7 +2786,7 @@ describe('L0 — agent vLEI authority', () => {
     expect(decision.ok).toBe(true);
     if (decision.ok) {
       expect(decision.authority.principalDid).toBe('did:web:bank.example');
-      expect(decision.authority.principalLegalName).toBe('國泰世華銀行');
+      expect(decision.authority.principalLegalName).toBe('示範商業銀行');
     }
   });
 });
@@ -2913,14 +2913,14 @@ import { createVleiIssuer } from '@eas/issuer';
 const eco = bootstrapEcosystem();
 const bank = await createVleiIssuer({
   didWeb: 'did:web:bank.example',
-  legalName: '國泰世華銀行',
+  legalName: '示範商業銀行',
   leiTag: 'BANKEXAMPLE',
   ecosystem: eco,
 });
 const agentVlei = bank.grantAgentEcr('did:key:zBankAgent');
 ```
 
-`reviewDelegationForWallet` 呼叫處 `knownInstitutions` → `agentVlei, trust: eco.trust`。新增一個斷言案例：authorized view 的 `verifiedLegalEntity.legalName` 為 `'國泰世華銀行'` 且 `verifiedLegalEntity.lei` 以 `BANKEXAMPLE` 開頭。
+`reviewDelegationForWallet` 呼叫處 `knownInstitutions` → `agentVlei, trust: eco.trust`。新增一個斷言案例：authorized view 的 `verifiedLegalEntity.legalName` 為 `'示範商業銀行'` 且 `verifiedLegalEntity.lei` 以 `BANKEXAMPLE` 開頭。
 
 - [ ] **Step 9: 更新 `packages/web/src/demo/world.ts`**
 
@@ -2945,7 +2945,7 @@ const agentVlei = bank.grantAgentEcr('did:key:zBankAgent');
   });
   const bank = await createVleiIssuer({
     didWeb: 'did:web:bank.example',
-    legalName: '國泰世華銀行',
+    legalName: '示範商業銀行',
     leiTag: 'BANKEXAMPLE',
     ecosystem: eco,
   });
@@ -3024,7 +3024,7 @@ async function world() {
   });
   const bank = await createVleiIssuer({
     didWeb: 'did:web:bank.example',
-    legalName: '國泰世華銀行',
+    legalName: '示範商業銀行',
     leiTag: 'BANKEXAMPLE',
     ecosystem: eco,
   });
@@ -3048,7 +3048,7 @@ async function world() {
 
   const delegation = await bank.issueDelegation({
     agentDid: AGENT_DID,
-    principalName: '國泰世華銀行',
+    principalName: '示範商業銀行',
     allowedQueryTypes: ['boolean'],
     scope: ['DocumentCustodyCredential'],
     purpose: '開戶申請的身份與意願查驗',

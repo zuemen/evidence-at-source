@@ -12,7 +12,7 @@ async function setup() {
   ) {
     return world.bank.issueDelegation({
       agentDid: AGENT_DID,
-      principalName: '國泰世華銀行',
+      principalName: '示範商業銀行',
       allowedQueryTypes: ['boolean'],
       scope: ['DocumentCustodyCredential', 'WorkingHoursCredential'],
       purpose: '開戶申請的身份與意願查驗',
@@ -104,7 +104,7 @@ describe('L0 — agent delegation', () => {
     });
     const signed = await impostor.issueDelegation({
       agentDid: AGENT_DID,
-      principalName: '國泰世華銀行',
+      principalName: '示範商業銀行',
       allowedQueryTypes: ['boolean'],
       scope: ['WorkingHoursCredential'],
       purpose: '開戶申請的身份與意願查驗',
@@ -125,7 +125,7 @@ describe('L0 — agent delegation', () => {
 
     expect(result.ok).toBe(true);
     expect(result.ok === true && result.claims.agentDid).toBe(AGENT_DID);
-    expect(result.ok === true && result.claims.principalName).toBe('國泰世華銀行');
+    expect(result.ok === true && result.claims.principalName).toBe('示範商業銀行');
     expect(workerReader).toHaveBeenCalledTimes(1);
   });
 
@@ -185,7 +185,7 @@ describe('L0 — agent vLEI authority', () => {
     expect(decision.ok).toBe(true);
     if (decision.ok) {
       expect(decision.authority.principalDid).toBe('did:web:bank.example');
-      expect(decision.authority.principalLegalName).toBe('國泰世華銀行');
+      expect(decision.authority.principalLegalName).toBe('示範商業銀行');
     }
   });
 });

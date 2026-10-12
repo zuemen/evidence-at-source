@@ -13,7 +13,7 @@ const AGENT_DID = 'did:key:zBankAgent';
 function world() {
   const eco = bootstrapEcosystem();
   const le = eco.createLegalEntity({
-    legalName: '國泰世華銀行',
+    legalName: '示範商業銀行',
     didWeb: 'did:web:bank.example',
     leiTag: 'BANKEXAMPLE',
     signingJwk: JWK,

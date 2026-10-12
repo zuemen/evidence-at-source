@@ -11,7 +11,7 @@ async function setup() {
   const eco = bootstrapEcosystem();
   const bank = await createVleiIssuer({
     didWeb: 'did:web:bank.example',
-    legalName: '國泰世華銀行',
+    legalName: '示範商業銀行',
     leiTag: 'BANKEXAMPLE',
     ecosystem: eco,
   });
@@ -20,7 +20,7 @@ async function setup() {
   const delegation = (overrides: Partial<Parameters<typeof bank.issueDelegation>[0]> = {}) =>
     bank.issueDelegation({
       agentDid: AGENT_DID,
-      principalName: '國泰世華銀行',
+      principalName: '示範商業銀行',
       allowedQueryTypes: ['boolean'],
       scope: ['DocumentCustodyCredential', 'WorkingHoursCredential'],
       purpose: '開戶申請的身份與意願查驗',
@@ -44,7 +44,7 @@ describe('wallet — delegation review before disclosure', () => {
     expect(view.status).toBe('authorized');
     if (view.status !== 'authorized') return;
     expect(view.canDisclose).toBe(true);
-    expect(view.principalName).toBe('國泰世華銀行');
+    expect(view.principalName).toBe('示範商業銀行');
     expect(view.purpose).toBe('開戶申請的身份與意願查驗');
     expect(view.remainingSeconds).toBeGreaterThan(0);
     expect(view.credentialsInScope).toEqual([
@@ -118,7 +118,7 @@ describe('wallet — delegation review before disclosure', () => {
 
     expect(view.status).toBe('authorized');
     if (view.status === 'authorized') {
-      expect(view.verifiedLegalEntity.legalName).toBe('國泰世華銀行');
+      expect(view.verifiedLegalEntity.legalName).toBe('示範商業銀行');
       expect(view.verifiedLegalEntity.lei.startsWith('BANKEXAMPLE')).toBe(true);
     }
 

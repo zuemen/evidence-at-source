@@ -19,7 +19,7 @@ async function sealingInstitution() {
   const keyPair = await generateKeyPair();
   const bank = await createVleiIssuer({
     didWeb: 'did:web:bank.example',
-    legalName: '國泰世華銀行',
+    legalName: '示範商業銀行',
     leiTag: 'BANKEXAMPLE',
     ecosystem: eco,
     options: { keyPair },
