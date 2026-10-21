@@ -13,6 +13,7 @@
 
 | 你想 | 做這件事 | 需要安裝 |
 |---|---|---|
+| **先看影片**（約 1.5 分鐘） | <https://zuemen.net/projects#evidence-at-source>（動畫解說＋示範站真實錄影；人物與機構為虛構、資料為合成、vLEI 鏈為自寫模擬） | 什麼都不用 |
 | **先看會動的** | 開 <https://zuemen.github.io/evidence-at-source/>，按右上角「**一鍵導覽**」——15 幕自動演完整條故事，不用點任何別的東西 | 什麼都不用 |
 | **驗證核心主張**（3 分鐘） | `git clone` 後跑三行：<br>`cd poc` 後 `node dual-signature.mjs` → 篡改後配對 `false`（**改不動**）<br>`node selective-disclosure.mjs` → `totalHours present? false`（**拿不到**）<br>`npm run verify:external` → `9/9 vectors passed`（**不用信我們**——驗證器零依賴） | 只要 Node 22 |
 | **跑完整測試** | `npm ci && npm test` → 592 tests；`npm run demo:vlei` → 17 步信任鏈主張，exit 0 即全數成立 | Node 22 |
@@ -214,14 +215,16 @@ gh attestation verify <下載的檔案> --repo zuemen/evidence-at-source
 
 它回答的是一個具體的問題：**你瀏覽器裡跑的這份 JavaScript，是不是這個 repo 這個版本建出來的。** 在此之前，這個問題沒有任何答案——靜態站的程式碼可以被替換，而沒有人有辦法察覺。
 
-**目前狀態：workflow 已就緒，但尚未產生任何 attestation**，因為它要在推上 `main` 之後由 CI 執行才會產生。現在對本機建置的產物執行上面那道指令，得到的是：
+**目前狀態：已產生。** 線上站（GitHub Pages）的 `index.html` 與 JS bundle 都查得到 build provenance attestation：下載後執行上面那道指令即可驗證（2026-10-21 實測通過）。
+
+反過來，沒有經過 CI 的產物（例如對本機自己建置的檔案）執行同一道指令，得到的是：
 
 ```
 Error: HTTP 404: Not Found
 (https://api.github.com/repos/zuemen/evidence-at-source/attestations/sha256:92643e1f...)
 ```
 
-這個 404 本身就是正確的行為，也值得記下來：**沒有 attestation 的產物，驗證是失敗而不是沉默通過。** 第一次推上 `main` 之後，同一道指令會回報簽章、commit SHA 與 workflow run。
+這個 404 本身就是正確的行為，也值得記下來：**沒有 attestation 的產物，驗證是失敗而不是沉默通過。**
 
 ### 做不到的三層，以及為什麼
 
@@ -244,6 +247,11 @@ Error: HTTP 404: Not Found
 DelegationCredential 之外還必須出示 ECR 鏈；機構簽發勞工憑證的公鑰也只能從已驗證
 的 Legal Entity vLEI 取得。任何上游憑證被撤銷，下游全部立即失效。完整規格與
 明文簡化清單見 [`docs/vlei.md`](docs/vlei.md)。
+
+> **注意**：這條 vLEI 鏈是本 repo **自行實作的 PoC 模擬**，不是 GLEIF 的正式 vLEI 生態系：
+> GLEIF Root、QVI 與 Legal Entity 都在本機產生，所有 LEI 都是 `syntheticLei()` 產生的合成值，
+> Schema SAID 也是自算、非 GLEIF 登錄的官方 SAID。SAID 演算法已與參考沙盒逐位元組比對相符，
+> 但這不構成與 KERIA 互通的宣稱（見 `docs/vlei.md` 簡化清單與「互通性狀態」）。
 
 **掛在這條鏈上的不只是「機構是誰」，還有四件本來各自散落的事**——這是本專案與一般
 「用了 vLEI」的作品最大的差別：
@@ -712,7 +720,7 @@ Agent A 的能力邊界也寫在型別裡：`BankAssessment.requiresHumanReview`
 | **朱廷翊** | 資訊管理學系＋人工智慧跨域微學程 | 系統架構、憑證與授權設計 | 憑證 schema 與雙簽機制、Agent 授權模型、Policy Gate 分層設計、技術論述 |
 | **柯穎文** | 資訊管理學系 | 後端工程、對帳與稽核邏輯 | 簽發與驗證服務、交叉對帳模組、審計鏈、測試與 CI 品質把關 |
 
-**這個題目不是臨時挑的，是既有經驗的交會點**：數位發展部數位憑證場景創新競賽佳作（SSI／VC／DID 應用於 FHIR 醫療資料跨機構互通）、ERC-3643 身分閘門化持有權與 IdentityRegistry 法遵實作、ChainLens 詐騙金流偵測（SNA＋GNN）、以及一套營運中的商用系統裡的「帳本恆等＋每日自動對帳＋異常告警」——本專案的雙簽配對、Policy Gate、選擇性揭露與工時×入帳交叉驗證，分別是這幾條線推進到「憑證持有人與查驗委託人不是同一個人」時的樣子。
+**這個題目不是臨時挑的，是既有經驗的交會點**：數位發展部數位憑證場景創新賽學生組優選（2025-11，MedSSI；SSI／VC／DID 應用於 FHIR 醫療資料跨機構互通）、ERC-3643 身分閘門化持有權與 IdentityRegistry 法遵實作、ChainLens 詐騙金流偵測（SNA＋GNN）、以及一套營運中的商用系統裡的「帳本恆等＋每日自動對帳＋異常告警」——本專案的雙簽配對、Policy Gate、選擇性揭露與工時×入帳交叉驗證，分別是這幾條線推進到「憑證持有人與查驗委託人不是同一個人」時的樣子。
 
 ## 系統邊界：這個原型還不是什麼
 
@@ -733,6 +741,8 @@ Agent A 的能力邊界也寫在型別裡：`BankAssessment.requiresHumanReview`
 ## 資料使用聲明
 
 本專案**全部使用合成資料**，存放於 `fixtures/`。不含任何真實移工的個人資料。
+
+Demo 與影片中的勞工（例如影片主角 Siti）、銀行（示範商業銀行／Demo Commercial Bank）與品牌皆為虛構；2026-10-12 起 demo 已把原本出現的真實銀行名稱換成虛構名稱。
 
 ## 授權
 
